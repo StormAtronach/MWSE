@@ -36,6 +36,7 @@ docs/source/.vscode/
 docs/source/_build/
 .vscode/
 .vs/
+.claude/
 build/dist/
 /deps/LuaJIT/src/*.exp
 /deps/LuaJIT/src/jit/vmdef.lua
