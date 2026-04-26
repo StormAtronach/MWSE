@@ -124,9 +124,17 @@ namespace mwse::patch::IndexedVertexBlending {
 	}
 
 	//
-	// Hook B1/B2: NiSkinPartition::MakePartitions call sites at 0x6adedf
-	//             (NiDX8Renderer::DrawSkinnedPrimitive) and 0x6b00c3
-	//             (NiDX8Renderer::maybe_PrePackSkinnedGeometryBuffer).
+	// Hook B: NiSkinPartition::MakePartitions call sites (4 total, enumerated
+	// via IDA get_callers(0x6c78f0)):
+	//   0x6adedf  NiDX8Renderer::DrawSkinnedPrimitive
+	//   0x6ae6a8  NiDX8Renderer::BatchRenderShape
+	//   0x6ae960  NiDX8Renderer::BatchRenderStrips
+	//   0x6b00bc  NiDX8Renderer::maybe_PrePackSkinnedGeometryBuffer
+	//
+	// All four pass (countHWBones, countHWBones) → non-palette mode by default.
+	// Must hook every site for IVB to apply consistently; an unhooked site
+	// produces partitions with bonePalette=null, which Hook C falls through on,
+	// silently leaving that mesh on vanilla XYZBn rendering.
 	//
 	// Verified signature at 0x6c78f0:
 	//   bool __thiscall NiSkinPartition::MakePartitions(
@@ -364,8 +372,11 @@ namespace mwse::patch::IndexedVertexBlending {
 	}
 
 	//
-	// Hook D: NiDX8Renderer::SetSkinnedModelTransforms @ 0x6acbe0
-	//         (called from DrawSkinnedPrimitive2 inner loop at 0x6af188).
+	// Hook D: NiDX8Renderer::SetSkinnedModelTransforms @ 0x6acbe0, 3 call
+	// sites (enumerated via IDA get_callers(0x6acbe0)):
+	//   0x6ae3b9  NiDX8Renderer::EndBatch                (batch render path)
+	//   0x6aece7  NiDX8Renderer::DrawPrimitive           (immediate skinned)
+	//   0x6af188  NiDX8Renderer::DrawSkinnedPrimitive2   (per-partition loop)
 	//
 	// Vanilla layout / behaviour:
 	//   for (i = 0; i < partition->numBones; ++i) {
@@ -438,13 +449,18 @@ namespace mwse::patch::IndexedVertexBlending {
 		// kPaletteCeiling) in EDX, preserving EAX/ECX for the surrounding reads.
 		genCallUnprotected(0x6aba2c, reinterpret_cast<DWORD>(&validateDeviceCaps_stub), 6);
 
-		// Hook B1/B2: intercept both MakePartitions call sites so we can force
-		// palette mode with s_paletteSize bones when IVB is active. genCallEnforced
-		// verifies the call at that address currently targets 0x6c78f0 before
-		// patching; if Morrowind or another mod has moved it, the game asserts
-		// instead of silently corrupting skinned geometry.
+		// Hook B: intercept all four MakePartitions call sites so we can force
+		// palette mode with s_paletteSize bones when IVB is active. Sites
+		// enumerated via IDA get_callers(0x6c78f0); must stay 1:1 with Hook D
+		// or palette partitions would flow into draws that don't enable IVB,
+		// rendering garbled geometry. genCallEnforced verifies the call at
+		// each address currently targets 0x6c78f0 before patching; if
+		// Morrowind or another mod has moved it, the game asserts instead of
+		// silently corrupting skinned geometry.
 		genCallEnforced(0x6adedf, 0x6c78f0, reinterpret_cast<DWORD>(&MakePartitions_hook));
-		genCallEnforced(0x6b00c3, 0x6c78f0, reinterpret_cast<DWORD>(&MakePartitions_hook));
+		genCallEnforced(0x6ae6a8, 0x6c78f0, reinterpret_cast<DWORD>(&MakePartitions_hook));
+		genCallEnforced(0x6ae960, 0x6c78f0, reinterpret_cast<DWORD>(&MakePartitions_hook));
+		genCallEnforced(0x6b00bc, 0x6c78f0, reinterpret_cast<DWORD>(&MakePartitions_hook));
 
 		// Hook C: three call sites of NiDX8VertexBufferManager::PackSkinnedVB.
 		// Two live in NiDX8Renderer::createPartitionGeomBuffer (the normal path
@@ -455,12 +471,18 @@ namespace mwse::patch::IndexedVertexBlending {
 		genCallEnforced(0x6afc46, 0x6be2b0, reinterpret_cast<DWORD>(&PackSkinnedVB_hook));
 		genCallEnforced(0x6b01ae, 0x6be2b0, reinterpret_cast<DWORD>(&PackSkinnedVB_hook));
 
-		// Hook D: redirect the single SetSkinnedModelTransforms call inside the
-		// per-partition loop of DrawSkinnedPrimitive2. Vanilla's matrix-upload
-		// loop is already correct for palette mode (bones[i] -> WorldMatrix[i],
-		// indexed by the LOCAL bonePalette[] bytes Hook C writes into LASTBETA),
-		// so the hook just calls vanilla and then raises
-		// D3DRS_INDEXEDVERTEXBLENDENABLE so the GPU honours those byte indices.
+		// Hook D: redirect all three SetSkinnedModelTransforms call sites.
+		// Vanilla's matrix-upload loop is already correct for palette mode
+		// (bones[i] -> WorldMatrix[i], indexed by the LOCAL bonePalette[] bytes
+		// Hook C writes into LASTBETA), so the hook just calls vanilla and then
+		// raises D3DRS_INDEXEDVERTEXBLENDENABLE so the GPU honours those byte
+		// indices. All three sites must be hooked together with Hook B's four
+		// — leaving a SetSkinnedModelTransforms site unhooked while its caller
+		// produces palette partitions would render garbled geometry (the GPU
+		// would interpret LASTBETA bytes as float weight bits without IVB
+		// enabled).
+		genCallEnforced(0x6ae3b9, 0x6acbe0, reinterpret_cast<DWORD>(&SetSkinnedModelTransforms_hook));
+		genCallEnforced(0x6aece7, 0x6acbe0, reinterpret_cast<DWORD>(&SetSkinnedModelTransforms_hook));
 		genCallEnforced(0x6af188, 0x6acbe0, reinterpret_cast<DWORD>(&SetSkinnedModelTransforms_hook));
 	}
 }
