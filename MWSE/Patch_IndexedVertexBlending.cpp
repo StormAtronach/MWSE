@@ -295,6 +295,7 @@ namespace mwse::patch::IndexedVertexBlending {
 
 		BYTE* lockMem = nullptr;
 		if (FAILED(vb->Lock(0, 0, &lockMem, 0))) {
+			vb->Release();
 			return nullptr;
 		}
 
@@ -334,6 +335,9 @@ namespace mwse::patch::IndexedVertexBlending {
 
 		for (DWORD ts = 0; ts < textureSets; ++ts) {
 			const BYTE* texSet = static_cast<const BYTE*>(GetTextureSet_fn(geomData, 0, ts));
+			if (!texSet) {
+				continue;
+			}
 			BYTE* outBase = lockMem + texOffset + 8 * ts;
 			for (DWORD i = 0; i < numVertices; ++i) {
 				const unsigned short vIdx = partition->vertices[i];
@@ -452,11 +456,11 @@ namespace mwse::patch::IndexedVertexBlending {
 		genCallEnforced(0x6b01ae, 0x6be2b0, reinterpret_cast<DWORD>(&PackSkinnedVB_hook));
 
 		// Hook D: redirect the single SetSkinnedModelTransforms call inside the
-		// per-partition loop of DrawSkinnedPrimitive2. Hook swaps partition->bones
-		// for a short[] built from bonePalette[] (palette-mode layout reads global
-		// indices from bonePalette, not bones) before calling vanilla, and raises
-		// D3DRS_INDEXEDVERTEXBLENDENABLE on the device so the GPU honours the
-		// LASTBETA_UBYTE4 indices embedded in the stream by Hook C.
+		// per-partition loop of DrawSkinnedPrimitive2. Vanilla's matrix-upload
+		// loop is already correct for palette mode (bones[i] -> WorldMatrix[i],
+		// indexed by the LOCAL bonePalette[] bytes Hook C writes into LASTBETA),
+		// so the hook just calls vanilla and then raises
+		// D3DRS_INDEXEDVERTEXBLENDENABLE so the GPU honours those byte indices.
 		genCallEnforced(0x6af188, 0x6acbe0, reinterpret_cast<DWORD>(&SetSkinnedModelTransforms_hook));
 	}
 }
