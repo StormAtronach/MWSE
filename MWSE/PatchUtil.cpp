@@ -2,6 +2,7 @@
 
 #include "Log.h"
 #include "MemoryUtil.h"
+#include "MGEApi.h"
 #include "mwOffsets.h"
 
 #include "TES3Actor.h"
@@ -1698,6 +1699,26 @@ namespace mwse::patch {
 		Sleep(Configuration::BackgroundLoadPollIntervalMs);
 	}
 
+	// MGE-XE scene-graph bridge (MGEAPI v4+). Wraps the call site at 0x41be56
+	// in TES3Game::mainLoop where the engine invokes renderNextFrame, after
+	// the three explicit NiAVObject::Update passes that recompose worldTransforms
+	// on the camera scene-graph subtrees but before any cull walk fires. Safe
+	// to walk: post-AI/physics/scripts, pre-cullShow, snapshot is sealed before
+	// any renderMorrowind draw reads it. Soft dependency: silent no-op when
+	// mge::apiVersion < 4 or MGE-XE is absent.
+	const auto TES3_Game_renderNextFrame = reinterpret_cast<void(__thiscall*)(TES3::Game*, int)>(0x41BE90);
+
+	void __fastcall RenderNextFrameBridgeHook(TES3::Game* game, void*, int renderType) {
+		if (mge::api && mge::apiVersion >= 4) {
+			auto api4 = static_cast<mge::MGEAPIv4*>(mge::api);
+			if (api4->getDataHandler() == nullptr) {
+				api4->setDataHandler(TES3::DataHandler::get());
+			}
+			api4->onSceneGraphReady();
+		}
+		TES3_Game_renderNextFrame(game, renderType);
+	}
+
 	//
 	// Install all the patches.
 	//
@@ -1743,6 +1764,10 @@ namespace mwse::patch {
 		genCallEnforced(0x41B857, 0x40FF50, *reinterpret_cast<DWORD*>(&WorldController_tickClock));
 		auto WorldController_checkForDayWrapping = &TES3::WorldController::checkForDayWrapping;
 		genCallEnforced(0x6350E9, 0x40FF50, *reinterpret_cast<DWORD*>(&WorldController_checkForDayWrapping));
+
+		// Patch: MGE-XE scene-graph bridge (MGEAPI v4+). Wraps the renderNextFrame
+		// call site in TES3Game::mainLoop. See RenderNextFrameBridgeHook above.
+		genCallEnforced(0x41BE56, 0x41BE90, reinterpret_cast<DWORD>(RenderNextFrameBridgeHook));
 
 		// Patch: Prevent error messageboxes from creating a rogue process.
 		genCallEnforced(0x47731B, 0x5F2160, reinterpret_cast<DWORD>(SafeQuitGetMessageChoice));
