@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -6098,6 +6098,8 @@
   
     
     
+      
+        
       
         
       
@@ -15254,6 +15256,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../tes3mobileObjectLightData/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    tes3mobileObjectLightData
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../tes3mobilePlayer/" class="md-nav__link">
         
   
@@ -18365,6 +18395,10 @@
       
         
       
+        
+      
+        
+      
     
     
     
@@ -18929,6 +18963,34 @@
     
   
     calcChargenStats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../events/calcEnchantingSpellPointCost/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    calcEnchantingSpellPointCost
   
 
     
@@ -21197,6 +21259,34 @@
     
   
     lockPick
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../events/magicAbsorb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    magicAbsorb
   
 
     
@@ -23871,7 +23961,7 @@
 <h3 id="readback"><code>readback</code><a class="headerlink" href="#readback" title="Permanent link">⚓︎</a></h3>
 <div class="search_terms" style="display: none">readback</div>
 
-<p>Reads the contents of the rendered texture into a system memory niPixelData. This requires that the rendered texture is not the current render target -- make sure niRenderer:setRenderTarget(nil) is called before using this function. The texture dimensions of the niRenderedTexture and niPixelData must be the same. It returns true if the readback succeeded, false otherwise.</p>
+<p>Reads the contents of the rendered texture into a system memory niPixelData. This requires that the rendered texture is not the current render target -- make sure niRenderer:setRenderTarget(nil) is called before using this function. The texture dimensions of the niRenderedTexture and niPixelData must be the same. It returns true if the readback succeeded, false otherwise. This function will also change the pixel data's pixel format to match the d3d surface.</p>
 <p>This function requires the GPU to finish rendering and send data to the CPU. This can impact framerates significantly, so measure and consider performance carefully when using this.</p>
 <p><strong>Parameters</strong>:</p>
 <ul>
@@ -24113,12 +24203,13 @@
 <div class="search_terms" style="display: none">create</div>
 
 <p>Creates an niRenderedTexture.</p>
-<div class="highlight"><pre><span></span><code><span class="kd">local</span> <span class="n">texture</span> <span class="o">=</span> <span class="n">niRenderedTexture</span><span class="p">.</span><span class="n">create</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="kd">local</span> <span class="n">texture</span> <span class="o">=</span> <span class="n">niRenderedTexture</span><span class="p">.</span><span class="n">create</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">prefs</span><span class="p">)</span>
 </code></pre></div>
 <p><strong>Parameters</strong>:</p>
 <ul>
 <li><code>width</code> (number): The width of the rendered texture. Should be a power of 2.</li>
 <li><code>height</code> (number): The height of the rendered texture. Should be a power of 2.</li>
+<li><code>prefs</code> (<a href="../niFormatPrefs/">niFormatPrefs</a>): <em>Optional</em>. Custom preferences to use. By default, the texture uses 32-bit true color, no mipmaps, and smooth alphas.</li>
 </ul>
 <p><strong>Returns</strong>:</p>
 <ul>
@@ -24146,7 +24237,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="June 8, 2025 14:47:45 UTC">June 8, 2025 14:47:45</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-datetime" title="February 1, 2026 07:08:03 UTC">February 1, 2026 07:08:03</span>
   </span>
 
     
