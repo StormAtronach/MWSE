@@ -107,6 +107,11 @@ namespace TES3 {
 		// Custom functions.
 		//
 
+		// Build a DirectSound buffer from interleaved 16-bit PCM. Used by the flexible
+		// loadSoundFile (TES3AudioDecoder.cpp) for formats the vanilla loader can't
+		// take; owns its buffer creation so no mmio handle leaks.
+		SoundBuffer* createSoundBufferFromPcm(const short* samples, size_t sampleCount, unsigned int channels, unsigned int sampleRate, bool isPointSource);
+
 		bool playSoundBuffer(SoundBuffer* soundBuffer, DWORD flags, uint8_t volume, float pitch, bool isNot3D);
 		void stopSoundBuffer(SoundBuffer* buffer) const;
 
