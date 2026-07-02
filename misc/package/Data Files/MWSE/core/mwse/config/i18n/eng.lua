@@ -36,6 +36,8 @@ return {
 	["replaceLightSorting.description"] = "If enabled, the default method of prioritizing lights that affect a mesh is replaced with a new method. This greatly reduces the amount of landscape seams as well as the amount of light popping, but may diminish the impact of carried torches in some environments.",
 	["createFullMinidumps.label"] = "Create full crash minidumps?",
 	["createFullMinidumps.description"] = "If enabled, full memory minidumps will be created. This is usually not needed, and will result in much larger minidumps being created.",
+	["useAsyncSoundLoads.label"] = "Load sounds asynchronously?",
+	["useAsyncSoundLoads.description"] = "If enabled, sound effects are decoded and their audio buffers built on a background thread, so sound loads never stall the frame. Disable to load sound effects synchronously on the game thread if you suspect the background loading of causing audio issues; voiceovers always load on the background thread. On by default.",
 	["logFlexibleAudioLoads.label"] = "Log flexible audio loads?",
 	["logFlexibleAudioLoads.description"] = "If enabled, MWSE writes a line to mwse.log for each foreign-format sound (24/32-bit or float WAV, WAVE_FORMAT_EXTENSIBLE, MP3, FLAC) decoded by the flexible loader on the main thread, with decode and buffer-build timings in microseconds. Useful for diagnosing audio-load stalls. Off by default. Only covers main-thread (Sound record) loads; sounds handled on the async decode worker are not logged.",
 	["backgroundLoadPollIntervalMs.label"] = "Background load poll interval (ms)",

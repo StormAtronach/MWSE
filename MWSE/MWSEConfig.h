@@ -17,6 +17,7 @@ namespace mwse {
 		static bool UseSkinnedAccurateActivationRaytests;
 		static bool SuppressUselessWarnings;
 		static bool UseGlobalAudio;
+		static bool UseAsyncSoundLoads;
 		static bool LogFlexibleAudioLoads;
 		static bool NonExclusiveKeyboard;
 		static bool ReplaceLightSorting;

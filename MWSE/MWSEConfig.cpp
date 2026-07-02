@@ -20,6 +20,7 @@ namespace mwse {
 	bool Configuration::UseSkinnedAccurateActivationRaytests = true;
 	bool Configuration::SuppressUselessWarnings = true;
 	bool Configuration::UseGlobalAudio = false;
+	bool Configuration::UseAsyncSoundLoads = true;
 	bool Configuration::LogFlexibleAudioLoads = false;
 	bool Configuration::NonExclusiveKeyboard = false;
 	bool Configuration::ReplaceLightSorting = true;
@@ -73,6 +74,7 @@ namespace mwse {
 		DECLARE_CONFIG(UseSkinnedAccurateActivationRaytests)
 		DECLARE_CONFIG(SuppressUselessWarnings)
 		DECLARE_CONFIG(UseGlobalAudio)
+		DECLARE_CONFIG(UseAsyncSoundLoads)
 		DECLARE_CONFIG(LogFlexibleAudioLoads)
 		DECLARE_CONFIG(NonExclusiveKeyboard)
 		DECLARE_CONFIG(ReplaceLightSorting)

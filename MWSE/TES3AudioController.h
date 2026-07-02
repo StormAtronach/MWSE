@@ -182,6 +182,10 @@ namespace TES3 {
 	};
 	static_assert(sizeof(AudioController) == 0x2D8, "TES3::AudioController failed size validation");
 
+	// Matches the engine's own voiceover probe in addTempSound (0x48C5F3). Defined
+	// in TES3AudioDecoder.cpp; shared with the voice streamer.
+	bool isVoiceoverPath(const char* filename);
+
 	// Make sure we're looking at the same size for DirectSound structures.
 	static_assert(sizeof(DSBUFFERDESC) == 0x24, "DirectSound DSBUFFERDESC failed size validation");
 	static_assert(sizeof(DSCAPS) == 0x60, "DirectSound DSCAPS failed size validation");

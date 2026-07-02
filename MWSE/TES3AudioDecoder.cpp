@@ -59,7 +59,7 @@ namespace TES3 {
 	}
 
 	// Matches the engine's own voiceover probe at 0x48C5F3.
-	static bool isVoiceoverPath(const char* filename) {
+	bool isVoiceoverPath(const char* filename) {
 		return std::strstr(filename, "vo\\") != nullptr
 			|| std::strstr(filename, "Vo\\") != nullptr
 			|| std::strstr(filename, "vO\\") != nullptr
@@ -76,6 +76,24 @@ namespace TES3 {
 			samples[i] = static_cast<drwav_int16>(acc / static_cast<int>(channels));
 		}
 		samples.resize(frames);
+	}
+
+	// Fold >2-channel audio down to stereo: keep front L/R, spread the remaining
+	// channels (center/LFE/surrounds, WAV channel order) equally into both at half
+	// gain, clamped. In-place is safe: each frame writes 2 samples at an index
+	// behind the channels-per-frame read position.
+	static void downmixToStereo(std::vector<drwav_int16>& samples, unsigned int channels) {
+		if (channels <= 2) return;
+		const size_t frames = samples.size() / channels;
+		for (size_t i = 0; i < frames; ++i) {
+			const drwav_int16* frame = &samples[i * channels];
+			int extra = 0;
+			for (unsigned int c = 2; c < channels; ++c) extra += frame[c];
+			extra /= 2;
+			samples[i * 2] = static_cast<drwav_int16>(std::clamp(frame[0] + extra, -32768, 32767));
+			samples[i * 2 + 1] = static_cast<drwav_int16>(std::clamp(frame[1] + extra, -32768, 32767));
+		}
+		samples.resize(frames * 2);
 	}
 
 	static bool decodeMp3(const char* filename, DecodedPcm& out) {
@@ -174,10 +192,11 @@ namespace TES3 {
 	}
 
 	// Decodes WAV variants DirectSound can't take (24/32-bit, float, EXTENSIBLE)
-	// and non-voiceover MP3/FLAC (no ACM codec linked), and downmixes stereo 3D
-	// point sources to mono. Engine-compatible, missing, and voiceover files fall
-	// through to the vanilla loader; a recognized-but-unplayable format returns
-	// null (silent) instead of the engine's leaking failure path.
+	// and non-voiceover MP3/FLAC (no ACM codec linked), downmixes multichannel 3D
+	// point sources to mono and anything else to stereo. Engine-compatible,
+	// missing, and voiceover files fall through to the vanilla loader; a
+	// recognized-but-unplayable format returns null (silent) instead of the
+	// engine's leaking failure path.
 	SoundBuffer* AudioController::loadSoundFile(const char* filename, bool isPointSource) {
 		if (!filename || isVoiceoverPath(filename) || disableAudio || !isDirectSoundAvailable()) {
 			return TES3_AudioController_loadSoundFile(this, filename, isPointSource);
@@ -219,10 +238,15 @@ namespace TES3 {
 		if (!pcm.ok()) return nullptr;
 
 		const unsigned int sourceChannels = pcm.channels;
-		// 3D point sources must be mono (DirectSound rejects stereo CTRL3D).
-		if ((isPointSource && pcm.channels > 1) || pcm.channels > 2) {
+		// 3D point sources must be mono (DirectSound rejects stereo CTRL3D); other
+		// multichannel audio folds down to stereo.
+		if (isPointSource && pcm.channels > 1) {
 			downmixToMono(pcm.samples, pcm.channels);
 			pcm.channels = 1;
+		}
+		else if (pcm.channels > 2) {
+			downmixToStereo(pcm.samples, pcm.channels);
+			pcm.channels = 2;
 		}
 
 		const auto buildStart = std::chrono::steady_clock::now();

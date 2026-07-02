@@ -3104,6 +3104,28 @@ namespace mwse::patch {
 		writeDoubleWordEnforced(0x6A9BC4, 0x94, NiDX8RendererHashBuckets * 4); // push 94h (rendered cubemaps)
 	}
 
+	// Every CreateSoundBuffer failure branch in the engine's LoadSoundFile funnels
+	// to a call to a no-op error logger at 0x402140 (nullsub_36), then deletes the
+	// SoundBuffer and returns 0 WITHOUT closing the WINMM handle still held in esi.
+	// Sounds that fail this way get retried every SoundGen event, so one bad WAV
+	// leaks handles until exhaustion. Repurpose the no-op call to close the handle.
+	// The logger's two pushed arguments stay on the stack; the caller pops them
+	// (add esp, 8) right after, exactly as it did for the original call.
+	__declspec(naked) void PatchLoadSoundFileCloseHandleOnFailure() {
+		__asm {
+			push eax // preserve the HRESULT/scratch registers like the nullsub did
+			push ecx
+			push edx
+			push 0 // fuClose
+			push esi // hmmio, still live at the 0x402140 call site
+			call dword ptr ds:[0x746400] // mmioClose import thunk (stdcall, pops its args)
+			pop edx
+			pop ecx
+			pop eax
+			ret
+		}
+	}
+
 	void installPostLuaPatches() {
 		using se::memory::writeByteUnprotected;
 		using se::memory::genCallUnprotected;
@@ -3164,6 +3186,13 @@ namespace mwse::patch {
 		auto AudioController_loadSoundFile = &TES3::AudioController::loadSoundFile;
 		genCallEnforced(0x51083F, 0x401DB0, *reinterpret_cast<DWORD*>(&AudioController_loadSoundFile));
 		genCallEnforced(0x510859, 0x401DB0, *reinterpret_cast<DWORD*>(&AudioController_loadSoundFile));
+
+		// Patch: Plug the vanilla LoadSoundFile handle leak on CreateSoundBuffer
+		// failure. Belt-and-braces behind the flexible loader: its passthrough and
+		// fallback paths still reach the vanilla loader, and a 16-bit PCM WAV that
+		// DirectSound nevertheless rejects (zero data frames, absurd sample rate)
+		// would otherwise still leak.
+		genCallEnforced(0x402140, 0x6E9A00, reinterpret_cast<DWORD>(PatchLoadSoundFileCloseHandleOnFailure));
 	}
 
 	void installPostInitializationPatches() {
