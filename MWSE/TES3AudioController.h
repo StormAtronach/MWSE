@@ -186,6 +186,14 @@ namespace TES3 {
 	// in TES3AudioDecoder.cpp; shared with the voice streamer.
 	bool isVoiceoverPath(const char* filename);
 
+	// Rare audio diagnostics (e.g. the LoadSoundFile leak-guard report) can fire on
+	// the decode worker, which must not touch the non-thread-safe MWSE log. Lines
+	// log immediately on the main thread and queue otherwise; main-thread audio
+	// entry points flush the queue. Each unique line logs once per session. Defined
+	// in TES3AudioDecoder.cpp.
+	void logAudioDiagnostic(std::string line);
+	void flushAudioDiagnostics();
+
 	// Make sure we're looking at the same size for DirectSound structures.
 	static_assert(sizeof(DSBUFFERDESC) == 0x24, "DirectSound DSBUFFERDESC failed size validation");
 	static_assert(sizeof(DSCAPS) == 0x60, "DirectSound DSCAPS failed size validation");

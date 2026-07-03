@@ -43,6 +43,44 @@ namespace TES3 {
 		return nullptr;
 	}
 
+	// Rare-diagnostic funnel (leak-guard reports and the like). The MWSE log is not
+	// thread-safe, so lines produced off the main thread queue here until a
+	// main-thread audio entry point flushes them; in the failure scenarios that
+	// matter the game retries the bad sound constantly, so the flush is prompt.
+	// Each unique line logs once per session -- those same retries would otherwise
+	// flood the log.
+	static std::mutex g_diagnosticsMutex;
+	static std::vector<std::string> g_pendingDiagnostics;
+	static std::unordered_set<std::string> g_loggedDiagnostics;
+	static std::atomic<bool> g_hasPendingDiagnostics{ false };
+
+	void flushAudioDiagnostics() {
+		if (!onMainThread() || !g_hasPendingDiagnostics.load(std::memory_order_acquire)) return;
+		std::vector<std::string> lines;
+		{
+			std::lock_guard lk(g_diagnosticsMutex);
+			lines.swap(g_pendingDiagnostics);
+			g_hasPendingDiagnostics.store(false, std::memory_order_release);
+		}
+		for (const auto& line : lines) {
+			mwse::log::getLog() << line << '\n';
+		}
+	}
+
+	void logAudioDiagnostic(std::string line) {
+		{
+			std::lock_guard lk(g_diagnosticsMutex);
+			if (!g_loggedDiagnostics.insert(line).second) return; // already reported this session
+			if (!onMainThread()) {
+				g_pendingDiagnostics.push_back(std::move(line));
+				g_hasPendingDiagnostics.store(true, std::memory_order_release);
+				return;
+			}
+		}
+		flushAudioDiagnostics(); // keep earlier worker lines ordered ahead of this one
+		mwse::log::getLog() << line << '\n';
+	}
+
 	// Interleaved 16-bit PCM, the only format DirectSound (and createSoundBufferFromPcm) accepts.
 	struct DecodedPcm {
 		std::vector<drwav_int16> samples; // interleaved
@@ -198,6 +236,8 @@ namespace TES3 {
 	// recognized-but-unplayable format returns null (silent) instead of the
 	// engine's leaking failure path.
 	SoundBuffer* AudioController::loadSoundFile(const char* filename, bool isPointSource) {
+		flushAudioDiagnostics(); // no-op off the main thread
+
 		if (!filename || isVoiceoverPath(filename) || disableAudio || !isDirectSoundAvailable()) {
 			return TES3_AudioController_loadSoundFile(this, filename, isPointSource);
 		}

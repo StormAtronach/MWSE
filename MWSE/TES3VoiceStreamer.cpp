@@ -398,6 +398,10 @@ namespace mwse::patch::voice {
 		// always stay on the worker -- their synchronous path is the MP3 decode stall
 		// the streamer was built to remove.
 		TES3::SoundBuffer* __fastcall asyncLoadSoundFile(TES3::AudioController* audio, void* /*edx*/, const char* filename, bool isPointSource) {
+			// addTempSound runs on the main thread; publish any diagnostics queued
+			// by the decode worker (e.g. leak-guard reports).
+			TES3::flushAudioDiagnostics();
+
 			if (!mwse::Configuration::UseAsyncSoundLoads && !TES3::isVoiceoverPath(filename)) {
 				return audio->loadSoundFile(filename, isPointSource);
 			}

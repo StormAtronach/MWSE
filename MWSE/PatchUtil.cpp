@@ -3104,21 +3104,42 @@ namespace mwse::patch {
 		writeDoubleWordEnforced(0x6A9BC4, 0x94, NiDX8RendererHashBuckets * 4); // push 94h (rendered cubemaps)
 	}
 
+	// Called from the trampoline below with the suppressed engine logger's own
+	// arguments plus the mmio handle. Closes the handle the engine forgot, then
+	// reports which file tripped the guard.
+	static void __cdecl PatchLoadSoundFileReportFailure(const char* format, const char* filename, void* hmmio) {
+		using mmioCloseFn = int(WINAPI*)(void* hmmio, unsigned int fuClose);
+		(*reinterpret_cast<mmioCloseFn*>(0x746400))(hmmio, 0); // engine's mmioClose import thunk
+
+		// The engine format string has exactly one %s (the filename) and names the
+		// error, e.g. "DirectSound CreateSoundBuffer failed (%s)- Error Code:
+		// DSERR_BADFORMAT".
+		char message[384];
+		std::snprintf(message, sizeof(message), format, filename);
+		TES3::logAudioDiagnostic(std::string("[MWSE] Sound load failed, leaked file handle closed: ") + message);
+	}
+
 	// Every CreateSoundBuffer failure branch in the engine's LoadSoundFile funnels
 	// to a call to a no-op error logger at 0x402140 (nullsub_36), then deletes the
 	// SoundBuffer and returns 0 WITHOUT closing the WINMM handle still held in esi.
 	// Sounds that fail this way get retried every SoundGen event, so one bad WAV
-	// leaks handles until exhaustion. Repurpose the no-op call to close the handle.
-	// The logger's two pushed arguments stay on the stack; the caller pops them
-	// (add esp, 8) right after, exactly as it did for the original call.
+	// leaks handles until exhaustion. Repurpose the no-op call: forward the logger's
+	// two stack arguments plus the handle to the reporting helper above. The two
+	// arguments stay on the stack; the caller pops them (add esp, 8) right after,
+	// exactly as it did for the original call.
 	__declspec(naked) void PatchLoadSoundFileCloseHandleOnFailure() {
 		__asm {
-			push eax // preserve the HRESULT/scratch registers like the nullsub did
+			// On entry: [esp+4] = format string, [esp+8] = filename.
+			push eax // preserve the scratch registers like the nullsub did
 			push ecx
 			push edx
-			push 0 // fuClose
 			push esi // hmmio, still live at the 0x402140 call site
-			call dword ptr ds:[0x746400] // mmioClose import thunk (stdcall, pops its args)
+			mov eax, [esp + 0x18] // filename (offsets shift with each push)
+			push eax
+			mov eax, [esp + 0x18] // format
+			push eax
+			call PatchLoadSoundFileReportFailure
+			add esp, 0xC
 			pop edx
 			pop ecx
 			pop eax
