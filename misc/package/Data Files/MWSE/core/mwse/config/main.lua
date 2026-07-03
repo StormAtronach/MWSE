@@ -241,6 +241,26 @@ local config = {
 					callback = resetLighting,
 				},
 				{
+					class = "OnOffButton",
+					label = i18n("useAsyncSoundLoads.label"),
+					description = i18n("useAsyncSoundLoads.description"),
+					variable = {
+						id = "UseAsyncSoundLoads",
+						class = "TableVariable",
+						table = mwseConfig,
+					},
+				},
+				{
+					class = "OnOffButton",
+					label = i18n("logFlexibleAudioLoads.label"),
+					description = i18n("logFlexibleAudioLoads.description"),
+					variable = {
+						id = "LogFlexibleAudioLoads",
+						class = "TableVariable",
+						table = mwseConfig,
+					},
+				},
+				{
 					class = "Slider",
 					label = i18n("backgroundLoadPollIntervalMs.label"),
 					description = i18n("backgroundLoadPollIntervalMs.description"),

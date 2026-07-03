@@ -107,6 +107,11 @@ namespace TES3 {
 		// Custom functions.
 		//
 
+		// Build a DirectSound buffer from interleaved 16-bit PCM. Used by the flexible
+		// loadSoundFile (TES3AudioDecoder.cpp) for formats the vanilla loader can't
+		// take; owns its buffer creation so no mmio handle leaks.
+		SoundBuffer* createSoundBufferFromPcm(const short* samples, size_t sampleCount, unsigned int channels, unsigned int sampleRate, bool isPointSource);
+
 		bool playSoundBuffer(SoundBuffer* soundBuffer, DWORD flags, uint8_t volume, float pitch, bool isNot3D);
 		void stopSoundBuffer(SoundBuffer* buffer) const;
 
@@ -176,6 +181,18 @@ namespace TES3 {
 
 	};
 	static_assert(sizeof(AudioController) == 0x2D8, "TES3::AudioController failed size validation");
+
+	// Matches the engine's own voiceover probe in addTempSound (0x48C5F3). Defined
+	// in TES3AudioDecoder.cpp; shared with the voice streamer.
+	bool isVoiceoverPath(const char* filename);
+
+	// Rare audio diagnostics (e.g. the LoadSoundFile leak-guard report) can fire on
+	// the decode worker, which must not touch the non-thread-safe MWSE log. Lines
+	// log immediately on the main thread and queue otherwise; main-thread audio
+	// entry points flush the queue. Each unique line logs once per session. Defined
+	// in TES3AudioDecoder.cpp.
+	void logAudioDiagnostic(std::string line);
+	void flushAudioDiagnostics();
 
 	// Make sure we're looking at the same size for DirectSound structures.
 	static_assert(sizeof(DSBUFFERDESC) == 0x24, "DirectSound DSBUFFERDESC failed size validation");

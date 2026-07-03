@@ -3703,6 +3703,49 @@ namespace mwse::patch {
 		writeDoubleWordEnforced(0x6A9BC4, 0x94, NiDX8RendererHashBuckets * 4); // push 94h (rendered cubemaps)
 	}
 
+	// Called from the trampoline below with the suppressed engine logger's own
+	// arguments plus the mmio handle. Closes the handle the engine forgot, then
+	// reports which file tripped the guard.
+	static void __cdecl PatchLoadSoundFileReportFailure(const char* format, const char* filename, void* hmmio) {
+		using mmioCloseFn = int(WINAPI*)(void* hmmio, unsigned int fuClose);
+		(*reinterpret_cast<mmioCloseFn*>(0x746400))(hmmio, 0); // engine's mmioClose import thunk
+
+		// The engine format string has exactly one %s (the filename) and names the
+		// error, e.g. "DirectSound CreateSoundBuffer failed (%s)- Error Code:
+		// DSERR_BADFORMAT".
+		char message[384];
+		std::snprintf(message, sizeof(message), format, filename);
+		TES3::logAudioDiagnostic(std::string("[MWSE] Sound load failed, leaked file handle closed: ") + message);
+	}
+
+	// Every CreateSoundBuffer failure branch in the engine's LoadSoundFile funnels
+	// to a call to a no-op error logger at 0x402140 (nullsub_36), then deletes the
+	// SoundBuffer and returns 0 WITHOUT closing the WINMM handle still held in esi.
+	// Sounds that fail this way get retried every SoundGen event, so one bad WAV
+	// leaks handles until exhaustion. Repurpose the no-op call: forward the logger's
+	// two stack arguments plus the handle to the reporting helper above. The two
+	// arguments stay on the stack; the caller pops them (add esp, 8) right after,
+	// exactly as it did for the original call.
+	__declspec(naked) void PatchLoadSoundFileCloseHandleOnFailure() {
+		__asm {
+			// On entry: [esp+4] = format string, [esp+8] = filename.
+			push eax // preserve the scratch registers like the nullsub did
+			push ecx
+			push edx
+			push esi // hmmio, still live at the 0x402140 call site
+			mov eax, [esp + 0x18] // filename (offsets shift with each push)
+			push eax
+			mov eax, [esp + 0x18] // format
+			push eax
+			call PatchLoadSoundFileReportFailure
+			add esp, 0xC
+			pop edx
+			pop ecx
+			pop eax
+			ret
+		}
+	}
+
 	void installPostLuaPatches() {
 		using se::memory::writeByteUnprotected;
 		using se::memory::genCallUnprotected;
@@ -3755,6 +3798,21 @@ namespace mwse::patch {
 			se::memory::writeAddFlagEnforced(0x40240E + 0x3, DS_FLAGS_DEFAULT | DSBCAPS_CTRLPAN, DSBCAPS_GLOBALFOCUS);
 			se::memory::writeAddFlagEnforced(0x402405 + 0x3, DS_FLAGS_3D, DSBCAPS_GLOBALFOCUS);
 		}
+
+		// Patch: Flexible sound loading. Route the engine's Sound::set3DParams load
+		// sites to the flexible AudioController::loadSoundFile (TES3AudioDecoder.cpp);
+		// MWSE/Lua callers reach it through the member, and addTempSound through the
+		// voice streamer.
+		auto AudioController_loadSoundFile = &TES3::AudioController::loadSoundFile;
+		genCallEnforced(0x51083F, 0x401DB0, *reinterpret_cast<DWORD*>(&AudioController_loadSoundFile));
+		genCallEnforced(0x510859, 0x401DB0, *reinterpret_cast<DWORD*>(&AudioController_loadSoundFile));
+
+		// Patch: Plug the vanilla LoadSoundFile handle leak on CreateSoundBuffer
+		// failure. Belt-and-braces behind the flexible loader: its passthrough and
+		// fallback paths still reach the vanilla loader, and a 16-bit PCM WAV that
+		// DirectSound nevertheless rejects (zero data frames, absurd sample rate)
+		// would otherwise still leak.
+		genCallEnforced(0x402140, 0x6E9A00, reinterpret_cast<DWORD>(PatchLoadSoundFileCloseHandleOnFailure));
 	}
 
 	void installPostInitializationPatches() {

@@ -24,6 +24,8 @@ namespace mwse {
 	bool Configuration::UseCollisionRootOnlyUpdates = true;
 	bool Configuration::SuppressUselessWarnings = true;
 	bool Configuration::UseGlobalAudio = false;
+	bool Configuration::UseAsyncSoundLoads = true;
+	bool Configuration::LogFlexibleAudioLoads = false;
 	bool Configuration::NonExclusiveKeyboard = false;
 	bool Configuration::ReplaceLightSorting = true;
 	bool Configuration::CreateFullMinidumps = false;
@@ -80,6 +82,8 @@ namespace mwse {
 		DECLARE_CONFIG(UseCollisionRootOnlyUpdates)
 		DECLARE_CONFIG(SuppressUselessWarnings)
 		DECLARE_CONFIG(UseGlobalAudio)
+		DECLARE_CONFIG(UseAsyncSoundLoads)
+		DECLARE_CONFIG(LogFlexibleAudioLoads)
 		DECLARE_CONFIG(NonExclusiveKeyboard)
 		DECLARE_CONFIG(ReplaceLightSorting)
 		DECLARE_CONFIG(CreateFullMinidumps)

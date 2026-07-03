@@ -21,6 +21,8 @@ namespace mwse {
 		static bool UseCollisionRootOnlyUpdates;
 		static bool SuppressUselessWarnings;
 		static bool UseGlobalAudio;
+		static bool UseAsyncSoundLoads;
+		static bool LogFlexibleAudioLoads;
 		static bool NonExclusiveKeyboard;
 		static bool ReplaceLightSorting;
 		static bool CreateFullMinidumps;

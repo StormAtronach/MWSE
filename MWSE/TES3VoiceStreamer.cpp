@@ -2,6 +2,7 @@
 
 #include "Log.h"
 #include "MemoryUtil.h"
+#include "MWSEConfig.h"
 #include "WindowsUtil.h"
 
 #include "TES3AudioController.h"
@@ -28,15 +29,6 @@ namespace mwse::patch::voice {
 
 		bool isPending(const TES3::SoundBuffer* sb) {
 			return sb && sb->bufferDescription.dwSize == STUB_PENDING_SENTINEL;
-		}
-
-		bool isVoiceoverPath(const char* filename) {
-			if (!filename) return false;
-			// Match the engine's own case-insensitive probe at 0x48C5F3.
-			return std::strstr(filename, "vo\\") != nullptr
-				|| std::strstr(filename, "Vo\\") != nullptr
-				|| std::strstr(filename, "vO\\") != nullptr
-				|| std::strstr(filename, "VO\\") != nullptr;
 		}
 
 		// Allocate a stub via SoundBuffer's class-specific operator new (engine
@@ -115,7 +107,8 @@ namespace mwse::patch::voice {
 			// use-after-free.
 			stub->bufferDescription.lpwfxFormat = reinterpret_cast<WAVEFORMATEX*>(stub->fileHeader);
 
-			stub->isVoiceover = true;
+			// Leave stub->isVoiceover as addTempSound set it -- this path now
+			// publishes non-voiceover sounds too, not just voiceovers.
 
 			// Do NOT touch stub->volume here. addTempSound already called
 			// SetSoundBufferVolume(stub, vol) while the stub was pending, which
@@ -391,12 +384,25 @@ namespace mwse::patch::voice {
 			delete sb;
 		}
 
-		// Replaces the call to LoadSoundFile inside addTempSound (0x48C369). For
-		// non-voiceover paths, falls straight through to the engine's loadSoundFile.
-		// For voiceover paths, allocates a pending stub and queues the actual decode
-		// onto the worker thread.
+		// Replaces the call to LoadSoundFile inside addTempSound (0x48C369). Every
+		// load is queued onto the decode worker: the flexible loadSoundFile decodes
+		// foreign formats and builds the DirectSound buffer off the main thread, so no
+		// sound load stalls the frame. addTempSound continues with a pending stub; the
+		// worker publishes the real buffer when the decode finishes. Engine-compatible
+		// files complete near-instantly on the worker, so their only added latency is
+		// worker scheduling.
+		//
+		// UseAsyncSoundLoads (MWSE MCM, default on) is the escape hatch: with it off,
+		// non-voiceover sounds load synchronously through the flexible loader (still
+		// leak-free and format-flexible, just back on the calling thread). Voiceovers
+		// always stay on the worker -- their synchronous path is the MP3 decode stall
+		// the streamer was built to remove.
 		TES3::SoundBuffer* __fastcall asyncLoadSoundFile(TES3::AudioController* audio, void* /*edx*/, const char* filename, bool isPointSource) {
-			if (!isVoiceoverPath(filename)) {
+			// addTempSound runs on the main thread; publish any diagnostics queued
+			// by the decode worker (e.g. leak-guard reports).
+			TES3::flushAudioDiagnostics();
+
+			if (!mwse::Configuration::UseAsyncSoundLoads && !TES3::isVoiceoverPath(filename)) {
 				return audio->loadSoundFile(filename, isPointSource);
 			}
 
@@ -416,7 +422,8 @@ namespace mwse::patch::voice {
 	void install() {
 		// Divert addTempSound's call to LoadSoundFile. The two other call sites
 		// of LoadSoundFile (Sound::set3DParams at 0x51083F / 0x510859) are for
-		// permanent Sound records and never see voiceover paths — leave them.
+		// permanent Sound records; PatchUtil routes those to the flexible
+		// loadSoundFile synchronously -- they never go through the decode worker.
 		//
 		// The call instruction is at 0x48C369 (5-byte E8 rel32). Verified bytes:
 		// E8 42 5A F7 FF (= call 0x401DB0). genCallEnforced returns false silently
