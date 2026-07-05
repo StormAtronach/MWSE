@@ -5524,6 +5524,9 @@ namespace mwse::lua {
 
 	// Legacy tes3.getOwner.
 	TES3::BaseObject* getOwnerLegacy(TES3::Reference* reference) {
+		if (reference == nullptr) {
+			return nullptr;
+		}
 		auto itemData = reference->getAttachedItemData();
 		if (itemData == nullptr) {
 			return nullptr;
