@@ -37,7 +37,7 @@ namespace TES3 {
 	}
 
 	const auto TES3_AnimationData_playAnimationGroupForSection = reinterpret_cast<void(__thiscall*)(AnimationDataVanilla*, AnimGroupID, int, int, int)>(0x470AE0);
-	void AnimationDataVanilla::playAnimationGroupForSection(AnimGroupID animationGroup, int bodySection, int startFlag, int loopCount) {
+	bool AnimationDataVanilla::triggerPlayGroupEvent(AnimGroupID& animationGroup, int bodySection, int& startFlag, int& loopCount) {
 		if (mwse::lua::event::PlayAnimationGroupEvent::getEventEnabled()) {
 			const auto stateHandle = mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle();
 			sol::object response = stateHandle.triggerEvent(new mwse::lua::event::PlayAnimationGroupEvent(reinterpret_cast<AnimationData*>(this), int(animationGroup), bodySection, startFlag, loopCount));
@@ -46,7 +46,7 @@ namespace TES3 {
 
 				// Allow event blocking.
 				if (eventData.get_or("block", false)) {
-					return;
+					return false;
 				}
 
 				// Allow overrides.
@@ -54,6 +54,13 @@ namespace TES3 {
 				startFlag = eventData.get_or("flags", startFlag);
 				loopCount = eventData.get_or("loopCount", loopCount);
 			}
+		}
+		return true;
+	}
+
+	void AnimationDataVanilla::playAnimationGroupForSection(AnimGroupID animationGroup, int bodySection, int startFlag, int loopCount) {
+		if (!triggerPlayGroupEvent(animationGroup, bodySection, startFlag, loopCount)) {
+			return;
 		}
 
 		TES3_AnimationData_playAnimationGroupForSection(this, animationGroup, bodySection, startFlag, loopCount);
@@ -107,7 +114,7 @@ namespace TES3 {
 		if (jumpToLoopEnd) {
 			// Advance the lower section animation directly to the end of the loop.
 			auto lowerGroup = currentAnimGroups[0];
-			if (AnimationGroup::getActionClass(lowerGroup) == AnimGroupActionClass::Looping) {
+			if (lowerGroup <= AnimGroupID::Last && animationGroups[int(lowerGroup)] && AnimationGroup::getActionClass(lowerGroup) == AnimGroupActionClass::Looping) {
 				const int Action_Looping_LoopEnd = 3;
 				auto loopEndTiming = animationGroups[int(lowerGroup)]->actionTimings[Action_Looping_LoopEnd];
 
@@ -408,18 +415,11 @@ namespace TES3 {
 		// This function switches in an animation group temporarily, which is reverted to the original when it is no longer being played.
 		// The temporary switches are checked on every playGroup.
 		// It is a compromise design which is easier than patching every animation group access and comparison.
-		TemporarySwitchedGroup* existingSwitch = nullptr;
 		auto expireSwitch = temporarySwitchedGroups.end();
 
+		// De-activate any previous temporary anim group on this body section that does not match the target group id.
 		for (auto t = temporarySwitchedGroups.begin(); t != temporarySwitchedGroups.end(); ++t) {
-			// Check for matching group id. There may be different animations with the same id, but only one can be active.
-			if (t->temporary.group->groupId == target.group->groupId) {
-				// Re-use already-active matching temporary anim group.
-				t->activeSections[bodySection] = true;
-				existingSwitch = &*t;
-			}
-			else if (t->activeSections[bodySection]) {
-				// De-activate previous temporary anim group.
+			if (t->temporary.group->groupId != target.group->groupId && t->activeSections[bodySection]) {
 				t->activeSections[bodySection] = false;
 				// Retire it if no section is using it.
 				if (!(t->activeSections[0] || t->activeSections[1] || t->activeSections[2])) {
@@ -431,6 +431,18 @@ namespace TES3 {
 			// The temporary anim group can be safely retired.
 			revertSwitchedGroup(*expireSwitch);
 			temporarySwitchedGroups.erase(expireSwitch);
+		}
+
+		// Check for matching group id after any erasure, so the pointer stays valid below.
+		// There may be different animations with the same id, but only one can be active.
+		TemporarySwitchedGroup* existingSwitch = nullptr;
+		for (auto& t : temporarySwitchedGroups) {
+			if (t.temporary.group->groupId == target.group->groupId) {
+				// Re-use already-active matching temporary anim group.
+				t.activeSections[bodySection] = true;
+				existingSwitch = &t;
+				break;
+			}
 		}
 
 		if (!existingSwitch) {
@@ -515,30 +527,46 @@ namespace TES3 {
 		}
 
 		// This function is a replacement for the vanilla engine function.
+		// Trigger the event before changing any state, so that blocking leaves the animation state untouched.
+		if (!triggerPlayGroupEvent(groupId, bodySection, startFlag, loopCount)) {
+			return;
+		}
+
 		// Cancel any active temporary animation for this body section.
 		revertTemporarySwitches(bodySection);
 
-		// Trigger event and original function.
-		AnimationDataVanilla::playAnimationGroupForSection(groupId, bodySection, startFlag, loopCount);
+		TES3_AnimationData_playAnimationGroupForSection(this, groupId, bodySection, startFlag, loopCount);
 	}
 
-	void AnimationData::playNamedAnimationGroup(std::string_view name, int bodySection, int startFlag, int loopCount) {
+	bool AnimationData::playNamedAnimationGroup(std::string_view name, int bodySection, int startFlag, int loopCount) {
 		// Prevent out-of-bounds array access.
 		if (bodySection < 0 || bodySection > 2) {
-			return;
+			return false;
 		}
 
 		auto iter = namedGroups.find(KeyframeDefinition::toCanonicalName(name));
 		if (iter == namedGroups.end()) {
-			return;
+			return false;
 		}
 		auto& namedTarget = iter->second;
+
+		// Trigger the event before changing any state, so that blocking leaves the animation state untouched.
+		auto groupId = namedTarget.group->groupId;
+		if (!triggerPlayGroupEvent(groupId, bodySection, startFlag, loopCount)) {
+			return true;
+		}
+		if (groupId != namedTarget.group->groupId) {
+			// The event redirected the play to a different group id. Play it as a regular group.
+			revertTemporarySwitches(bodySection);
+			TES3_AnimationData_playAnimationGroupForSection(this, groupId, bodySection, startFlag, loopCount);
+			return true;
+		}
 
 		// Playing named animations is automatically temporary.
 		setTemporarySwitch(namedTarget, bodySection);
 
-		// Trigger event and original function.
-		AnimationDataVanilla::playAnimationGroupForSection(namedTarget.group->groupId, bodySection, startFlag, loopCount);
+		TES3_AnimationData_playAnimationGroupForSection(this, groupId, bodySection, startFlag, loopCount);
+		return true;
 	}
 
 	void AnimationData::deactivateSources() {
@@ -610,10 +638,19 @@ namespace TES3 {
 		// Do necessary updates if the source has changed.
 		int prevSource = currentAnimGroupSources[bodySection], newSource = currentAnimGroupSources[0];
 		if (newSource != prevSource) {
+			// A source may have no sequence for this section (non-biped sources only fill the lower section).
 			if (prevSource != -1) {
-				manager->deactivateSequence(customSources[prevSource].at(bodySection));
+				auto prevSeq = customSources[prevSource].at(bodySection);
+				if (prevSeq) {
+					manager->deactivateSequence(prevSeq);
+				}
 			}
-			manager->activateSequence(customSources[newSource].at(bodySection));
+			if (newSource != -1) {
+				auto newSeq = customSources[newSource].at(bodySection);
+				if (newSeq) {
+					manager->activateSequence(newSeq);
+				}
+			}
 			currentAnimGroupSources[bodySection] = newSource;
 		}
 	}
@@ -758,6 +795,9 @@ namespace TES3 {
 	void AnimationData::resetCustomAnims() {
 		deactivateSources();
 
+		// Every group is re-merged from the vanilla sources below, so no temporary switch can remain valid.
+		temporarySwitchedGroups.clear();
+
 		// Merge in vanilla animations in original priority order.
 		for (int layer = BaseAnimSourceIndex; layer >= 0; --layer) {
 			if (customAnimDefinitions[layer]) {
@@ -781,8 +821,10 @@ namespace TES3 {
 		reactivateSources();
 	}
 
-	std::reference_wrapper<decltype(AnimationData::customSources)> AnimationData::getKeyframeSources() {
-		return std::ref(customSources);
+	std::vector<AnimationData::SequenceGroup> AnimationData::getKeyframeSources() const {
+		// Returned by value: customSources reallocates when a custom animation is added, which would leave
+		// element references handed to Lua dangling.
+		return customSources;
 	}
 
 	std::reference_wrapper<decltype(AnimationData::customAnimDefinitions)> AnimationData::getAnimationDefinitions() {

@@ -6464,6 +6464,8 @@ namespace mwse::lua {
 		genCallEnforced(0x4DC9AF, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection));
 		genCallEnforced(0x4DC9BD, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection));
 		genCallEnforced(0x4DC9CB, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection));
+		genCallEnforced(0x5071B5, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection)); // Non-MCP
+		genCallEnforced(0x507213, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection)); // Non-MCP
 		genCallEnforced(0x524BC8, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection));
 		genCallEnforced(0x524BD6, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection));
 		genCallEnforced(0x524BE4, 0x470AE0, *reinterpret_cast<DWORD*>(&AnimationData_playAnimationGroupForSection));
@@ -6511,11 +6513,8 @@ namespace mwse::lua {
 		// Disable navigational turning if the IdleAnim flag is set.
 		writePatchCodeUnprotected(0x52670E, (BYTE*)&patchAIMovementFacing, patchAIMovementFacing_size);
 
-		// Extended animation system patches.
+		// Extended animation system patches. Includes the hand-to-hand and cast animation speed patch.
 		TES3::AnimationData::patch();
-
-		// Patch: Allow hand-to-hand animation speed to be changed.
-		writeByteUnprotected(0x46CAD7, 0x89);
 
 		// Event: Power Recharged
 		overrideVirtualTableEnforced(0x74AC54, offsetof(PowersHashMap::VirtualTable, deleteKeyValuePair), 0x4F1C50, reinterpret_cast<DWORD>(OnDeletePowerHashMapKVP));

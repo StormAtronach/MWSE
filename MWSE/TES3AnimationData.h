@@ -71,6 +71,8 @@ namespace TES3 {
 
 		AnimationDataVanilla* ctor();
 
+		// Fires the playGroup event and applies its overrides. Returns false if the event blocked the play.
+		bool triggerPlayGroupEvent(AnimGroupID& animationGroup, int bodySection, int& startFlag, int& loopCount);
 		void playAnimationGroupForSection(AnimGroupID animationGroup, int bodySection, int startFlag = 0, int loopCount = -1);
 		void setHeadNode(NI::Node* head);
 		bool setSourceKeyframes(KeyframeDefinition* kfData, int sourceIndex, bool isBiped);
@@ -136,7 +138,8 @@ namespace TES3 {
 		void mergeAnimGroups(AnimationGroup* animGroup, int sourceIndex);
 		void playAnimationGroup(AnimGroupID animationGroup, int startFlag = 0, int loopCount = -1);
 		void playAnimationGroupForSection(AnimGroupID groupId, int bodySection, int startFlag = 0, int loopCount = -1);
-		void playNamedAnimationGroup(std::string_view name, int bodySection, int startFlag = 0, int loopCount = -1);
+		// Returns false if no named group with that name is loaded.
+		bool playNamedAnimationGroup(std::string_view name, int bodySection, int startFlag = 0, int loopCount = -1);
 		bool setSourceKeyframes(KeyframeDefinition* kfData, int sourceIndex, bool isBiped);
 		void updateMovementDelta(float timing, NI::Point3* inout_startingPosition, bool dontUpdatePositionDelta);
 
@@ -166,7 +169,7 @@ namespace TES3 {
 		bool removeCustomAnim(std::string_view name);
 		void resetCustomAnims();
 
-		std::reference_wrapper<decltype(customSources)> getKeyframeSources();
+		std::vector<SequenceGroup> getKeyframeSources() const;
 		std::reference_wrapper<decltype(customAnimDefinitions)> getAnimationDefinitions();
 
 		static void patch();

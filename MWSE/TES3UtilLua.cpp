@@ -4873,6 +4873,13 @@ namespace mwse::lua {
 			throw std::invalid_argument("Invalid 'shield' parameter provided: must be between 0 and 149, or a name.");
 		}
 
+		// Named animations must be loaded on the actor, otherwise nothing would play while the AI is still paused below.
+		for (const auto& name : { lowerGroupName, upperGroupName, leftArmGroupName }) {
+			if (name && !animData->hasNamedGroup(name.value())) {
+				throw std::invalid_argument(std::string("Invalid animation group name provided: '") + name.value() + "' is not loaded on this reference.");
+			}
+		}
+
 		// Play anim group 0 (returns control to AI) if no groups are specified.
 		if (lowerGroup == -1 && upperGroup == -1 && leftArmGroup == -1) {
 			group = lowerGroup = upperGroup = leftArmGroup = int(TES3::AnimGroupID::Idle);
@@ -4989,19 +4996,30 @@ namespace mwse::lua {
 			return;
 		}
 
+		// Route through setTiming so the next soundgen/trigger index follows the new time.
+		const auto applyTiming = [&](int section, float t) {
+			auto groupId = animData->currentAnimGroups[section];
+			if (groupId <= TES3::AnimGroupID::Last && animData->animationGroups[int(groupId)]) {
+				animData->setTiming(groupId, section, t);
+			}
+			else {
+				animData->timings[section] = t;
+			}
+		};
+
 		sol::object timing = params["timing"];
 		if (timing.valid() && timing != sol::nil) {
 			if (timing.is<float>()) {
 				const float fTiming = timing.as<float>();
-				animData->timings[0] = fTiming;
-				animData->timings[1] = fTiming;
-				animData->timings[2] = fTiming;
+				applyTiming(0, fTiming);
+				applyTiming(1, fTiming);
+				applyTiming(2, fTiming);
 			}
 			else if (timing.is<sol::table>() && timing.as<sol::table>().size() == 3) {
 				auto timings = timing.as<sol::table>();
-				animData->timings[0] = timings[1];
-				animData->timings[1] = timings[2];
-				animData->timings[2] = timings[3];
+				applyTiming(0, timings.get<float>(1));
+				applyTiming(1, timings.get<float>(2));
+				applyTiming(2, timings.get<float>(3));
 			}
 		}
 	}

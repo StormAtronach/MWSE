@@ -46,7 +46,12 @@ namespace mwse::lua::event {
 		cEntries.clear();
 		cEntries.reserve(lEntries.size());
 		for (auto i = 0u; i < lEntries.size(); ++i) {
-			sol::table e = lEntries[i + 1];
+			// Skip entries that are not tables rather than raising from inside the keyframe loader.
+			sol::object entryObject = lEntries[i + 1];
+			if (entryObject.get_type() != sol::type::table) {
+				continue;
+			}
+			sol::table e = entryObject;
 			sol::optional<float> time = e["time"];
 			sol::optional<std::string> key = e["key"];
 			sol::optional<std::string> value = e["value"];

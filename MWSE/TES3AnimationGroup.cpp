@@ -42,6 +42,9 @@ namespace TES3 {
 			}
 		}
 
+		// Drop any cached userdata for this group.
+		clearCachedLuaObject(this);
+
 		TES3_AnimationGroup_dtor(this);
 	}
 
@@ -310,7 +313,7 @@ namespace TES3 {
 					while (valueBegin != note.end() && *valueBegin == ' ') { ++valueBegin; }
 
 					std::string noteKey{ noteBegin, (size_t)std::distance(note.begin(), splitAt) };
-					std::string noteValue{ &*valueBegin, (size_t)std::distance(valueBegin, note.end()) };
+					std::string noteValue(valueBegin, note.end());
 
 					entries.push_back({ key.time, std::move(noteKey), std::move(noteValue) });
 				}
@@ -439,29 +442,44 @@ namespace TES3 {
 
 			// Note this is a prefix match. e.g. actionText could be "Stop."
 			if (se::string::istarts_with(noteValue, actionText)) {
-				// Find if the animation group exists already. Check active anim groups first, then all groups.
-				// Activate group if not already active.
+				// Find if the animation group exists already. Activate group if not already active.
 				AnimationGroup* animGroup = nullptr;
-				auto iterMatchedGroup = std::find_if(
-					activeAnimGroups.begin(), activeAnimGroups.end(),
-					[&](AnimationGroup* g) { return g->groupId == matchedGroupId; }
-				);
-				if (iterMatchedGroup != activeAnimGroups.end()) {
-					animGroup = *iterMatchedGroup;
-				}
-				else if (isNamedAnim) {
+				if (isNamedAnim) {
+					// Named anims resolve by name only. Matching by behave-as id would attach the note to an
+					// unrelated active group that shares the id.
 					auto itt = kfData->namedGroups.find(lowercaseName);
 					if (itt != kfData->namedGroups.end()) {
 						animGroup = itt->second;
-						activeAnimGroups.emplace_back(animGroup);
+						if (std::find(activeAnimGroups.begin(), activeAnimGroups.end(), animGroup) == activeAnimGroups.end()) {
+							activeAnimGroups.emplace_back(animGroup);
+						}
 					}
 				}
 				else {
-					for (auto g = firstGroup; g; g = g->nextGroup) {
-						if (g->groupId == matchedGroupId) {
-							animGroup = g;
-							activeAnimGroups.emplace_back(animGroup);
-							break;
+					// Vanilla anims resolve by id. Check active anim groups first, then the group chain.
+					// Named groups that behave as this id are never a match.
+					const auto isChainGroup = [&](const AnimationGroup* g) {
+						for (auto c = firstGroup; c; c = c->nextGroup) {
+							if (c == g) {
+								return true;
+							}
+						}
+						return false;
+					};
+					auto iterMatchedGroup = std::find_if(
+						activeAnimGroups.begin(), activeAnimGroups.end(),
+						[&](AnimationGroup* g) { return g->groupId == matchedGroupId && isChainGroup(g); }
+					);
+					if (iterMatchedGroup != activeAnimGroups.end()) {
+						animGroup = *iterMatchedGroup;
+					}
+					else {
+						for (auto g = firstGroup; g; g = g->nextGroup) {
+							if (g->groupId == matchedGroupId) {
+								animGroup = g;
+								activeAnimGroups.emplace_back(animGroup);
+								break;
+							}
 						}
 					}
 				}
@@ -654,9 +672,20 @@ namespace TES3 {
 
 			std::swap(rootController->target, target);
 			rootController->setActive(true);
-			rootController->update(loopStartTime);
+
+			// Walk the controller to each sample time in small steps from time zero.
+			const float maxStep = 0.5f;
+			float t = 0.0f;
+			rootController->update(t);
+			const auto advanceTo = [&](float targetTime) {
+				while (t < targetTime) {
+					t = std::min(t + maxStep, targetTime);
+					rootController->update(t);
+				}
+			};
+			advanceTo(loopStartTime);
 			NI::Point3 startPoint = root.localTranslate;
-			rootController->update(loopEndTime);
+			advanceTo(loopEndTime);
 			NI::Point3 movement = root.localTranslate - startPoint;
 			rootController->setActive(false);
 
