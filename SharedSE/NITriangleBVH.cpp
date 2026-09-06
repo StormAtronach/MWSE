@@ -27,6 +27,9 @@ namespace NI {
 		for (auto i = begin + 1; i < end; ++i) {
 			bounds.merge(triangleBounds[triangleIndices[i]]);
 		}
+		const auto padding = roundingPadding(bounds);
+		bounds.minimum = bounds.minimum - padding;
+		bounds.maximum = bounds.maximum + padding;
 		nodes[nodeIndex].bounds = bounds;
 
 		const auto count = end - begin;
@@ -74,9 +77,6 @@ namespace NI {
 			box = BoundingBox(vertex0, vertex0);
 			box.merge(vertices[triangle.vertices[1]]);
 			box.merge(vertices[triangle.vertices[2]]);
-			const auto padding = roundingPadding(box);
-			box.minimum = box.minimum - padding;
-			box.maximum = box.maximum + padding;
 		}
 
 		triangleIndices.resize(triangleCount);
