@@ -573,7 +573,13 @@
     <ClInclude Include="TES3UITree.h">
       <Filter>Header Files\DataAdapters\TES3\UI</Filter>
     </ClInclude>
-    <ClInclude Include="PatchUtil.h">
+    <ClInclude Include="StaticBatching.h">
+      <Filter>Header FilesTILITY</FILTER>
+    </CLINCLUDE>
+    <CLINCLUDE INCLUDE="RENDERSKIPPROBE.H">
+      <Filter>Header FilesTILITY</FILTER>
+    </CLINCLUDE>
+    <CLINCLUDE INCLUDE="PATCHUTIL.H">
       <Filter>Header Files\Utility</Filter>
     </ClInclude>
     <ClInclude Include="TES3ActorAnimationController.h">
@@ -2486,7 +2492,13 @@
     <ClCompile Include="TES3InputController.cpp">
       <Filter>Source Files\DataAdapters\TES3</Filter>
     </ClCompile>
-    <ClCompile Include="PatchUtil.cpp">
+    <ClCompile Include="StaticBatching.cpp">
+      <Filter>Source FilesTILITY</FILTER>
+    </CLCOMPILE>
+    <CLCOMPILE INCLUDE="RENDERSKIPPROBE.CPP">
+      <Filter>Source FilesTILITY</FILTER>
+    </CLCOMPILE>
+    <CLCOMPILE INCLUDE="PATCHUTIL.CPP">
       <Filter>Source Files\Utility</Filter>
     </ClCompile>
     <ClCompile Include="TES3MobileProjectileLua.cpp">

@@ -1,5 +1,7 @@
 #include "PatchUtil.h"
 
+#include "RenderSkipProbe.h"
+
 #include "Log.h"
 #include "MemoryUtil.h"
 #include "mwOffsets.h"
@@ -3263,6 +3265,9 @@ namespace mwse::patch {
 		genCallEnforced(0x40F7ED, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
 		genCallEnforced(0x48C6C3, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
 		genCallEnforced(0x510B57, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
+
+		// Render-skip probe: NiNode::Display detour with a private hide bit. Local instrument.
+		renderskip::install();
 
 	}
 

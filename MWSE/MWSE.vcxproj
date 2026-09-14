@@ -285,6 +285,8 @@
     <ClInclude Include="NIPickLua.h" />
     <ClInclude Include="NISwitchNodeLua.h" />
     <ClInclude Include="PatchUtil.h" />
+    <ClInclude Include="RenderSkipProbe.h" />
+    <ClInclude Include="StaticBatching.h" />
     <ClInclude Include="ScriptUtilLua.h" />
     <ClInclude Include="TES3ActorLua.h" />
     <ClInclude Include="TES3Defines.h" />
@@ -738,6 +740,8 @@
     <ClCompile Include="NILinesLua.cpp" />
     <ClCompile Include="NITriShapeLua.cpp" />
     <ClCompile Include="PatchUtil.cpp" />
+    <ClCompile Include="RenderSkipProbe.cpp" />
+    <ClCompile Include="StaticBatching.cpp" />
     <ClCompile Include="RngUtil.cpp" />
     <ClCompile Include="ScriptUtil.cpp" />
     <ClCompile Include="ScriptUtilLua.cpp" />

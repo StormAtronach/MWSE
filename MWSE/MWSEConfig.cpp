@@ -25,6 +25,14 @@ namespace mwse {
 	bool Configuration::ReplaceLightSorting = true;
 	bool Configuration::CreateFullMinidumps = false;
 	UINT Configuration::BackgroundLoadPollIntervalMs = 5;
+	bool Configuration::EnableRenderSkipProbe = false;
+	UINT Configuration::RenderSkipPercent = 0;
+	UINT Configuration::RenderSkipMinTriangles = 0;
+	UINT Configuration::RenderSkipMaxTriangles = 1000000;
+	bool Configuration::EnableStaticBatching = false;
+	UINT Configuration::StaticBatchingBinSize = 2048;
+	UINT Configuration::StaticBatchingTypes = 1;
+	UINT Configuration::StaticBatchingMaxLights = 7;
 #ifdef APPVEYOR_BUILD_NUMBER
 	UINT Configuration::BuildNumber = APPVEYOR_BUILD_NUMBER;
 #else
@@ -78,6 +86,14 @@ namespace mwse {
 		DECLARE_CONFIG(ReplaceLightSorting)
 		DECLARE_CONFIG(CreateFullMinidumps)
 		DECLARE_CONFIG(BackgroundLoadPollIntervalMs)
+		DECLARE_CONFIG(EnableRenderSkipProbe)
+		DECLARE_CONFIG(RenderSkipPercent)
+		DECLARE_CONFIG(RenderSkipMinTriangles)
+		DECLARE_CONFIG(RenderSkipMaxTriangles)
+		DECLARE_CONFIG(EnableStaticBatching)
+		DECLARE_CONFIG(StaticBatchingBinSize)
+		DECLARE_CONFIG(StaticBatchingTypes)
+		DECLARE_CONFIG(StaticBatchingMaxLights)
 		DECLARE_CONFIG(BuildNumber)
 	}
 }
