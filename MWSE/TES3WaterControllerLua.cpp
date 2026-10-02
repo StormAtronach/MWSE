@@ -3,8 +3,46 @@
 #include "TES3WaterController.h"
 
 #include "LuaManager.h"
+#include "LuaUtil.h"
+
+#include "PatchWaterVolumes.h"
 
 namespace mwse::lua {
+	static sol::optional<int> addVolume(TES3::WaterController&, sol::table params) {
+		const auto min = getOptionalParamPoint3(params, "min");
+		const auto max = getOptionalParamPoint3(params, "max");
+		if (!min || !max) {
+			throw std::invalid_argument("Invalid 'min' or 'max' parameter provided.");
+		}
+
+		const auto id = patch::waterVolumes::add(min.value(), max.value());
+		if (id == 0) {
+			return {};
+		}
+		return id;
+	}
+
+	static bool removeVolume(TES3::WaterController&, int id) {
+		return patch::waterVolumes::remove(id);
+	}
+
+	static void clearVolumes(TES3::WaterController&) {
+		patch::waterVolumes::clear();
+	}
+
+	static sol::optional<float> getVolumeSurfaceAt(TES3::WaterController&, sol::stack_object position) {
+		NI::Point3 point;
+		if (!setVectorFromLua(point, position)) {
+			throw std::invalid_argument("Provided argument is not convertable to a vector3.");
+		}
+
+		const auto surface = patch::waterVolumes::getSurfaceAt(point);
+		if (!surface) {
+			return {};
+		}
+		return surface.value();
+	}
+
 	void bindTES3WaterController() {
 		// Get our lua state.
 		const auto stateHandle = LuaManager::getInstance().getThreadSafeStateHandle();
@@ -46,6 +84,11 @@ namespace mwse::lua {
 		usertypeDefinition["waterShown"] = &TES3::WaterController::waterShown;
 
 		// Basic function binding.
+		usertypeDefinition["addVolume"] = &addVolume;
+		usertypeDefinition["clearVolumes"] = &clearVolumes;
 		usertypeDefinition["createRipple"] = &TES3::WaterController::createRipple_lua;
+		usertypeDefinition["getVolumeSurfaceAt"] = &getVolumeSurfaceAt;
+		usertypeDefinition["removeVolume"] = &removeVolume;
+		usertypeDefinition["volumesSupported"] = sol::readonly_property([](TES3::WaterController&) { return patch::waterVolumes::isInstalled(); });
 	}
 }

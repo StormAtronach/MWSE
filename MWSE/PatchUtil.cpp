@@ -1,5 +1,7 @@
 #include "PatchUtil.h"
 
+#include "PatchWaterVolumes.h"
+
 #include "Log.h"
 #include "MemoryUtil.h"
 #include "mwOffsets.h"
@@ -3167,6 +3169,8 @@ namespace mwse::patch {
 		genCallEnforced(0x48C6C3, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
 		genCallEnforced(0x510B57, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
 
+		// Patch: Support boxes of water at any position.
+		waterVolumes::install();
 	}
 
 	void installPostLuaPatches() {
