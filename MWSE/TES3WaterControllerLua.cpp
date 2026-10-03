@@ -9,13 +9,20 @@
 
 namespace mwse::lua {
 	static sol::optional<int> addVolume(TES3::WaterController&, sol::table params) {
-		const auto min = getOptionalParamPoint3(params, "min");
-		const auto max = getOptionalParamPoint3(params, "max");
-		if (!min || !max) {
-			throw std::invalid_argument("Invalid 'min' or 'max' parameter provided.");
+		int id = 0;
+		const auto node = getOptionalParam<NI::AVObject*>(params, "node", nullptr);
+		if (node) {
+			id = patch::waterVolumes::addFromNode(node, getOptionalParam(params, "depth", 512.0f));
+		}
+		else {
+			const auto min = getOptionalParamPoint3(params, "min");
+			const auto max = getOptionalParamPoint3(params, "max");
+			if (!min || !max) {
+				throw std::invalid_argument("Provide either 'node', or both 'min' and 'max'.");
+			}
+			id = patch::waterVolumes::add(min.value(), max.value());
 		}
 
-		const auto id = patch::waterVolumes::add(min.value(), max.value());
 		if (id == 0) {
 			return {};
 		}

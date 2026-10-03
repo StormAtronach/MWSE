@@ -14,6 +14,10 @@
 #include "TES3WorldController.h"
 
 #include "NICamera.h"
+#include "NINode.h"
+#include "NIRTTI.h"
+#include "NITriShape.h"
+#include "NITriShapeData.h"
 
 namespace mwse::patch::waterVolumes {
 
@@ -35,8 +39,15 @@ namespace mwse::patch::waterVolumes {
 		float max[3];
 	};
 
-	static void publishVolumes() {
-		anyVolumes = !volumes.empty();
+	// The renderer is told about one volume at most: the one the camera is in.
+	static int rendererVolumeId = 0;
+
+	static void setRendererVolume(const Volume* volume) {
+		const auto id = volume ? volume->id : 0;
+		if (id == rendererVolumeId) {
+			return;
+		}
+		rendererVolumeId = id;
 
 		const auto renderer = GetModuleHandleA("d3d8.dll");
 		if (renderer == NULL) {
@@ -47,29 +58,87 @@ namespace mwse::patch::waterVolumes {
 			return;
 		}
 
-		std::vector<ExportedVolume> exported;
-		exported.reserve(volumes.size());
-		for (const auto& volume : volumes) {
-			exported.push_back({ { volume.min.x, volume.min.y, volume.min.z }, { volume.max.x, volume.max.y, volume.max.z } });
+		if (volume) {
+			const ExportedVolume exported = { { volume->min.x, volume->min.y, volume->min.z }, { volume->max.x, volume->max.y, volume->max.z } };
+			setter(&exported, 1);
 		}
-		setter(exported.data(), exported.size());
+		else {
+			setter(nullptr, 0);
+		}
+	}
+
+	static int store(Volume&& volume) {
+		if (mainThreadId == 0) {
+			mainThreadId = GetCurrentThreadId();
+		}
+		volume.id = nextVolumeId++;
+		volumes.push_back(std::move(volume));
+		anyVolumes = true;
+		return volumes.back().id;
 	}
 
 	int add(const NI::Point3& min, const NI::Point3& max) {
 		if (!installed) {
 			return 0;
 		}
-		if (mainThreadId == 0) {
-			mainThreadId = GetCurrentThreadId();
+
+		Volume volume = {};
+		volume.min = NI::Point3(std::min(min.x, max.x), std::min(min.y, max.y), std::min(min.z, max.z));
+		volume.max = NI::Point3(std::max(min.x, max.x), std::max(min.y, max.y), std::max(min.z, max.z));
+		return store(std::move(volume));
+	}
+
+	static void collectFootprint(NI::AVObject* object, Volume& volume, bool& any) {
+		if (object == nullptr || object->getAppCulled()) {
+			return;
+		}
+
+		if (object->isInstanceOfType(NI::RTTIStaticPtr::NiTriShape)) {
+			const auto shape = static_cast<NI::TriShape*>(object);
+			const auto data = shape->getModelData();
+			if (data == nullptr || data->vertex == nullptr || data->triangleList == nullptr) {
+				return;
+			}
+
+			const auto triangleCount = data->getActiveTriangleCount();
+			for (auto i = 0u; i < triangleCount; ++i) {
+				NI::Point3 corners[3];
+				for (auto c = 0u; c < 3; ++c) {
+					corners[c] = shape->worldTransform * data->vertex[data->triangleList[i].vertices[c]];
+					if (!any) {
+						volume.min = corners[c];
+						volume.max = corners[c];
+						any = true;
+					}
+					volume.min.x = std::min(volume.min.x, corners[c].x);
+					volume.min.y = std::min(volume.min.y, corners[c].y);
+					volume.max.x = std::max(volume.max.x, corners[c].x);
+					volume.max.y = std::max(volume.max.y, corners[c].y);
+					volume.max.z = std::max(volume.max.z, corners[c].z);
+				}
+				volume.footprint.push_back({ corners[0].x, corners[0].y, corners[1].x, corners[1].y, corners[2].x, corners[2].y });
+			}
+		}
+		else if (object->isInstanceOfType(NI::RTTIStaticPtr::NiNode)) {
+			for (const auto& child : static_cast<NI::Node*>(object)->children) {
+				collectFootprint(child.get(), volume, any);
+			}
+		}
+	}
+
+	int addFromNode(NI::AVObject* node, float depth) {
+		if (!installed || node == nullptr) {
+			return 0;
 		}
 
 		Volume volume = {};
-		volume.id = nextVolumeId++;
-		volume.min = NI::Point3(std::min(min.x, max.x), std::min(min.y, max.y), std::min(min.z, max.z));
-		volume.max = NI::Point3(std::max(min.x, max.x), std::max(min.y, max.y), std::max(min.z, max.z));
-		volumes.push_back(volume);
-		publishVolumes();
-		return volume.id;
+		bool any = false;
+		collectFootprint(node, volume, any);
+		if (!any) {
+			return 0;
+		}
+		volume.min.z = volume.max.z - std::max(depth, 0.0f);
+		return store(std::move(volume));
 	}
 
 	bool remove(int id) {
@@ -78,13 +147,17 @@ namespace mwse::patch::waterVolumes {
 			return false;
 		}
 		volumes.erase(itt);
-		publishVolumes();
+		anyVolumes = !volumes.empty();
+		if (id == rendererVolumeId) {
+			setRendererVolume(nullptr);
+		}
 		return true;
 	}
 
 	void clear() {
 		volumes.clear();
-		publishVolumes();
+		anyVolumes = false;
+		setRendererVolume(nullptr);
 	}
 
 	const std::vector<Volume>& getVolumes() {
@@ -95,18 +168,43 @@ namespace mwse::patch::waterVolumes {
 		return installed;
 	}
 
-	static bool findSurface(const NI::Point3* position, bool ignoreHeight, float& out_surface) {
-		bool found = false;
+	static bool footprintContains(const Volume& volume, float x, float y) {
+		if (volume.footprint.empty()) {
+			return true;
+		}
+		for (const auto& t : volume.footprint) {
+			const auto d1 = (x - t.bx) * (t.ay - t.by) - (t.ax - t.bx) * (y - t.by);
+			const auto d2 = (x - t.cx) * (t.by - t.cy) - (t.bx - t.cx) * (y - t.cy);
+			const auto d3 = (x - t.ax) * (t.cy - t.ay) - (t.cx - t.ax) * (y - t.ay);
+			const auto anyNegative = d1 < 0 || d2 < 0 || d3 < 0;
+			const auto anyPositive = d1 > 0 || d2 > 0 || d3 > 0;
+			if (!(anyNegative && anyPositive)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static const Volume* findVolume(const NI::Point3* position, bool ignoreHeight) {
+		const Volume* found = nullptr;
 		for (const auto& volume : volumes) {
 			if (position->x < volume.min.x || position->x > volume.max.x) continue;
 			if (position->y < volume.min.y || position->y > volume.max.y) continue;
 			if (!ignoreHeight && position->z < volume.min.z) continue;
-			if (!found || volume.max.z > out_surface) {
-				out_surface = volume.max.z;
-				found = true;
-			}
+			if (found != nullptr && volume.max.z <= found->max.z) continue;
+			if (!footprintContains(volume, position->x, position->y)) continue;
+			found = &volume;
 		}
 		return found;
+	}
+
+	static bool findSurface(const NI::Point3* position, bool ignoreHeight, float& out_surface) {
+		const auto volume = findVolume(position, ignoreHeight);
+		if (volume == nullptr) {
+			return false;
+		}
+		out_surface = volume->max.z;
+		return true;
 	}
 
 	std::optional<float> getSurfaceAt(const NI::Point3& position) {
@@ -264,12 +362,13 @@ namespace mwse::patch::waterVolumes {
 	// The underwater state is decided against the height of the water plane node, so a camera
 	// inside a volume is reported relative to that node.
 	static void __fastcall updateUnderwaterState(void* weatherController, DWORD _UNUSED_, float cameraZ, float waterLevel) {
-		float surface = 0.0f;
-		if (anyVolumes && subject.position != nullptr && findSurface(subject.position, false, surface)) {
+		const auto volume = (anyVolumes && subject.position != nullptr) ? findVolume(subject.position, false) : nullptr;
+		setRendererVolume(volume);
+		if (volume != nullptr) {
 			const auto dataHandler = TES3::DataHandler::get();
 			const auto plane = dataHandler && dataHandler->waterController ? dataHandler->waterController->waterPlane : nullptr;
 			if (plane != nullptr) {
-				cameraZ = plane->worldTransform.translation.z + (subject.position->z < surface ? -1.0f : 1.0f);
+				cameraZ = plane->worldTransform.translation.z + (subject.position->z < volume->max.z ? -1.0f : 1.0f);
 			}
 		}
 		TES3_WeatherController_updateUnderwaterState(weatherController, cameraZ, waterLevel);
