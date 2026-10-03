@@ -39,15 +39,18 @@ namespace mwse::patch::waterVolumes {
 		float max[3];
 	};
 
-	// The renderer is told about one volume at most: the one the camera is in.
+	// The renderer is told about one volume at most: the one the camera is in, as a box whose
+	// top is the surface at the camera.
 	static int rendererVolumeId = 0;
+	static float rendererSurface = 0.0f;
 
-	static void setRendererVolume(const Volume* volume) {
+	static void setRendererVolume(const Volume* volume, float surface) {
 		const auto id = volume ? volume->id : 0;
-		if (id == rendererVolumeId) {
+		if (id == rendererVolumeId && (id == 0 || std::abs(surface - rendererSurface) < 0.5f)) {
 			return;
 		}
 		rendererVolumeId = id;
+		rendererSurface = surface;
 
 		const auto renderer = GetModuleHandleA("d3d8.dll");
 		if (renderer == NULL) {
@@ -59,7 +62,8 @@ namespace mwse::patch::waterVolumes {
 		}
 
 		if (volume) {
-			const ExportedVolume exported = { { volume->min.x, volume->min.y, volume->min.z }, { volume->max.x, volume->max.y, volume->max.z } };
+			const auto floor = volume->footprint.empty() ? volume->min.z : surface - volume->depth;
+			const ExportedVolume exported = { { volume->min.x, volume->min.y, floor }, { volume->max.x, volume->max.y, surface } };
 			setter(&exported, 1);
 		}
 		else {
@@ -85,10 +89,11 @@ namespace mwse::patch::waterVolumes {
 		Volume volume = {};
 		volume.min = NI::Point3(std::min(min.x, max.x), std::min(min.y, max.y), std::min(min.z, max.z));
 		volume.max = NI::Point3(std::max(min.x, max.x), std::max(min.y, max.y), std::max(min.z, max.z));
+		volume.depth = volume.max.z - volume.min.z;
 		return store(std::move(volume));
 	}
 
-	static void collectFootprint(NI::AVObject* object, Volume& volume, bool& any) {
+	static void collectFootprint(NI::AVObject* object, Volume& volume) {
 		if (object == nullptr || object->getAppCulled()) {
 			return;
 		}
@@ -102,26 +107,51 @@ namespace mwse::patch::waterVolumes {
 
 			const auto triangleCount = data->getActiveTriangleCount();
 			for (auto i = 0u; i < triangleCount; ++i) {
-				NI::Point3 corners[3];
-				for (auto c = 0u; c < 3; ++c) {
-					corners[c] = shape->worldTransform * data->vertex[data->triangleList[i].vertices[c]];
-					if (!any) {
-						volume.min = corners[c];
-						volume.max = corners[c];
-						any = true;
-					}
-					volume.min.x = std::min(volume.min.x, corners[c].x);
-					volume.min.y = std::min(volume.min.y, corners[c].y);
-					volume.max.x = std::max(volume.max.x, corners[c].x);
-					volume.max.y = std::max(volume.max.y, corners[c].y);
-					volume.max.z = std::max(volume.max.z, corners[c].z);
+				FootprintTriangle triangle = {};
+				const auto& indices = data->triangleList[i].vertices;
+				triangle.a = shape->worldTransform * data->vertex[indices[0]];
+				triangle.b = shape->worldTransform * data->vertex[indices[1]];
+				triangle.c = shape->worldTransform * data->vertex[indices[2]];
+
+				// A triangle seen edge-on from above covers no area.
+				triangle.denominator = (triangle.b.y - triangle.c.y) * (triangle.a.x - triangle.c.x) + (triangle.c.x - triangle.b.x) * (triangle.a.y - triangle.c.y);
+				if (std::abs(triangle.denominator) < 1e-6f) {
+					continue;
 				}
-				volume.footprint.push_back({ corners[0].x, corners[0].y, corners[1].x, corners[1].y, corners[2].x, corners[2].y });
+				volume.footprint.push_back(triangle);
 			}
 		}
 		else if (object->isInstanceOfType(NI::RTTIStaticPtr::NiNode)) {
 			for (const auto& child : static_cast<NI::Node*>(object)->children) {
-				collectFootprint(child.get(), volume, any);
+				collectFootprint(child.get(), volume);
+			}
+		}
+	}
+
+	// Spreads the triangles over a grid so that a lookup tests only the few near the point.
+	static void buildGrid(Volume& volume) {
+		const auto count = volume.footprint.size();
+		volume.gridSize = std::clamp(static_cast<unsigned int>(std::ceil(std::sqrt(static_cast<float>(count)))), 1u, 64u);
+		volume.grid.assign(volume.gridSize * volume.gridSize, {});
+
+		const auto width = std::max(volume.max.x - volume.min.x, 1.0f);
+		const auto height = std::max(volume.max.y - volume.min.y, 1.0f);
+		volume.gridScaleX = volume.gridSize / width;
+		volume.gridScaleY = volume.gridSize / height;
+
+		const auto cellOf = [&](float value, float origin, float scale) {
+			return std::clamp(static_cast<int>((value - origin) * scale), 0, static_cast<int>(volume.gridSize) - 1);
+		};
+		for (auto i = 0u; i < count; ++i) {
+			const auto& t = volume.footprint[i];
+			const auto x0 = cellOf(std::min({ t.a.x, t.b.x, t.c.x }), volume.min.x, volume.gridScaleX);
+			const auto x1 = cellOf(std::max({ t.a.x, t.b.x, t.c.x }), volume.min.x, volume.gridScaleX);
+			const auto y0 = cellOf(std::min({ t.a.y, t.b.y, t.c.y }), volume.min.y, volume.gridScaleY);
+			const auto y1 = cellOf(std::max({ t.a.y, t.b.y, t.c.y }), volume.min.y, volume.gridScaleY);
+			for (auto y = y0; y <= y1; ++y) {
+				for (auto x = x0; x <= x1; ++x) {
+					volume.grid[y * volume.gridSize + x].push_back(i);
+				}
 			}
 		}
 	}
@@ -132,12 +162,28 @@ namespace mwse::patch::waterVolumes {
 		}
 
 		Volume volume = {};
-		bool any = false;
-		collectFootprint(node, volume, any);
-		if (!any) {
+		collectFootprint(node, volume);
+		if (volume.footprint.empty()) {
 			return 0;
 		}
-		volume.min.z = volume.max.z - std::max(depth, 0.0f);
+
+		volume.min = volume.footprint[0].a;
+		volume.max = volume.footprint[0].a;
+		for (const auto& t : volume.footprint) {
+			for (const auto& corner : { t.a, t.b, t.c }) {
+				volume.min.x = std::min(volume.min.x, corner.x);
+				volume.min.y = std::min(volume.min.y, corner.y);
+				volume.min.z = std::min(volume.min.z, corner.z);
+				volume.max.x = std::max(volume.max.x, corner.x);
+				volume.max.y = std::max(volume.max.y, corner.y);
+				volume.max.z = std::max(volume.max.z, corner.z);
+			}
+		}
+		volume.depth = std::max(depth, 0.0f);
+		// The lowest point any part of the volume reaches.
+		volume.min.z -= volume.depth;
+
+		buildGrid(volume);
 		return store(std::move(volume));
 	}
 
@@ -149,7 +195,7 @@ namespace mwse::patch::waterVolumes {
 		volumes.erase(itt);
 		anyVolumes = !volumes.empty();
 		if (id == rendererVolumeId) {
-			setRendererVolume(nullptr);
+			setRendererVolume(nullptr, 0.0f);
 		}
 		return true;
 	}
@@ -157,7 +203,7 @@ namespace mwse::patch::waterVolumes {
 	void clear() {
 		volumes.clear();
 		anyVolumes = false;
-		setRendererVolume(nullptr);
+		setRendererVolume(nullptr, 0.0f);
 	}
 
 	const std::vector<Volume>& getVolumes() {
@@ -168,43 +214,55 @@ namespace mwse::patch::waterVolumes {
 		return installed;
 	}
 
-	static bool footprintContains(const Volume& volume, float x, float y) {
+	// The height of the volume's surface above or below a point, if the point is within the footprint.
+	static bool surfaceOver(const Volume& volume, float x, float y, float& out_surface) {
 		if (volume.footprint.empty()) {
+			out_surface = volume.max.z;
 			return true;
 		}
-		for (const auto& t : volume.footprint) {
-			const auto d1 = (x - t.bx) * (t.ay - t.by) - (t.ax - t.bx) * (y - t.by);
-			const auto d2 = (x - t.cx) * (t.by - t.cy) - (t.bx - t.cx) * (y - t.cy);
-			const auto d3 = (x - t.ax) * (t.cy - t.ay) - (t.cx - t.ax) * (y - t.ay);
-			const auto anyNegative = d1 < 0 || d2 < 0 || d3 < 0;
-			const auto anyPositive = d1 > 0 || d2 > 0 || d3 > 0;
-			if (!(anyNegative && anyPositive)) {
-				return true;
+
+		const auto cellX = std::clamp(static_cast<int>((x - volume.min.x) * volume.gridScaleX), 0, static_cast<int>(volume.gridSize) - 1);
+		const auto cellY = std::clamp(static_cast<int>((y - volume.min.y) * volume.gridScaleY), 0, static_cast<int>(volume.gridSize) - 1);
+
+		constexpr auto EDGE_TOLERANCE = -1e-4f;
+		bool found = false;
+		for (const auto index : volume.grid[cellY * volume.gridSize + cellX]) {
+			const auto& t = volume.footprint[index];
+			const auto w1 = ((t.b.y - t.c.y) * (x - t.c.x) + (t.c.x - t.b.x) * (y - t.c.y)) / t.denominator;
+			const auto w2 = ((t.c.y - t.a.y) * (x - t.c.x) + (t.a.x - t.c.x) * (y - t.c.y)) / t.denominator;
+			const auto w3 = 1.0f - w1 - w2;
+			if (w1 < EDGE_TOLERANCE || w2 < EDGE_TOLERANCE || w3 < EDGE_TOLERANCE) {
+				continue;
+			}
+			const auto z = w1 * t.a.z + w2 * t.b.z + w3 * t.c.z;
+			if (!found || z > out_surface) {
+				out_surface = z;
+				found = true;
 			}
 		}
-		return false;
+		return found;
 	}
 
-	static const Volume* findVolume(const NI::Point3* position, bool ignoreHeight) {
+	static const Volume* findVolume(const NI::Point3* position, bool ignoreHeight, float& out_surface) {
 		const Volume* found = nullptr;
 		for (const auto& volume : volumes) {
 			if (position->x < volume.min.x || position->x > volume.max.x) continue;
 			if (position->y < volume.min.y || position->y > volume.max.y) continue;
 			if (!ignoreHeight && position->z < volume.min.z) continue;
-			if (found != nullptr && volume.max.z <= found->max.z) continue;
-			if (!footprintContains(volume, position->x, position->y)) continue;
+
+			float surface = 0.0f;
+			if (!surfaceOver(volume, position->x, position->y, surface)) continue;
+			if (!ignoreHeight && !volume.footprint.empty() && position->z < surface - volume.depth) continue;
+			if (found != nullptr && surface <= out_surface) continue;
+
 			found = &volume;
+			out_surface = surface;
 		}
 		return found;
 	}
 
 	static bool findSurface(const NI::Point3* position, bool ignoreHeight, float& out_surface) {
-		const auto volume = findVolume(position, ignoreHeight);
-		if (volume == nullptr) {
-			return false;
-		}
-		out_surface = volume->max.z;
-		return true;
+		return findVolume(position, ignoreHeight, out_surface) != nullptr;
 	}
 
 	std::optional<float> getSurfaceAt(const NI::Point3& position) {
@@ -362,13 +420,14 @@ namespace mwse::patch::waterVolumes {
 	// The underwater state is decided against the height of the water plane node, so a camera
 	// inside a volume is reported relative to that node.
 	static void __fastcall updateUnderwaterState(void* weatherController, DWORD _UNUSED_, float cameraZ, float waterLevel) {
-		const auto volume = (anyVolumes && subject.position != nullptr) ? findVolume(subject.position, false) : nullptr;
-		setRendererVolume(volume);
+		float surface = 0.0f;
+		const auto volume = (anyVolumes && subject.position != nullptr) ? findVolume(subject.position, false, surface) : nullptr;
+		setRendererVolume(volume, surface);
 		if (volume != nullptr) {
 			const auto dataHandler = TES3::DataHandler::get();
 			const auto plane = dataHandler && dataHandler->waterController ? dataHandler->waterController->waterPlane : nullptr;
 			if (plane != nullptr) {
-				cameraZ = plane->worldTransform.translation.z + (subject.position->z < volume->max.z ? -1.0f : 1.0f);
+				cameraZ = plane->worldTransform.translation.z + (subject.position->z < surface ? -1.0f : 1.0f);
 			}
 		}
 		TES3_WeatherController_updateUnderwaterState(weatherController, cameraZ, waterLevel);

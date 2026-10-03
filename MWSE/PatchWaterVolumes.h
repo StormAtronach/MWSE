@@ -5,17 +5,26 @@
 
 namespace mwse::patch::waterVolumes {
 	struct FootprintTriangle {
-		float ax, ay;
-		float bx, by;
-		float cx, cy;
+		NI::Point3 a;
+		NI::Point3 b;
+		NI::Point3 c;
+		float denominator;
 	};
 
 	struct Volume {
 		int id;
+		// Bounds. For a box, max.z is the surface and min.z the floor.
 		NI::Point3 min;
 		NI::Point3 max;
-		// Empty for a box. Otherwise the volume covers only the area under these triangles.
+		float depth;
+		// Empty for a box. Otherwise the surface is these triangles, in world space, and the
+		// volume reaches depth below them.
 		std::vector<FootprintTriangle> footprint;
+		// Triangle indices per grid cell over the bounds.
+		std::vector<std::vector<unsigned int>> grid;
+		unsigned int gridSize;
+		float gridScaleX;
+		float gridScaleY;
 	};
 
 	// Installs the hooks. Returns false and changes nothing if the executable does not match.
@@ -26,7 +35,8 @@ namespace mwse::patch::waterVolumes {
 	int add(const NI::Point3& min, const NI::Point3& max);
 
 	// Adds the water under the triangles of a scene graph branch, using their current world positions.
-	// The surface is at the highest vertex and the floor is depth below it. Returns the volume id, or 0 on failure.
+	// The triangles are the surface, which may slope, and the volume reaches depth below them.
+	// Returns the volume id, or 0 on failure.
 	int addFromNode(NI::AVObject* node, float depth);
 
 	bool remove(int id);
