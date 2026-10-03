@@ -518,6 +518,23 @@ namespace mwse::patch {
 	}
 
 	//
+	// Patch: Add the MP3 decoder DMO to music filter graphs before rendering.
+	//
+
+	static DWORD PatchMusicRenderFile_target = reinterpret_cast<DWORD>(&TES3::AudioController::renderMusicFile);
+
+	__declspec(naked) void PatchMusicRenderFile() {
+		__asm {
+			// Reorder the stack into a stdcall frame: return, graph, file, playlist.
+			pop ecx
+			push edx
+			push eax
+			push ecx
+			jmp dword ptr [PatchMusicRenderFile_target]
+		}
+	}
+
+	//
 	// Patch: Fix crash when saving menu position if the derived key name is too long.
 	//
 
@@ -2337,6 +2354,14 @@ namespace mwse::patch {
 		// Patch: Allow Morrowind.ini [Application] values to override registry-backed application settings.
 		auto Game_readSettings = &TES3::Game::readSettings;
 		overrideVirtualTableEnforced(0x74665C, offsetof(TES3::Game_vTable, ReadSettings), 0x4F54F0, *reinterpret_cast<DWORD*>(&Game_readSettings));
+
+		// Patch: Add the MP3 decoder DMO to music filter graphs before rendering.
+		{
+			constexpr BYTE expected[] = { 0x52, 0x50, 0xFF, 0x51, 0x34 }; // push edx; push eax; call [ecx+34h]
+			if (memcmp(reinterpret_cast<const void*>(0x4033D2), expected, sizeof(expected)) == 0) {
+				genCallUnprotected(0x4033D2, reinterpret_cast<DWORD>(PatchMusicRenderFile));
+			}
+		}
 
 		// Patch: Enable/Disable.
 		genCallUnprotected(0x508FEB, reinterpret_cast<DWORD>(PatchScriptOpEnable), 0x9);

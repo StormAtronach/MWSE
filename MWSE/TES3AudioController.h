@@ -148,6 +148,8 @@ namespace TES3 {
 		void setMusicPosition(double position);
 
 		double getMusicFileDuration(std::string_view path);
+		static void addMP3DecoderToMusicGraph(IGraphBuilder* graph);
+		static HRESULT __stdcall renderMusicFile(IGraphBuilder* graph, LPCWSTR file, LPCWSTR playList);
 
 		void changeMusicTrack_lua(const char* filename, sol::optional<int> crossfade, sol::optional<float> volume);
 

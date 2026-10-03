@@ -369,6 +369,32 @@ namespace TES3 {
 		positioning->Release();
 	}
 
+	constexpr GUID CLSID_DMOWrapperFilter_ = { 0x94297043, 0xBD82, 0x4DFD, { 0xB0, 0xDE, 0x81, 0x77, 0x73, 0x9C, 0x6D, 0x20 } };
+	constexpr GUID IID_IDMOWrapperFilter_ = { 0x52D6F586, 0x9F0F, 0x4824, { 0x8F, 0xC8, 0xE3, 0x2C, 0xA0, 0x49, 0x30, 0xC2 } };
+	constexpr GUID CLSID_MP3DecoderDMO = { 0xBBEEA841, 0x0A63, 0x4F52, { 0xA7, 0xAB, 0xA9, 0xB3, 0xA8, 0x4E, 0xD3, 0x8A } };
+	constexpr GUID DMOCATEGORY_AUDIO_DECODER_ = { 0x57F2DB8B, 0xE6BB, 0x4513, { 0x9D, 0x43, 0xDC, 0xD2, 0xA6, 0x59, 0x31, 0x25 } };
+
+	void AudioController::addMP3DecoderToMusicGraph(IGraphBuilder* graph) {
+		IBaseFilter* filter = nullptr;
+		if (FAILED(CoCreateInstance(CLSID_DMOWrapperFilter_, nullptr, CLSCTX_INPROC_SERVER, IID_IBaseFilter, (LPVOID*)&filter))) {
+			return;
+		}
+
+		IDMOWrapperFilter* wrapper = nullptr;
+		if (SUCCEEDED(filter->QueryInterface(IID_IDMOWrapperFilter_, (LPVOID*)&wrapper))) {
+			if (SUCCEEDED(wrapper->Init(CLSID_MP3DecoderDMO, DMOCATEGORY_AUDIO_DECODER_))) {
+				graph->AddFilter(filter, L"MP3 Decoder DMO");
+			}
+			wrapper->Release();
+		}
+		filter->Release();
+	}
+
+	HRESULT __stdcall AudioController::renderMusicFile(IGraphBuilder* graph, LPCWSTR file, LPCWSTR playList) {
+		addMP3DecoderToMusicGraph(graph);
+		return graph->RenderFile(file, playList);
+	}
+
 	double AudioController::getMusicFileDuration(std::string_view path) {
 		if (!std::filesystem::exists(path)) {
 			throw std::invalid_argument("No music file exists at path.");
@@ -383,7 +409,7 @@ namespace TES3 {
 
 		wchar_t buffer[MAX_PATH] = {};
 		MultiByteToWideChar(0, 0, path.data(), -1, buffer, MAX_PATH);
-		if (graph->RenderFile(buffer, 0) < 0) {
+		if (renderMusicFile(graph, buffer, nullptr) < 0) {
 			graph->Release();
 			throw std::runtime_error("Could not play file.");
 		}
