@@ -622,7 +622,16 @@ namespace TES3 {
 	}
 
 	const auto TES3_NonDynamicData_deleteObject = reinterpret_cast<void(__thiscall*)(NonDynamicData*, BaseObject*)>(0x4B8B20);
+	const auto TES3_ObjectMapContainer_remove = reinterpret_cast<int(__thiscall*)(ObjectMapContainer<BaseObject>*, const char*)>(0x481E10);
 	void NonDynamicData::deleteObject(BaseObject* object) {
+		if (object && object->objectType == ObjectType::Spell) {
+			auto spell = static_cast<Spell*>(object);
+			TES3_ObjectMapContainer_remove(allObjectsById, spell->getObjectID());
+			spellsList->erase_value(spell);
+			spell->owningCollection.asSpellList = nullptr;
+			return;
+		}
+
 		TES3_NonDynamicData_deleteObject(this, object);
 	}
 
