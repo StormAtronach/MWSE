@@ -44,7 +44,7 @@ namespace mwse::patch::waterVolumes {
 	static int rendererVolumeId = 0;
 	static float rendererSurface = 0.0f;
 
-	static void setRendererVolume(const Volume* volume, float surface) {
+	static void setRendererVolume(const Volume* volume, float surface, float floor) {
 		const auto id = volume ? volume->id : 0;
 		if (id == rendererVolumeId && (id == 0 || std::abs(surface - rendererSurface) < 0.5f)) {
 			return;
@@ -62,7 +62,6 @@ namespace mwse::patch::waterVolumes {
 		}
 
 		if (volume) {
-			const auto floor = volume->footprint.empty() ? volume->min.z : surface - volume->depth;
 			const ExportedVolume exported = { { volume->min.x, volume->min.y, floor }, { volume->max.x, volume->max.y, surface } };
 			setter(&exported, 1);
 		}
@@ -195,7 +194,7 @@ namespace mwse::patch::waterVolumes {
 		volumes.erase(itt);
 		anyVolumes = !volumes.empty();
 		if (id == rendererVolumeId) {
-			setRendererVolume(nullptr, 0.0f);
+			setRendererVolume(nullptr, 0.0f, 0.0f);
 		}
 		return true;
 	}
@@ -203,7 +202,7 @@ namespace mwse::patch::waterVolumes {
 	void clear() {
 		volumes.clear();
 		anyVolumes = false;
-		setRendererVolume(nullptr, 0.0f);
+		setRendererVolume(nullptr, 0.0f, 0.0f);
 	}
 
 	const std::vector<Volume>& getVolumes() {
@@ -214,18 +213,30 @@ namespace mwse::patch::waterVolumes {
 		return installed;
 	}
 
-	// The height of the volume's surface above or below a point, if the point is within the footprint.
-	static bool surfaceOver(const Volume& volume, float x, float y, float& out_surface) {
+	// Heights closer together than this are one layer of the surface. Meshes often carry the
+	// surface twice, a little apart, for two layers of texture.
+	constexpr auto LAYER_TOLERANCE = 8.0f;
+
+	// The surface and the floor of the volume's water at a position, if there is any.
+	// Where one layer of triangles lies over the position, the water reaches depth below it.
+	// Where several do, the lowest is the floor, and the water under each of the others reaches
+	// down to the layer below it. A position above the water gets the surface under it.
+	static bool waterAt(const Volume& volume, const NI::Point3* position, bool ignoreHeight, float& out_surface, float& out_floor) {
 		if (volume.footprint.empty()) {
 			out_surface = volume.max.z;
+			out_floor = volume.min.z;
 			return true;
 		}
 
+		const auto x = position->x;
+		const auto y = position->y;
 		const auto cellX = std::clamp(static_cast<int>((x - volume.min.x) * volume.gridScaleX), 0, static_cast<int>(volume.gridSize) - 1);
 		const auto cellY = std::clamp(static_cast<int>((y - volume.min.y) * volume.gridScaleY), 0, static_cast<int>(volume.gridSize) - 1);
 
 		constexpr auto EDGE_TOLERANCE = -1e-4f;
-		bool found = false;
+		constexpr auto MAX_HEIGHTS = 32u;
+		float heights[MAX_HEIGHTS];
+		auto count = 0u;
 		for (const auto index : volume.grid[cellY * volume.gridSize + cellX]) {
 			const auto& t = volume.footprint[index];
 			const auto w1 = ((t.b.y - t.c.y) * (x - t.c.x) + (t.c.x - t.b.x) * (y - t.c.y)) / t.denominator;
@@ -234,35 +245,81 @@ namespace mwse::patch::waterVolumes {
 			if (w1 < EDGE_TOLERANCE || w2 < EDGE_TOLERANCE || w3 < EDGE_TOLERANCE) {
 				continue;
 			}
-			const auto z = w1 * t.a.z + w2 * t.b.z + w3 * t.c.z;
-			if (!found || z > out_surface) {
-				out_surface = z;
-				found = true;
+			heights[count++] = w1 * t.a.z + w2 * t.b.z + w3 * t.c.z;
+			if (count == MAX_HEIGHTS) {
+				break;
 			}
 		}
-		return found;
+		if (count == 0) {
+			return false;
+		}
+
+		const auto lowest = *std::min_element(heights, heights + count);
+		const auto highest = *std::max_element(heights, heights + count);
+		if (highest - lowest <= LAYER_TOLERANCE) {
+			out_surface = highest;
+			out_floor = highest - volume.depth;
+			return ignoreHeight || position->z >= out_floor;
+		}
+
+		// The lowest height at or above the position belongs to the layer whose water it is in.
+		auto above = highest;
+		auto anyAbove = false;
+		for (auto i = 0u; i < count; ++i) {
+			if (heights[i] >= position->z && heights[i] <= above) {
+				above = heights[i];
+				anyAbove = true;
+			}
+		}
+		if (ignoreHeight || !anyAbove) {
+			out_surface = highest;
+			out_floor = lowest;
+			return true;
+		}
+
+		// The top of that layer is the surface; the top of the layer under it is the floor.
+		auto surface = above;
+		auto floor = 0.0f;
+		auto anyFloor = false;
+		for (auto i = 0u; i < count; ++i) {
+			const auto z = heights[i];
+			if (z > surface && z <= above + LAYER_TOLERANCE) {
+				surface = z;
+			}
+			if (z < above - LAYER_TOLERANCE && (!anyFloor || z > floor)) {
+				floor = z;
+				anyFloor = true;
+			}
+		}
+		if (!anyFloor) {
+			return false;
+		}
+		out_surface = surface;
+		out_floor = floor;
+		return true;
 	}
 
-	static const Volume* findVolume(const NI::Point3* position, bool ignoreHeight, float& out_surface) {
+	static const Volume* findVolume(const NI::Point3* position, bool ignoreHeight, float& out_surface, float& out_floor) {
 		const Volume* found = nullptr;
 		for (const auto& volume : volumes) {
 			if (position->x < volume.min.x || position->x > volume.max.x) continue;
 			if (position->y < volume.min.y || position->y > volume.max.y) continue;
 			if (!ignoreHeight && position->z < volume.min.z) continue;
 
-			float surface = 0.0f;
-			if (!surfaceOver(volume, position->x, position->y, surface)) continue;
-			if (!ignoreHeight && !volume.footprint.empty() && position->z < surface - volume.depth) continue;
+			float surface = 0.0f, floor = 0.0f;
+			if (!waterAt(volume, position, ignoreHeight, surface, floor)) continue;
 			if (found != nullptr && surface <= out_surface) continue;
 
 			found = &volume;
 			out_surface = surface;
+			out_floor = floor;
 		}
 		return found;
 	}
 
 	static bool findSurface(const NI::Point3* position, bool ignoreHeight, float& out_surface) {
-		return findVolume(position, ignoreHeight, out_surface) != nullptr;
+		float floor = 0.0f;
+		return findVolume(position, ignoreHeight, out_surface, floor) != nullptr;
 	}
 
 	std::optional<float> getSurfaceAt(const NI::Point3& position) {
@@ -420,9 +477,9 @@ namespace mwse::patch::waterVolumes {
 	// The underwater state is decided against the height of the water plane node, so a camera
 	// inside a volume is reported relative to that node.
 	static void __fastcall updateUnderwaterState(void* weatherController, DWORD _UNUSED_, float cameraZ, float waterLevel) {
-		float surface = 0.0f;
-		const auto volume = (anyVolumes && subject.position != nullptr) ? findVolume(subject.position, false, surface) : nullptr;
-		setRendererVolume(volume, surface);
+		float surface = 0.0f, floor = 0.0f;
+		const auto volume = (anyVolumes && subject.position != nullptr) ? findVolume(subject.position, false, surface, floor) : nullptr;
+		setRendererVolume(volume, surface, floor);
 		if (volume != nullptr) {
 			const auto dataHandler = TES3::DataHandler::get();
 			const auto plane = dataHandler && dataHandler->waterController ? dataHandler->waterController->waterPlane : nullptr;

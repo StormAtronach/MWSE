@@ -17,8 +17,9 @@ namespace mwse::patch::waterVolumes {
 		NI::Point3 min;
 		NI::Point3 max;
 		float depth;
-		// Empty for a box. Otherwise the surface is these triangles, in world space, and the
-		// volume reaches depth below them.
+		// Empty for a box. Otherwise the surface is these triangles, in world space. Where they lie
+		// in one layer over a point the volume reaches depth below them; where they lie in several,
+		// the lowest is the floor.
 		std::vector<FootprintTriangle> footprint;
 		// Triangle indices per grid cell over the bounds.
 		std::vector<std::vector<unsigned int>> grid;
@@ -36,6 +37,8 @@ namespace mwse::patch::waterVolumes {
 
 	// Adds the water under the triangles of a scene graph branch, using their current world positions.
 	// The triangles are the surface, which may slope, and the volume reaches depth below them.
+	// Where triangles lie over one another, the lowest is the floor instead, and the water under
+	// each of the others reaches down to the one below it.
 	// Returns the volume id, or 0 on failure.
 	int addFromNode(NI::AVObject* node, float depth);
 
