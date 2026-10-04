@@ -17,6 +17,8 @@ namespace mwse::patch::waterVolumes {
 		NI::Point3 min;
 		NI::Point3 max;
 		float depth;
+		// The scene graph branch the triangles came from. Compared, never followed.
+		const NI::AVObject* node;
 		// Empty for a box. Otherwise the surface is these triangles, in world space. Where they lie
 		// in one layer over a point the volume reaches depth below them; where they lie in several,
 		// the lowest is the floor.

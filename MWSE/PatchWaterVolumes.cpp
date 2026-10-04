@@ -179,6 +179,7 @@ namespace mwse::patch::waterVolumes {
 			}
 		}
 		volume.depth = std::max(depth, 0.0f);
+		volume.node = node;
 		// The lowest point any part of the volume reaches.
 		volume.min.z -= volume.depth;
 
@@ -472,6 +473,20 @@ namespace mwse::patch::waterVolumes {
 		return adjustLevel(base);
 	}
 
+	const auto TES3_lineOfSightRayVsReferenceNode = reinterpret_cast<bool(__cdecl*)(NI::Node*, const NI::Point3*, const NI::Point3*, float)>(0x53AF90);
+
+	// Line of sight passes through the surface mesh of a water volume.
+	static bool __cdecl lineOfSightRayVsReferenceNode(NI::Node* node, const NI::Point3* origin, const NI::Point3* direction, float maxDistance) {
+		if (anyVolumes && GetCurrentThreadId() == mainThreadId) {
+			for (const auto& volume : volumes) {
+				if (volume.node == node) {
+					return false;
+				}
+			}
+		}
+		return TES3_lineOfSightRayVsReferenceNode(node, origin, direction, maxDistance);
+	}
+
 	const auto TES3_WeatherController_updateUnderwaterState = reinterpret_cast<void(__thiscall*)(void*, float, float)>(0x440AF0);
 
 	// The underwater state is decided against the height of the water plane node, so a camera
@@ -636,6 +651,10 @@ namespace mwse::patch::waterVolumes {
 				ok = false;
 			}
 		}
+		if (!isCallTo(0x53B1DD, 0x53AF90)) {
+			log::getLog() << "[MWSE] Water volumes: unexpected code at call site 0x53b1dd" << std::endl;
+			ok = false;
+		}
 		for (const auto site : interiorCellLoadSites) {
 			if (memcmp(reinterpret_cast<const void*>(site), interiorCellLoadBytes, sizeof(interiorCellLoadBytes)) != 0) {
 				log::getLog() << "[MWSE] Water volumes: unexpected code at load site 0x" << std::hex << site << std::dec << std::endl;
@@ -720,6 +739,7 @@ namespace mwse::patch::waterVolumes {
 		for (const auto site : underwaterStateCallSites) {
 			se::memory::genCallEnforced(site, 0x440AF0, reinterpret_cast<DWORD>(&updateUnderwaterState));
 		}
+		se::memory::genCallEnforced(0x53B1DD, 0x53AF90, reinterpret_cast<DWORD>(&lineOfSightRayVsReferenceNode));
 		for (const auto site : interiorCellLoadSites) {
 			se::memory::genCallUnprotected(site, reinterpret_cast<DWORD>(&getInteriorCellOrProxy), sizeof(interiorCellLoadBytes));
 		}
