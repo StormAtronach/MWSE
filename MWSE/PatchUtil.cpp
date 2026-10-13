@@ -1626,6 +1626,54 @@ namespace mwse::patch {
 	}
 
 	//
+	// Patch: Write the texture report of the DataHandler destructor with one file open.
+	//
+
+	static std::string exitTextureReport;
+
+	static void __cdecl CollectExitTextureReportLine(const char* format, const char* textureName, int count) {
+		char line[1024];
+		const auto length = snprintf(line, sizeof(line), format, textureName, count);
+		if (length > 0) {
+			exitTextureReport.append(line, std::min<size_t>(length, sizeof(line) - 1));
+		}
+	}
+
+	static void __cdecl WriteExitTextureReport() {
+		if (exitTextureReport.empty()) {
+			return;
+		}
+
+		const auto file = CreateFileA("Warnings.txt", GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+		if (file != INVALID_HANDLE_VALUE) {
+			SetFilePointer(file, 0, nullptr, FILE_END);
+			DWORD written = 0;
+			WriteFile(file, exitTextureReport.data(), exitTextureReport.size(), &written, nullptr);
+			CloseHandle(file);
+		}
+		OutputDebugStringA(exitTextureReport.c_str());
+		exitTextureReport.clear();
+	}
+
+	__declspec(naked) void PatchDataHandlerDestructorAfterTextureReport() {
+		__asm {
+			pushfd
+			pushad
+			call WriteExitTextureReport
+			popad
+			popfd
+
+			// Overwritten code.
+			mov byte ptr ds:[0x7C8F71], bl
+			mov byte ptr [esp + 0x28], 0
+
+			push 0x483E51
+			ret
+		}
+	}
+	constexpr BYTE PatchDataHandlerDestructorAfterTextureReport_original[] = { 0x88, 0x1D, 0x71, 0x8F, 0x7C, 0x00, 0xC6, 0x44, 0x24, 0x28, 0x00 };
+
+	//
 	// Patch: Make checking the object type of nullptr objects return an invalid type instead of crashing.
 	//
 
@@ -3039,6 +3087,15 @@ namespace mwse::patch {
 		// Patch: Suppress sGeneralMastPlugMismatchMsg message.
 		genCallUnprotected(0x477512, reinterpret_cast<DWORD>(GetCachedYesToAll), 0x477518 - 0x477512);
 		genCallEnforced(0x4BB55D, 0x477400, reinterpret_cast<DWORD>(SuppressGeneralMastPlugMismatchMsg));
+
+		// Patch: Write the texture report of the DataHandler destructor with one file open.
+		if (memcmp(reinterpret_cast<const void*>(0x483E46), PatchDataHandlerDestructorAfterTextureReport_original, sizeof(PatchDataHandlerDestructorAfterTextureReport_original)) == 0) {
+			genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(CollectExitTextureReportLine));
+			genJumpUnprotected(0x483E46, reinterpret_cast<DWORD>(PatchDataHandlerDestructorAfterTextureReport), sizeof(PatchDataHandlerDestructorAfterTextureReport_original));
+		}
+		else {
+			log::getLog() << "[MWSE] Warning: Unexpected code at 0x483E46. The texture report of the DataHandler destructor is not patched." << std::endl;
+		}
 
 		// Patch: Clean up mobile collision data when a mobile is destroyed. Fixes probably a Todd-typo.
 		genNOPUnprotected(0x55E55B, 0x55E55F - 0x55E55B);

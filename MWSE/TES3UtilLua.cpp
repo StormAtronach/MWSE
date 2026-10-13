@@ -277,7 +277,7 @@ namespace mwse::lua {
 			}
 		}
 
-		if (index >= TES3::GMST::sMonthMorningstar && index <= TES3::GMST::sWitchhunter) {
+		if (index >= TES3::GMST::FirstGMST && index <= TES3::GMST::LastGMST) {
 			return dataHandler->nonDynamicData->GMSTs[index];
 		}
 
@@ -299,14 +299,14 @@ namespace mwse::lua {
 
 		if (key.is<int>()) {
 			int index = key.as<int>();
-			if (index >= TES3::GMST::sMonthMorningstar && index <= TES3::GMST::sWitchhunter) {
+			if (index >= TES3::GMST::FirstGMST && index <= TES3::GMST::LastGMST) {
 				return dataHandler->nonDynamicData->GMSTs[index];
 			}
 		}
 		else if (key.is<std::string>()) {
 			int index = -1;
 			std::string keyStr = key.as<std::string>();
-			for (int i = 0; i <= TES3::GMST::sWitchhunter; ++i) {
+			for (int i = TES3::GMST::FirstGMST; i <= TES3::GMST::LastGMST; ++i) {
 				TES3::GameSettingInfo* info = TES3::GameSettingInfo::get(i);
 				if (strcmp(info->name, keyStr.c_str()) == 0) {
 					index = i;
@@ -658,9 +658,9 @@ namespace mwse::lua {
 			}
 			else if (filter.value().is<sol::table>()) {
 				sol::table filterTable = filter.value().as<sol::table>();
-				for (const auto& kv : filterTable) {
-					if (kv.second.is<unsigned int>()) {
-						filters.insert(kv.second.as<unsigned int>());
+				for (const auto& [_, value] : filterTable) {
+					if (value.is<unsigned int>()) {
+						filters.insert(value.as<unsigned int>());
 					}
 				}
 			}
@@ -972,8 +972,7 @@ namespace mwse::lua {
 		// Allow defining references/nodes to ignore from the raytest.
 		sol::optional<sol::table> ignoreTable = params["ignore"];
 		if (ignoreTable) {
-			for (const auto& kvPair : ignoreTable.value()) {
-				sol::object value = kvPair.second;
+			for (const auto& [_, value] : ignoreTable.value()) {
 				if (value.is<NI::Node>()) {
 					auto node = value.as<NI::Node*>();
 					if (!node->getAppCulled()) {
@@ -1036,11 +1035,13 @@ namespace mwse::lua {
 				// Adjust distance as if direction was not normalized.
 				r->distance *= distanceScale;
 
-				// Skinned nodes only have usable scaled distance data.
+				// Explicit bounds picks still have scaled distance data for skinned nodes.
 				if (r->object->isInstanceOfType(NI::RTTIStaticPtr::NiTriBasedGeom)) {
 					const auto geometry = static_cast<const NI::TriBasedGeometry*>(r->object.get());
 					if (geometry->skinInstance) {
-						r->distance *= skinnedCorrection;
+						if (rayTestCache->intersectType != NI::PickIntersectType::TRIANGLE_INTERSECT) {
+							r->distance *= skinnedCorrection;
+						}
 						r->intersection = position.value() + direction.value() * r->distance;
 						r->normal = (r->intersection - geometry->worldBoundOrigin).normalized();
 					}
@@ -2767,7 +2768,7 @@ namespace mwse::lua {
 					}
 
 					// Magic menu spell list update.
-					if (spell->castType == TES3::SpellCastType::Spell) {
+					if (spell->isSpell()) {
 						TES3_UI_removeSpellFromGUIList(spell);
 					}
 					else {
@@ -5645,8 +5646,8 @@ namespace mwse::lua {
 	sol::table getKillCounts(sol::this_state ts) {
 		sol::state_view state = ts;
 		sol::table killMap = state.create_table();
-		for (auto& itt : *TES3::WorldController::get()->playerKills->counter) {
-			killMap[itt.first] = itt.second;
+		for (auto& [actor, killCount] : *TES3::WorldController::get()->playerKills->counter) {
+			killMap[actor] = killCount;
 		}
 		return killMap;
 	}

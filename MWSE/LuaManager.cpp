@@ -609,6 +609,7 @@ namespace mwse::lua {
 		if (searchResult == scriptOverrides.end()) {
 			return;
 		}
+		const auto& value = searchResult->second;
 
 		// Update the LuaManager to reference our current context.
 		lua::LuaManager& manager = lua::LuaManager::getInstance();
@@ -620,11 +621,11 @@ namespace mwse::lua {
 		const auto stateHandle = manager.getThreadSafeStateHandle();
 		auto& state = stateHandle.getState();
 		sol::protected_function execute;
-		if (searchResult->second.is<sol::function>()) {
-			execute = searchResult->second.as<sol::function>();
+		if (value.is<sol::function>()) {
+			execute = value.as<sol::function>();
 		}
-		else if (searchResult->second.get_type() == sol::type::table) {
-			execute = searchResult->second.as<sol::table>()["execute"];
+		else if (value.get_type() == sol::type::table) {
+			execute = value.as<sol::table>()["execute"];
 		}
 
 		if (execute) {
@@ -1628,7 +1629,7 @@ namespace mwse::lua {
 
 	void __stdcall OnMagicCastSuccess(TES3::MagicSourceInstance* magicInstance, int* pExpGainSchool) {
 		// Ignore ability spells, as they are automatically activated as NPCs enter simulation range.
-		if (magicInstance->sourceCombo.sourceType == TES3::MagicSourceType::Spell && magicInstance->sourceCombo.source.asSpell->castType == TES3::SpellCastType::Ability) {
+		if (magicInstance->sourceCombo.sourceType == TES3::MagicSourceType::Spell && magicInstance->sourceCombo.source.asSpell->isAbility()) {
 			return;
 		}
 
@@ -6980,8 +6981,8 @@ namespace mwse::lua {
 
 		// Restore timer values.
 		auto list = timerData.get<sol::table>("list");
-		for (const auto& kvp : list) {
-			auto timer = Timer::createFromTable(kvp.second);
+		for (const auto& [_, data] : list) {
+			Timer::createFromTable(data);
 		}
 	}
 
