@@ -144,7 +144,6 @@ namespace TES3 {
 		// Other related this-call functions.
 		//
 
-		void dtor();
 		bool saveGame(const char* fileName, const char* saveName);
 		LoadGameResult loadGame(const char* fileName);
 		LoadGameResult loadGameMainMenu(const char* fileName);
@@ -387,6 +386,7 @@ namespace TES3 {
 		// Other related this-call functions.
 		//
 
+		void dtor();
 		NI::Point3 getLastExteriorPosition() const;
 		float getLowestZInCurrentCell() const;
 

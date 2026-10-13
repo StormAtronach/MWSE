@@ -168,11 +168,6 @@ namespace TES3 {
 	// NonDynamicData
 	//
 
-	const auto TES3_NonDynamicData_dtor = reinterpret_cast<void(__thiscall*)(NonDynamicData*)>(0x4B7F70);
-	void NonDynamicData::dtor() {
-		TES3_NonDynamicData_dtor(this);
-	}
-
 	const auto TES3_NonDynamicData_saveGame = reinterpret_cast<signed char(__thiscall*)(NonDynamicData*, const char*, const char*)>(0x4C4250);
 	bool NonDynamicData::saveGame(const char* fileName, const char* saveName) {
 		std::string eventFileName = fileName ? fileName : "";
@@ -627,16 +622,7 @@ namespace TES3 {
 	}
 
 	const auto TES3_NonDynamicData_deleteObject = reinterpret_cast<void(__thiscall*)(NonDynamicData*, BaseObject*)>(0x4B8B20);
-	const auto TES3_ObjectMapContainer_remove = reinterpret_cast<int(__thiscall*)(ObjectMapContainer<BaseObject>*, const char*)>(0x481E10);
 	void NonDynamicData::deleteObject(BaseObject* object) {
-		if (object && object->objectType == ObjectType::Spell) {
-			auto spell = static_cast<Spell*>(object);
-			TES3_ObjectMapContainer_remove(allObjectsById, spell->getObjectID());
-			spellsList->erase_value(spell);
-			spell->owningCollection.asSpellList = nullptr;
-			return;
-		}
-
 		TES3_NonDynamicData_deleteObject(this, object);
 	}
 
@@ -843,6 +829,11 @@ namespace TES3 {
 	const auto TES3_NonDynamicData_getLandShapeAtPosition = reinterpret_cast<NI::TriShape * (__thiscall*)(const DataHandler*, const NI::Point3&)>(0x48E660);
 	NI::TriShape* DataHandler::getLandShapeAtPosition(const NI::Point3& position) const {
 		return TES3_NonDynamicData_getLandShapeAtPosition(this, position);
+	}
+
+	const auto TES3_DataHandler_dtor = reinterpret_cast<void(__thiscall*)(DataHandler*)>(0x483C20);
+	void DataHandler::dtor() {
+		TES3_DataHandler_dtor(this);
 	}
 
 	const auto TES3_DataHandler_addSound = reinterpret_cast<void(__thiscall*)(DataHandler*, Sound*, Reference*, int, unsigned char, float, bool, int)>(0x48BD40);

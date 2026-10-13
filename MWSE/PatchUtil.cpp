@@ -1626,25 +1626,43 @@ namespace mwse::patch {
 	}
 
 	//
-	// Patch: Write the texture report of the DataHandler destructor to Warnings.txt with one file open.
+	// Patch: Write the warnings of the DataHandler and ModelLoader destructors to Warnings.txt with one file open.
 	//
 
-	static std::string textureReport;
-
-	static void __cdecl PatchCollectTextureReportLine(const char* format, const char* textureName, int count) {
-		char line[512];
-		std::snprintf(line, sizeof(line), format, textureName, count);
-		textureReport += line;
+	static std::string& getExitWarnings() {
+		static std::string exitWarnings;
+		return exitWarnings;
 	}
 
-	static void __fastcall PatchWriteTextureReport(TES3::NonDynamicData* nonDynamicData) {
-		if (!textureReport.empty()) {
-			std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
-			warnings << textureReport;
-			OutputDebugStringA(textureReport.c_str());
+	static void __cdecl PatchCollectExitWarning(const char* format, ...) {
+		char line[1300];
+		va_list args;
+		va_start(args, format);
+		std::vsnprintf(line, sizeof(line), format, args);
+		va_end(args);
+
+		if (!Configuration::BufferExitWarnings) {
+			tes3::logAndShowError("%s", line);
+			return;
 		}
 
-		nonDynamicData->dtor();
+		OutputDebugStringA(line);
+
+		auto& exitWarnings = getExitWarnings();
+		exitWarnings += line;
+		if (!exitWarnings.ends_with("\r\n")) {
+			exitWarnings += "\r\n";
+		}
+	}
+
+	static void __fastcall PatchWriteExitWarnings(TES3::DataHandler* dataHandler) {
+		dataHandler->dtor();
+
+		const auto& exitWarnings = getExitWarnings();
+		if (!exitWarnings.empty()) {
+			std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
+			warnings << exitWarnings;
+		}
 	}
 
 	//
@@ -3062,9 +3080,14 @@ namespace mwse::patch {
 		genCallUnprotected(0x477512, reinterpret_cast<DWORD>(GetCachedYesToAll), 0x477518 - 0x477512);
 		genCallEnforced(0x4BB55D, 0x477400, reinterpret_cast<DWORD>(SuppressGeneralMastPlugMismatchMsg));
 
-		// Patch: Write the texture report of the DataHandler destructor to Warnings.txt with one file open.
-		genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(PatchCollectTextureReportLine));
-		genCallEnforced(0x483F80, 0x4B7F70, reinterpret_cast<DWORD>(PatchWriteTextureReport));
+		// Patch: Write the warnings of the DataHandler and ModelLoader destructors to Warnings.txt with one file open.
+		genCallEnforced(0x40E133, 0x483C20, reinterpret_cast<DWORD>(PatchWriteExitWarnings));
+		genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDE70, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDEE2, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDF50, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDFD3, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDFE2, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
 
 		// Patch: Clean up mobile collision data when a mobile is destroyed. Fixes probably a Todd-typo.
 		genNOPUnprotected(0x55E55B, 0x55E55F - 0x55E55B);
