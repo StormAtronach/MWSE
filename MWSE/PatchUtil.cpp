@@ -1626,40 +1626,37 @@ namespace mwse::patch {
 	}
 
 	//
-	// Patch: Write the texture report of the DataHandler destructor with one file open.
+	// Patch: Write the texture report of the DataHandler destructor to Warnings.txt with one file open.
 	//
 
-	static std::string exitTextureReport;
+	static std::string textureReport;
 
-	static void __cdecl CollectExitTextureReportLine(const char* format, const char* textureName, int count) {
-		char line[1024];
-		const auto length = snprintf(line, sizeof(line), format, textureName, count);
-		if (length > 0) {
-			exitTextureReport.append(line, std::min<size_t>(length, sizeof(line) - 1));
-		}
+	static void __cdecl PatchCollectTextureReportLine(const char* format, const char* textureName, int count) {
+		char line[512];
+		std::snprintf(line, sizeof(line), format, textureName, count);
+		textureReport += line;
 	}
 
-	static void __cdecl WriteExitTextureReport() {
-		if (exitTextureReport.empty()) {
+	static void __cdecl PatchWriteTextureReport() {
+		if (textureReport.empty()) {
 			return;
 		}
 
-		const auto file = CreateFileA("Warnings.txt", GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-		if (file != INVALID_HANDLE_VALUE) {
-			SetFilePointer(file, 0, nullptr, FILE_END);
-			DWORD written = 0;
-			WriteFile(file, exitTextureReport.data(), exitTextureReport.size(), &written, nullptr);
-			CloseHandle(file);
-		}
-		OutputDebugStringA(exitTextureReport.c_str());
-		exitTextureReport.clear();
+		std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
+		warnings << textureReport;
+		OutputDebugStringA(textureReport.c_str());
 	}
 
-	__declspec(naked) void PatchDataHandlerDestructorAfterTextureReport() {
+	static DWORD callbackWriteTextureReport = 0x483E51;
+	static __declspec(naked) void HookWriteTextureReport() {
 		__asm {
+			// Save all registers and flags.
 			pushfd
 			pushad
-			call WriteExitTextureReport
+
+			call PatchWriteTextureReport
+
+			// Restore all registers and flags.
 			popad
 			popfd
 
@@ -1667,11 +1664,10 @@ namespace mwse::patch {
 			mov byte ptr ds:[0x7C8F71], bl
 			mov byte ptr [esp + 0x28], 0
 
-			push 0x483E51
-			ret
+			// Resume normal execution.
+			jmp callbackWriteTextureReport
 		}
 	}
-	constexpr BYTE PatchDataHandlerDestructorAfterTextureReport_original[] = { 0x88, 0x1D, 0x71, 0x8F, 0x7C, 0x00, 0xC6, 0x44, 0x24, 0x28, 0x00 };
 
 	//
 	// Patch: Make checking the object type of nullptr objects return an invalid type instead of crashing.
@@ -3088,14 +3084,9 @@ namespace mwse::patch {
 		genCallUnprotected(0x477512, reinterpret_cast<DWORD>(GetCachedYesToAll), 0x477518 - 0x477512);
 		genCallEnforced(0x4BB55D, 0x477400, reinterpret_cast<DWORD>(SuppressGeneralMastPlugMismatchMsg));
 
-		// Patch: Write the texture report of the DataHandler destructor with one file open.
-		if (memcmp(reinterpret_cast<const void*>(0x483E46), PatchDataHandlerDestructorAfterTextureReport_original, sizeof(PatchDataHandlerDestructorAfterTextureReport_original)) == 0) {
-			genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(CollectExitTextureReportLine));
-			genJumpUnprotected(0x483E46, reinterpret_cast<DWORD>(PatchDataHandlerDestructorAfterTextureReport), sizeof(PatchDataHandlerDestructorAfterTextureReport_original));
-		}
-		else {
-			log::getLog() << "[MWSE] Warning: Unexpected code at 0x483E46. The texture report of the DataHandler destructor is not patched." << std::endl;
-		}
+		// Patch: Write the texture report of the DataHandler destructor to Warnings.txt with one file open.
+		genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(PatchCollectTextureReportLine));
+		genJumpUnprotected(0x483E46, reinterpret_cast<DWORD>(HookWriteTextureReport), 0x483E51 - 0x483E46);
 
 		// Patch: Clean up mobile collision data when a mobile is destroyed. Fixes probably a Todd-typo.
 		genNOPUnprotected(0x55E55B, 0x55E55F - 0x55E55B);
