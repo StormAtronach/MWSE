@@ -1637,36 +1637,15 @@ namespace mwse::patch {
 		textureReport += line;
 	}
 
-	static void __cdecl PatchWriteTextureReport() {
-		if (textureReport.empty()) {
-			return;
+	const auto TES3_NonDynamicData_dtor = reinterpret_cast<void(__thiscall*)(TES3::NonDynamicData*)>(0x4B7F70);
+	static void __fastcall PatchWriteTextureReport(TES3::NonDynamicData* nonDynamicData) {
+		if (!textureReport.empty()) {
+			std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
+			warnings << textureReport;
+			OutputDebugStringA(textureReport.c_str());
 		}
 
-		std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
-		warnings << textureReport;
-		OutputDebugStringA(textureReport.c_str());
-	}
-
-	static DWORD callbackWriteTextureReport = 0x483E51;
-	static __declspec(naked) void HookWriteTextureReport() {
-		__asm {
-			// Save all registers and flags.
-			pushfd
-			pushad
-
-			call PatchWriteTextureReport
-
-			// Restore all registers and flags.
-			popad
-			popfd
-
-			// Overwritten code.
-			mov byte ptr ds:[0x7C8F71], bl
-			mov byte ptr [esp + 0x28], 0
-
-			// Resume normal execution.
-			jmp callbackWriteTextureReport
-		}
+		TES3_NonDynamicData_dtor(nonDynamicData);
 	}
 
 	//
@@ -3086,7 +3065,7 @@ namespace mwse::patch {
 
 		// Patch: Write the texture report of the DataHandler destructor to Warnings.txt with one file open.
 		genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(PatchCollectTextureReportLine));
-		genJumpUnprotected(0x483E46, reinterpret_cast<DWORD>(HookWriteTextureReport), 0x483E51 - 0x483E46);
+		genCallEnforced(0x483F80, 0x4B7F70, reinterpret_cast<DWORD>(PatchWriteTextureReport));
 
 		// Patch: Clean up mobile collision data when a mobile is destroyed. Fixes probably a Todd-typo.
 		genNOPUnprotected(0x55E55B, 0x55E55F - 0x55E55B);
