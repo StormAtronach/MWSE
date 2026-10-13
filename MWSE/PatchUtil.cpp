@@ -1607,6 +1607,28 @@ namespace mwse::patch {
 	}
 
 	//
+	// Patch: Write the texture report of the DataHandler destructor to Warnings.txt with one file open.
+	//
+
+	static std::string textureReport;
+
+	static void __cdecl PatchCollectTextureReportLine(const char* format, const char* textureName, int count) {
+		char line[512];
+		std::snprintf(line, sizeof(line), format, textureName, count);
+		textureReport += line;
+	}
+
+	static void __fastcall PatchWriteTextureReport(TES3::NonDynamicData* nonDynamicData) {
+		if (!textureReport.empty()) {
+			std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
+			warnings << textureReport;
+			OutputDebugStringA(textureReport.c_str());
+		}
+
+		nonDynamicData->dtor();
+	}
+
+	//
 	// Patch: Make checking the object type of nullptr objects return an invalid type instead of crashing.
 	//
 
@@ -3012,6 +3034,10 @@ namespace mwse::patch {
 		// Patch: Suppress sGeneralMastPlugMismatchMsg message.
 		genCallUnprotected(0x477512, reinterpret_cast<DWORD>(GetCachedYesToAll), 0x477518 - 0x477512);
 		genCallEnforced(0x4BB55D, 0x477400, reinterpret_cast<DWORD>(SuppressGeneralMastPlugMismatchMsg));
+
+		// Patch: Write the texture report of the DataHandler destructor to Warnings.txt with one file open.
+		genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(PatchCollectTextureReportLine));
+		genCallEnforced(0x483F80, 0x4B7F70, reinterpret_cast<DWORD>(PatchWriteTextureReport));
 
 		// Patch: Clean up mobile collision data when a mobile is destroyed. Fixes probably a Todd-typo.
 		genNOPUnprotected(0x55E55B, 0x55E55F - 0x55E55B);
