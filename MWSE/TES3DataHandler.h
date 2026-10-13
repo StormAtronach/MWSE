@@ -144,6 +144,7 @@ namespace TES3 {
 		// Other related this-call functions.
 		//
 
+		void dtor();
 		bool saveGame(const char* fileName, const char* saveName);
 		LoadGameResult loadGame(const char* fileName);
 		LoadGameResult loadGameMainMenu(const char* fileName);

@@ -1637,7 +1637,6 @@ namespace mwse::patch {
 		textureReport += line;
 	}
 
-	const auto TES3_NonDynamicData_dtor = reinterpret_cast<void(__thiscall*)(TES3::NonDynamicData*)>(0x4B7F70);
 	static void __fastcall PatchWriteTextureReport(TES3::NonDynamicData* nonDynamicData) {
 		if (!textureReport.empty()) {
 			std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
@@ -1645,7 +1644,7 @@ namespace mwse::patch {
 			OutputDebugStringA(textureReport.c_str());
 		}
 
-		TES3_NonDynamicData_dtor(nonDynamicData);
+		nonDynamicData->dtor();
 	}
 
 	//

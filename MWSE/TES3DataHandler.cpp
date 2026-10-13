@@ -168,6 +168,11 @@ namespace TES3 {
 	// NonDynamicData
 	//
 
+	const auto TES3_NonDynamicData_dtor = reinterpret_cast<void(__thiscall*)(NonDynamicData*)>(0x4B7F70);
+	void NonDynamicData::dtor() {
+		TES3_NonDynamicData_dtor(this);
+	}
+
 	const auto TES3_NonDynamicData_saveGame = reinterpret_cast<signed char(__thiscall*)(NonDynamicData*, const char*, const char*)>(0x4C4250);
 	bool NonDynamicData::saveGame(const char* fileName, const char* saveName) {
 		std::string eventFileName = fileName ? fileName : "";
