@@ -8,6 +8,12 @@
 namespace NI {
 	void ObjectNET::prependController(TimeController* controller) {
 #if defined(SE_NI_OBJECTNET_FNADDR_PREPENDCONTROLLER) && SE_NI_OBJECTNET_FNADDR_PREPENDCONTROLLER > 0
+		// A controller without a target is attached through setTarget, which also prepends it.
+		if (controller->target == nullptr) {
+			controller->setTarget(this);
+			return;
+		}
+
 		const auto NI_ObjectNET_prependController = reinterpret_cast<void(__thiscall*)(const ObjectNET*, TimeController*)>(SE_NI_OBJECTNET_FNADDR_PREPENDCONTROLLER);
 		NI_ObjectNET_prependController(this, controller);
 #else

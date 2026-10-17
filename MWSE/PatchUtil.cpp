@@ -3285,6 +3285,9 @@ namespace mwse::patch {
 		if (Configuration::PatchNiFlipController) {
 			auto NiFlipController_clone = &NI::FlipController::copy;
 			genCallEnforced(0x715D26, DWORD(NI::FlipController::_copy), *reinterpret_cast<DWORD*>(&NiFlipController_clone));
+
+			// Patch: Fix NiFlipController::Update testing the base or dark map slot in place of the affected map's.
+			se::memory::writeValueEnforced<BYTE>(0x715AED, 0x8E, 0x86); // cmp [esi+ecx*4], ebx -> cmp [esi+eax*4], ebx
 		}
 
 		// Patch: Allow global audio.
