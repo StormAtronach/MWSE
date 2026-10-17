@@ -769,7 +769,7 @@ local success = myObject:lookAtWorldPoint(point, up)
 ### `prependController`
 <div class="search_terms" style="display: none">prependcontroller</div>
 
-Add a controller to the object as the first controller.
+Add a controller to the object as the first controller. A controller without a target takes this object as its target.
 
 ```lua
 myObject:prependController(controller)

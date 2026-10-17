@@ -39,7 +39,7 @@ function niObjectNET:hasStringDataStartingWith(value) end
 --- @return boolean result No description yet available.
 function niObjectNET:hasStringDataWith(value) end
 
---- Add a controller to the object as the first controller.
+--- Add a controller to the object as the first controller. A controller without a target takes this object as its target.
 --- @param controller niKeyframeController|niKeyframeManager|niLookAtController|niParticleSystemController|niPathController|niTimeController No description yet available.
 function niObjectNET:prependController(controller) end
 
