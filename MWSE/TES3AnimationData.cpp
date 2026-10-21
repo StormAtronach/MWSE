@@ -297,7 +297,7 @@ namespace TES3 {
 
 		// Release loaded animations. Leave vanilla animations.
 		auto modelLoader = DataHandler::get()->nonDynamicData->meshData;
-		for (int i = VanillaSourceCount; i < customAnimDefinitions.size(); ++i) {
+		for (int i = VanillaSourceCount; i < int(customAnimDefinitions.size()); ++i) {
 			if (customAnimDefinitions[i]) {
 				modelLoader->releaseKeyframes(customAnimDefinitions[i]);
 			}
@@ -317,7 +317,7 @@ namespace TES3 {
 	}
 
 	bool AnimationData::setSourceKeyframes(KeyframeDefinition* kfData, int sourceIndex, bool isBiped) {
-		if (sourceIndex >= customAnimDefinitions.size()) {
+		if (sourceIndex < 0 || size_t(sourceIndex) >= customAnimDefinitions.size()) {
 			// Allocate space for the new source. The engine will write to the sequence group for the source.
 			customAnimDefinitions.resize(sourceIndex + 1);
 			customSources.resize(sourceIndex + 1);
@@ -339,7 +339,7 @@ namespace TES3 {
 
 				// Re-implementation of remove_if on both arrays that handles TArray object lifetimes correctly.
 				int removeIndex = 0;
-				for (int i = 0; i < seq->objectNames.endIndex; ++i) {
+				for (int i = 0; i < int(seq->objectNames.endIndex); ++i) {
 					if (actorNode->getObjectByName(seq->objectNames[i])) {
 						if (removeIndex < i) {
 							std::swap(seq->objectNames.at(i), seq->objectNames.at(removeIndex));
@@ -348,7 +348,7 @@ namespace TES3 {
 						++removeIndex;
 					}
 				}
-				for (int i = removeIndex; i < seq->objectNames.endIndex; ++i) {
+				for (int i = removeIndex; i < int(seq->objectNames.endIndex); ++i) {
 					// mwse::log::getLog() << "[AnimLoader] Discarding unmatched bone '" << seq->objectNames.at(i) << "' from " << actorNode->getName() << std::endl;
 					se::memory::_delete(seq->objectNames.at(i));
 					seq->objectNames.at(i) = nullptr;
@@ -389,7 +389,7 @@ namespace TES3 {
 		animGroupSoundGenCounts[i] = soundGenCount;
 		if (soundGenCount > 0) {
 			auto soundGenArray = se::memory::_new<AnimationGroup::SoundGenKey*>(soundGenCount);
-			for (int i = 0; i < soundGenCount; ++i) {
+			for (unsigned int i = 0; i < soundGenCount; ++i) {
 				soundGenArray[i] = animGroup->soundGenKeys + i;
 			}
 			animGroupSoundGens[i] = soundGenArray;
