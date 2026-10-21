@@ -43,12 +43,24 @@ namespace se::cs {
 		return (flags & 0x2000);
 	}
 
+	bool BaseObject::isMobileCapableActor() const {
+		switch (objectType) {
+		case ObjectType::Creature:
+		case ObjectType::CreatureClone:
+		case ObjectType::NPC:
+		case ObjectType::NPCClone:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	void BaseObject::setFlag80(bool set) {
 		const auto BaseObject_setFlag80 = reinterpret_cast<void(__thiscall*)(BaseObject*, bool)>(0x4019E7);
 		BaseObject_setFlag80(this, set);
 	}
 
-	bool BaseObject::search(const std::string_view& needle, const SearchSettings& settings, std::regex* regex) const {
+	bool BaseObject::search(std::string_view needle, const SearchSettings& settings, std::regex* regex) const {
 		if (settings.id && string::complex_contains(getObjectID(), needle, settings, regex)) {
 			return true;
 		}
@@ -56,7 +68,7 @@ namespace se::cs {
 		return false;
 	}
 
-	bool BaseObject::searchWithInheritance(const std::string_view& needle, const SearchSettings& settings, std::regex* regex) const {
+	bool BaseObject::searchWithInheritance(std::string_view needle, const SearchSettings& settings, std::regex* regex) const {
 		switch (objectType) {
 		case ObjectType::Birthsign:
 			return static_cast<const Birthsign*>(this)->search(needle, settings, regex);

@@ -78,7 +78,6 @@ namespace TES3 {
 
 		bool enable();
 		bool disable();
-		bool getDisabled() const;
 
 		void setDeleted(bool deleted);
 		void setDeletedWithSafety();
@@ -91,7 +90,12 @@ namespace TES3 {
 		void setReferenceActive(bool skipDeleted = true);
 		void setReferenceInactive(bool skipDeleted = true);
 
-		void handleUpdate(bool deletion, bool updateCollisions = true);
+		enum class UpdateType {
+			Enabled,
+			Disabled,
+			Deleted,
+		};
+		void handleUpdate(UpdateType updateType, bool updateCollisions = true);
 
 		NI::Point3* getPosition();
 		void setPosition(const NI::Point3 * newPosition);

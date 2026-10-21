@@ -31,6 +31,7 @@
 #include "TES3MobileProjectile.h"
 #include "TES3MobManager.h"
 #include "TES3Reference.h"
+#include "TES3Region.h"
 #include "TES3Script.h"
 #include "TES3Sound.h"
 #include "TES3UIElement.h"
@@ -59,6 +60,7 @@
 
 #include "BitUtil.h"
 #include "ScriptUtil.h"
+#include "StringUtil.h"
 #include "TES3Util.h"
 #include "WindowsUtil.h"
 
@@ -69,7 +71,7 @@
 #include "CodePatchUtil.h"
 #include "MWSEConfig.h"
 #include "MWSEDefs.h"
-#include "CrashLogExceptionHandler.hpp"
+#include "CrashLogger.h"
 
 namespace mwse::patch {
 
@@ -350,6 +352,7 @@ namespace mwse::patch {
 		constexpr DWORD ModMaskMWSE = ((1 << ModBitsMWSE) - 1) << FormBitsMWSE;
 		constexpr DWORD FormMaskMWSE = (1 << FormBitsMWSE) - 1;
 		constexpr DWORD ModCountMWSE = 1 << ModBitsMWSE;
+		constexpr DWORD InvalidFormId = 0xFFFFFFFF;
 		static_assert(1 << ModBitsMWSE == sizeof(TES3::NonDynamicData::activeMods) / sizeof(TES3::GameFile*), "Reference FormID bit assignment does not match active game file array size.");
 
 		struct SerializedFormId {
@@ -362,11 +365,24 @@ namespace mwse::patch {
 			SerializedFormId data;
 			if (file->currentChunkHeader.size == sizeof(SerializedFormId)) {
 				file->readChunkData(&data);
+
+				// Handle saves where an invalid form ID was incorrectly serialized.
+				// This does have the edge case if mod 1023 has a more than ~4.2 million form IDs. Extremely unlikely.
+				if (data.modIndex == ModCountMWSE - 1 && data.formId == FormMaskMWSE) {
+					*out_movedFormId = InvalidFormId;
+					return;
+				}
 			}
 			else {
 				// If it's not the new format, we need to convert.
 				DWORD oldFormId = 0;
 				file->readChunkData(&oldFormId);
+
+				// Preserve invalid form IDs.
+				if (oldFormId == InvalidFormId) {
+					*out_movedFormId = InvalidFormId;
+					return;
+				}
 
 				data.modIndex = (oldFormId >> FormBitsVanilla);
 				data.formId = (oldFormId & FormMaskVanilla);
@@ -376,19 +392,26 @@ namespace mwse::patch {
 		}
 
 		void __fastcall SaveFormId(TES3::GameFile* file, DWORD edx, unsigned int tag, DWORD* movedRefId, size_t size) {
+			// Preserve invalid form IDs.
+			if (*movedRefId == InvalidFormId) {
+				DWORD refId = InvalidFormId;
+				file->writeChunkValue(tag, refId);
+				return;
+			}
+
 			// Split out the bitmasked field.
 			SerializedFormId data = {};
 			data.modIndex = *movedRefId >> FormBitsMWSE;
 			data.formId = *movedRefId & FormMaskMWSE;
 
 			// If the mod index is higher than the vanilla limit, save the new format.
-			if (data.modIndex > 255) {
-				file->writeChunkData(tag, &data, sizeof(data));
+			if (data.modIndex >= ModCountVanilla) {
+				file->writeChunkValue(tag, data);
 			}
-			// If the mod index is <255, use the vanilla save format and masks for compatibility.
+			// If the mod index is below the vanilla limit, use the vanilla save format and masks for compatibility.
 			else {
 				DWORD refId = (data.modIndex << FormBitsVanilla) + data.formId;
-				file->writeChunkData(tag, &refId, 4);
+				file->writeChunkValue(tag, refId);
 			}
 		}
 	}
@@ -1503,6 +1526,17 @@ namespace mwse::patch {
 	}
 	const size_t PatchSoulTrappedCreatureNotFound3_size = 0x5;
 
+	// Prevent crashes when the actor holding a casting item is no longer present.
+	// The engine computes &actor->inventory without checking that the actor from the save's
+	// target reference id resolved. Returning no result makes loading take the normal
+	// invalid-spell path ("Failed to load spell ...") instead of crashing.
+	static TES3::ItemStack* __fastcall PatchFindRestoredCastingItemEntry(TES3::Inventory* inventory, DWORD _EDX_, TES3::Object* item) {
+		if (reinterpret_cast<DWORD>(inventory) == offsetof(TES3::Actor, inventory)) {
+			return nullptr;
+		}
+		return inventory->findItemStack(item);
+	}
+
 	//
 	// Patch: Prevent crash with magic effects on invalid targets.
 	//
@@ -1728,7 +1762,7 @@ namespace mwse::patch {
 		for (const auto& dialogue : *dialogues) {
 			sortedDialogues.push_back(dialogue);
 		}
-		std::sort(sortedDialogues.begin(), sortedDialogues.end(), dialogueLengthSorter);
+		std::ranges::sort(sortedDialogues, dialogueLengthSorter);
 
 		// Clone the sorted data back into the TList, without any allocations.
 		auto itt = dialogues->head;
@@ -1932,6 +1966,19 @@ namespace mwse::patch {
 		return self->getCellByName(name);
 	}
 
+	static TES3::Region* __fastcall PatchCellLoadGetRegion(TES3::NonDynamicData* self, TES3::Cell* cell, const char* name) {
+		const auto region = self->getRegion(name);
+		cell->setRegion(region);
+		return region;
+	}
+
+	__declspec(naked) void PatchCellLoadGetRegionSetup() {
+		__asm {
+			mov edx, ebp // Snag the cell while we can before forwarding.
+			jmp PatchCellLoadGetRegion
+		}
+	}
+
 	//
 	// Patch: Implement map-based lookup of references.
 	//
@@ -2098,6 +2145,22 @@ namespace mwse::patch {
 	static bool __cdecl PatchCellLoadReference(TES3::Reference* reference, TES3::GameFile* gameFile, bool mustBePersistent, bool insertNew, TES3::Cell* cell) {
 		const auto previousLookupKey = ReferenceTracker::getLookupKey(reference);
 		const auto result = TES3_Cell_static_loadReference(reference, gameFile, mustBePersistent, insertNew, cell);
+		if (
+			cell
+			&& reference->baseObject
+			&& reference->baseObject->isMobileCapableActor()
+			&& reference->owningCollection.asReferenceList == &cell->temporaryRefs
+		) {
+			cell->temporaryRefs.remove(reference);
+			cell->actors.insertAtEnd(reference);
+			const auto objectId = reference->baseObject->getObjectID();
+			mwse::log::getLog() << fmt::format(
+				"[MWSE] Warning: Loaded actor '{}' from the temporary references list of cell '{}' in '{}'.",
+				objectId ? objectId : "<invalid>",
+				cell->getEditorName(),
+				gameFile ? gameFile->getFilename() : "<unknown>"
+			) << std::endl;
+		}
 		ReferenceTracker::rekeyReference(reference, previousLookupKey);
 		return result;
 	}
@@ -2283,6 +2346,10 @@ namespace mwse::patch {
 		using se::memory::writeBytesUnprotected;
 		using se::memory::writeDoubleWordEnforced;
 
+		// Patch: Allow Morrowind.ini [Application] values to override registry-backed application settings.
+		auto Game_readSettings = &TES3::Game::readSettings;
+		overrideVirtualTableEnforced(0x74665C, offsetof(TES3::Game_vTable, ReadSettings), 0x4F54F0, *reinterpret_cast<DWORD*>(&Game_readSettings));
+
 		// Patch: Enable/Disable.
 		genCallUnprotected(0x508FEB, reinterpret_cast<DWORD>(PatchScriptOpEnable), 0x9);
 		genCallUnprotected(0x5090DB, reinterpret_cast<DWORD>(PatchScriptOpDisable), 0x9);
@@ -2338,6 +2405,12 @@ namespace mwse::patch {
 
 		// Patch: Cache cell lookups by ID.
 		genJumpUnprotected(0x4BA9B0, reinterpret_cast<DWORD>(PatchRecordsHandlerGetCellByName), 0x5);
+		auto cell_dtor = &TES3::Cell::dtor;
+		genCallEnforced(0x4DB643, 0x4DB660, *reinterpret_cast<DWORD*>(&cell_dtor));
+		auto cell_setName = &TES3::Cell::setName;
+		genCallEnforced(0x4B8BD6, 0x4E25E0, *reinterpret_cast<DWORD*>(&cell_setName));
+		genCallEnforced(0x4BEF97, 0x4E25E0, *reinterpret_cast<DWORD*>(&cell_setName));
+		genCallEnforced(0x4DD4B5, 0x4BA610, reinterpret_cast<DWORD>(PatchCellLoadGetRegionSetup));
 
 		// Patch: Implement map-based lookup of references.
 		genJumpUnprotected(0x4F19F0, reinterpret_cast<DWORD>(PatchEntityListInsertAfter), 0x5);
@@ -2745,6 +2818,11 @@ namespace mwse::patch {
 		// Patch: Fall back to reference rotation values when initializing animation controllers without a scene node.
 		genCallEnforced(0x521773, 0x53DE70, reinterpret_cast<DWORD>(PatchSetAnimControllerMobile));
 
+		// Patch: Stop updating an actor animation controller if its mobile is detached during a state-machine update.
+		auto ActorAnimationController_update = &TES3::ActorAnimationController::update;
+		overrideVirtualTableEnforced(TES3::VirtualTableAddress::ActorAnimController, offsetof(TES3::ActorAnimationController_VirtualTable, update), 0x53E070, *reinterpret_cast<DWORD*>(&ActorAnimationController_update));
+		genCallEnforced(0x543A2B, 0x53E070, *reinterpret_cast<DWORD*>(&ActorAnimationController_update));
+
 		// Provide lua stack traces with invalid UI access.
 		genCallEnforced(0x581484, 0x476E20, reinterpret_cast<DWORD>(PatchLogUIMemoryPointerErrors));
 		genCallEnforced(0x582DFA, 0x476E20, reinterpret_cast<DWORD>(PatchLogUIMemoryPointerErrors));
@@ -2802,6 +2880,7 @@ namespace mwse::patch {
 		writePatchCodeUnprotected(0x49DEE1, (BYTE*)&PatchSoulTrappedCreatureNotFound1, PatchSoulTrappedCreatureNotFound1_size);
 		writePatchCodeUnprotected(0x4A4BEC, (BYTE*)&PatchSoulTrappedCreatureNotFound2, PatchSoulTrappedCreatureNotFound2_size);
 		writePatchCodeUnprotected(0x4D8DD7, (BYTE*)&PatchSoulTrappedCreatureNotFound3, PatchSoulTrappedCreatureNotFound3_size);
+		genCallEnforced(0x51428D, 0x49A6C0, reinterpret_cast<DWORD>(PatchFindRestoredCastingItemEntry));
 
 		// Patch: Prevent crash with magic effects on invalid targets.
 		WritePatchMagicEffect_RequireMobile<0x45F170>(TES3::EffectID::WaterBreathing);
@@ -3078,6 +3157,36 @@ namespace mwse::patch {
 		genCallEnforced(0x56F0AF, 0x565350, reinterpret_cast<DWORD>(&ActorTeardownDedupLeaveSimulation));
 		genCallEnforced(0x55ECC0, 0x6FD680, reinterpret_cast<DWORD>(&ActorTeardownResetRootSearchCache));
 		genCallEnforced(0x55ED1B, 0x6A3080, reinterpret_cast<DWORD>(&ActorTeardownMemoizedRootSearch));
+
+		// Patch: Optimize renderer hash map lookups. Use `NiDX8RendererHashBuckets` buckets instead of 37.
+		constexpr DWORD NiDX8RendererHashBuckets = 4093; // Prime, ~16KB per map.
+		writeDoubleWordEnforced(0x6A9AED, 37, NiDX8RendererHashBuckets); // mov ebp, 25h
+		writeDoubleWordEnforced(0x6A9AF2, 0x94, NiDX8RendererHashBuckets * 4); // push 94h (geometry buffers)
+		writeDoubleWordEnforced(0x6A9B38, 0x94, NiDX8RendererHashBuckets * 4); // push 94h (skin partitions)
+		writeDoubleWordEnforced(0x6A9B7E, 0x94, NiDX8RendererHashBuckets * 4); // push 94h (rendered textures)
+		writeDoubleWordEnforced(0x6A9BC4, 0x94, NiDX8RendererHashBuckets * 4); // push 94h (rendered cubemaps)
+
+		// Patch: Guarded 3D audio listener access.
+		auto AudioController_setListenerDistanceFactor = &TES3::AudioController::setListenerDistanceFactor;
+		genCallEnforced(0x40E5DB, 0x402F40, *reinterpret_cast<DWORD*>(&AudioController_setListenerDistanceFactor));
+		genCallEnforced(0x40E602, 0x402F40, *reinterpret_cast<DWORD*>(&AudioController_setListenerDistanceFactor));
+		genCallEnforced(0x40E74E, 0x402F40, *reinterpret_cast<DWORD*>(&AudioController_setListenerDistanceFactor));
+		genCallEnforced(0x40E775, 0x402F40, *reinterpret_cast<DWORD*>(&AudioController_setListenerDistanceFactor));
+		auto AudioController_setListenerDopplerFactor = &TES3::AudioController::setListenerDopplerFactor;
+		genCallEnforced(0x40E5E8, 0x402F60, *reinterpret_cast<DWORD*>(&AudioController_setListenerDopplerFactor));
+		genCallEnforced(0x40E75B, 0x402F60, *reinterpret_cast<DWORD*>(&AudioController_setListenerDopplerFactor));
+		genCallEnforced(0x489851, 0x402F60, *reinterpret_cast<DWORD*>(&AudioController_setListenerDopplerFactor));
+		auto AudioController_setListenerRolloffFactor = &TES3::AudioController::setListenerRolloffFactor;
+		genCallEnforced(0x40E5F5, 0x402F80, *reinterpret_cast<DWORD*>(&AudioController_setListenerRolloffFactor));
+		genCallEnforced(0x40E768, 0x402F80, *reinterpret_cast<DWORD*>(&AudioController_setListenerRolloffFactor));
+		genCallEnforced(0x489864, 0x402F80, *reinterpret_cast<DWORD*>(&AudioController_setListenerRolloffFactor));
+		auto AudioController_setListenerVelocity = &TES3::AudioController::setListenerVelocity;
+		genCallEnforced(0x48B112, 0x403220, *reinterpret_cast<DWORD*>(&AudioController_setListenerVelocity));
+		auto AudioController_commitDeferredSettings = &TES3::AudioController::commitDeferredSettings;
+		genCallEnforced(0x40F7ED, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
+		genCallEnforced(0x48C6C3, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
+		genCallEnforced(0x510B57, 0x403250, *reinterpret_cast<DWORD*>(&AudioController_commitDeferredSettings));
+
 	}
 
 	void installPostLuaPatches() {

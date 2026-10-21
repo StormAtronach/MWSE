@@ -102,8 +102,8 @@ namespace TES3::UI {
 	}
 
 	void Element::clearCachedLuaObjects() {
-		for (auto& item : uiElementCache) {
-			mwse::lua::clearUserdataPointer(item.second);
+		for (auto& [_, object] : uiElementCache) {
+			mwse::lua::clearUserdataPointer(object);
 		}
 		uiElementCache.clear();
 	}
@@ -241,6 +241,16 @@ namespace TES3::UI {
 		return TES3_ui_getTopLevelParent(this);
 	}
 
+	const auto TES3_ui_dispatchInputEvent = reinterpret_cast<void(__thiscall*)(Element*, Property, int, int, Element*)>(0x583460);
+	void Element::dispatchInputEvent(Property eventId, int data0, int data1, Element* source) {
+		TES3_ui_dispatchInputEvent(this, eventId, data0, data1, source);
+	}
+
+	const auto TES3_ui_checkMouseEventInElement = reinterpret_cast<bool(__thiscall*)(const Element*, int, int)>(0x587730);
+	bool Element::checkMouseEventInElement(int mouseX, int mouseY) const {
+		return TES3_ui_checkMouseEventInElement(this, mouseX, mouseY);
+	}
+
 	Element* Element::performLayout(bool bUpdateTimestamp) {
 		return TES3_ui_performLayout(this, bUpdateTimestamp);
 	}
@@ -278,13 +288,13 @@ namespace TES3::UI {
 		// Slide <shift> children in-place, then write buffer into correct location
 		if (moveFrom < insertBefore) {
 			int shift = insertBefore - moveFrom;
-			memmove_s(from, sizeof(Element*) * shift, from + count, sizeof(Element*) * shift);
-			memmove_s(to - count, sizeof(Element*) * count, &*temp.begin(), sizeof(Element*) * count);
+			memmove_s(from, sizeof(Element**) * shift, from + count, sizeof(Element**) * shift);
+			memmove_s(to - count, sizeof(Element**) * count, temp.data(), sizeof(Element**) * count);
 		}
 		else {
 			int shift = moveFrom - insertBefore;
-			memmove_s(to + count, sizeof(Element*) * shift, to, sizeof(Element*) * shift);
-			memmove_s(to, sizeof(Element*) * count, &*temp.begin(), sizeof(Element*) * count);
+			memmove_s(to + count, sizeof(Element**) * shift, to, sizeof(Element**) * shift);
+			memmove_s(to, sizeof(Element**) * count, temp.data(), sizeof(Element**) * count);
 		}
 
 		return true;
@@ -407,7 +417,7 @@ namespace TES3::UI {
 	std::string Element::toJson() const {
 		std::ostringstream ss;
 		ss << "\"tes3uiElement:" << id << ":" << (name.cString ? name.cString : "(unnamed)") << "\"";
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	sol::table Element::getChildren_lua(sol::this_state ts) const {
@@ -568,10 +578,10 @@ namespace TES3::UI {
 			return WidgetButton::fromElement(this)->getText();
 		}
 		else if (part == propParagraphInput) {
-			return std::move(WidgetParagraphInput::fromElement(this)->getText());
+			return WidgetParagraphInput::fromElement(this)->getText();
 		}
 		else if (part == propTextInput) {
-			return std::move(WidgetTextInput::fromElement(this)->getText());
+			return WidgetTextInput::fromElement(this)->getText();
 		}
 
 		return getText();
@@ -767,7 +777,7 @@ namespace TES3::UI {
 		return (flow == Property::top_to_bottom) ? "top_to_bottom" : "left_to_right";
 	}
 
-	void Element::setFlowDirectionString(std::string value) {
+	void Element::setFlowDirectionString(std::string_view value) {
 		auto prop = (value == "top_to_bottom") ? Property::top_to_bottom : Property::left_to_right;
 		setProperty(TES3::UI::Property::flow_direction, prop);
 	}
@@ -869,7 +879,7 @@ namespace TES3::UI {
 		return "left";
 	}
 
-	void Element::setJustifyTextString(std::string value) {
+	void Element::setJustifyTextString(std::string_view value) {
 		auto prop = Property::left;
 		if (value == "center") {
 			prop = Property::center;
@@ -1166,7 +1176,7 @@ namespace TES3::UI {
 		return container->getData();
 	}
 
-	sol::object Element::getLuaData(const std::string_view& key) const {
+	sol::object Element::getLuaData(std::string_view key) const {
 		auto container = getLuaDataContainer();
 		if (container == nullptr) {
 			return sol::nil;
@@ -1175,7 +1185,7 @@ namespace TES3::UI {
 		return container->getValue(key);
 	}
 
-	void Element::setLuaData(sol::this_state ts, const std::string_view& key, sol::object value) {
+	void Element::setLuaData(sol::this_state ts, std::string_view key, sol::object value) {
 		auto container = getLuaDataContainer();
 		if (container == nullptr) {
 			container = new LuaData(ts);

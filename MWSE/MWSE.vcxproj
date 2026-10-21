@@ -12,12 +12,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ArrayUtil.h" />
-    <ClInclude Include="BitUtil.h" />
     <ClInclude Include="LuaAnimationTriggerEvent.h" />
-    <ClInclude Include="CrashLogExceptionHandler.hpp" />
     <ClInclude Include="CrashLogFormatter.hpp" />
-    <ClInclude Include="CrashLogger.hpp" />
-    <ClInclude Include="CrashLogUtilities.hpp" />
     <ClInclude Include="LuaCalcChargenStatsEvent.h" />
     <ClInclude Include="LuaCalcHitDetectionConeEvent.h" />
     <ClInclude Include="LuaCalcTouchSpellConeEvent.h" />
@@ -196,6 +192,7 @@
     <ClInclude Include="LuaReferenceActivatedEvent.h" />
     <ClInclude Include="LuaReferenceDeactivatedEvent.h" />
     <ClInclude Include="LuaReferenceSceneNodeCreatedEvent.h" />
+    <ClInclude Include="LuaRenderEvent.h" />
     <ClInclude Include="LuaRestInterruptEvent.h" />
     <ClInclude Include="LuaSavedGameEvent.h" />
     <ClInclude Include="LuaSaveGameEvent.h" />
@@ -481,11 +478,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ArrayUtil.cpp" />
-    <ClCompile Include="CrashLogCallTrace.cpp" />
-    <ClCompile Include="CrashLogDevice.cpp" />
     <ClCompile Include="CrashLogLabelsMWSE.cpp" />
-    <ClCompile Include="CrashLogMemory.cpp" />
-    <ClCompile Include="CrashLogRegistryStack.cpp" />
+    <ClCompile Include="CrashLoggerMWSE.cpp" />
+    <ClCompile Include="CrashLoggerMWSEClient.cpp" />
     <ClCompile Include="DynamicLuaObject.cpp" />
     <ClCompile Include="FileUtil.cpp" />
     <ClCompile Include="LuaAbsorbedMagicEvent.cpp" />
@@ -639,6 +634,7 @@
     <ClCompile Include="LuaReferenceActivatedEvent.cpp" />
     <ClCompile Include="LuaReferenceDeactivatedEvent.cpp" />
     <ClCompile Include="LuaReferenceSceneNodeCreatedEvent.cpp" />
+    <ClCompile Include="LuaRenderEvent.cpp" />
     <ClCompile Include="LuaRepairEvent.cpp" />
     <ClCompile Include="LuaRestInterruptEvent.cpp" />
     <ClCompile Include="LuaSavedGameEvent.cpp" />

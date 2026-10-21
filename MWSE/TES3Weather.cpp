@@ -23,7 +23,7 @@ namespace TES3 {
 	std::string Weather::toJson() const {
 		std::ostringstream ss;
 		ss << "\"tes3weather:" << index << "\"";
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	const char* Weather::getName() const {
@@ -167,8 +167,8 @@ namespace TES3 {
 
 	void Weather::clearCachedLuaObjects() {
 		weatherObjectCacheMutex.lock();
-		for (auto& item : weatherObjectCache) {
-			mwse::lua::clearUserdataPointer(item.second);
+		for (auto& [_, object] : weatherObjectCache) {
+			mwse::lua::clearUserdataPointer(object);
 		}
 		weatherObjectCache.clear();
 		weatherObjectCacheMutex.unlock();

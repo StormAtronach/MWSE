@@ -99,21 +99,7 @@ namespace se::string {
 		return true;
 	}
 
-	bool starts_with(const std::string_view& string, const std::string_view& substring) {
-		if (substring.size() >= string.size()) {
-			return false;
-		}
-		return string.compare(0, substring.size(), substring) == 0;
-	}
-
-	bool ends_with(const std::string_view& string, const std::string_view& substring) {
-		if (substring.size() >= string.size()) {
-			return false;
-		}
-		return string.compare(string.size() - substring.size(), substring.size(), substring) == 0;
-	}
-
-	bool contains(const std::string_view& haystack, const std::string_view& needle) {
+	bool contains(std::string_view haystack, std::string_view needle) {
 		if (needle.empty()) {
 			return true;
 		}
@@ -125,7 +111,7 @@ namespace se::string {
 		return std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end()) != haystack.end();
 	}
 
-	bool cicontains(const std::string_view& haystack, const std::string_view& needle) {
+	bool cicontains(std::string_view haystack, std::string_view needle) {
 		if (needle.empty()) {
 			return true;
 		}
@@ -142,14 +128,14 @@ namespace se::string {
 	// Other string utility functions.
 	//
 
-	void strip_start(std::string& string, const std::string_view& substring) {
-		if (starts_with(string, substring)) {
+	void strip_start(std::string& string, std::string_view substring) {
+		if (string.starts_with(substring)) {
 			string.erase(0, substring.length());
 		}
 	}
 
-	void strip_end(std::string& string, const std::string_view& substring) {
-		if (ends_with(string, substring)) {
+	void strip_end(std::string& string, std::string_view substring) {
+		if (string.ends_with(substring)) {
 			string.erase(string.length() - substring.length());
 		}
 	}
@@ -206,7 +192,7 @@ namespace se::string {
 		}
 
 		bool exists(const long id) {
-			return store.find(id) != store.end();
+			return store.contains(id);
 		}
 
 		bool exists(const char* value) {
@@ -632,7 +618,7 @@ namespace se::string {
 			start = end;
 		}
 
-		return std::move(result);
+		return result;
 	}
 #endif
 
@@ -641,7 +627,7 @@ namespace se::string {
 	//
 
 #if defined(SE_IS_CS) && SE_IS_CS == 1
-	bool complex_contains(const std::string_view& haystack, const std::string_view& needle, const se::cs::BaseObject::SearchSettings& settings, std::regex* regex) {
+	bool complex_contains(std::string_view haystack, std::string_view needle, const se::cs::BaseObject::SearchSettings& settings, std::regex* regex) {
 		if (settings.use_regex && regex) {
 			return std::regex_search(haystack.data(), *regex);
 		}

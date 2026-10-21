@@ -39,6 +39,7 @@
 
 // Standard template libraries.
 #include <algorithm>
+#include <bit>
 #include <charconv>
 #include <chrono>
 #include <exception>
@@ -97,6 +98,15 @@
 #include <strmif.h>
 #include <dinput.h>
 #include <dsound.h>
+
+// UI requirements
+#include <uxtheme.h>
+#include <dwmapi.h>
+#include <richedit.h>
+#include <gdiplus.h>
+#pragma comment(lib, "uxtheme.lib")
+#pragma comment(lib, "dwmapi.lib")
+#pragma comment(lib, "gdiplus.lib")
 
 // Core lua binding library.
 #if defined(SE_USE_LUA) && SE_USE_LUA == 1

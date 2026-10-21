@@ -25,6 +25,8 @@ namespace NI {
 	// dragging se::memory::ExternalGlobal into SharedSE.
 	static inline Point2& gPickDefaultTextureCoords() { return *reinterpret_cast<Point2*>(0x7DED80); }
 	static inline PackedColor& gPickDefaultColor() { return *reinterpret_cast<PackedColor*>(0x7DE814); }
+	static inline const int& gPickIgnoresSkinInstances() { return *reinterpret_cast<const int*>(SE_NI_PICK_GLOBAL_IGNORES_SKIN_INSTANCES); }
+	static inline const float& gPickCurrentMaxDistance() { return *reinterpret_cast<const float*>(SE_NI_PICK_GLOBAL_CURRENT_MAX_DISTANCE); }
 
 	static bool __cdecl FindIntersectRayWithTriangle(const Point3* position, const Point3* direction, const Point3* vertex1, const Point3* vertex2, const Point3* vertex3, bool frontOnly, Point3* out_intersection, float* out_distance, float* out_weight2, float* out_weight3) {
 #if defined(SE_NI_FNADDR_FINDINTERSECTRAYWITHTRIANGLE) && SE_NI_FNADDR_FINDINTERSECTRAYWITHTRIANGLE > 0
@@ -47,7 +49,21 @@ namespace NI {
 		// Allow the MCM configuration option to disable this logic entirely and fall back to vanilla behavior.
 		// This will be removed in the future when the config option is removed, once we're confident of performance and accuracy.
 		if (!mwse::Configuration::UseSkinnedAccurateActivationRaytests) {
-			return NI_TriBasedGeometry_findIntersections(this, position, direction, pick);
+			const auto result = NI_TriBasedGeometry_findIntersections(this, position, direction, pick);
+			const auto pickIgnoresSkinInstances = gPickIgnoresSkinInstances() != 0;
+
+			// Vanilla picks skinned geometry by its bounds. Convert that hit to the same
+			// ray distance as triangle hits before NiPick sorts or selects a result.
+			if (result && skinInstance && pick->intersectType == PickIntersectType::TRIANGLE_INTERSECT && pickIgnoresSkinInstances) {
+				const auto record = pick->lastAddedRecord;
+				const auto directionLength = direction->length();
+				if (record && record->object.get() == this && directionLength != 0.0f) {
+					const auto maxDistance = gPickCurrentMaxDistance();
+					record->distance *= ((maxDistance != 0.0f) ? maxDistance : 1.0f) / directionLength;
+				}
+			}
+
+			return result;
 		}
 
 		// Ignore if we don't care about culled geometry.

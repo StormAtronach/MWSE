@@ -3,21 +3,8 @@
 -- Load parameters passed by CSSE.
 --
 
-local commandLine = os.getCommandLine()
-if (not table.find(commandLine, "--fromCSSE")) then
-	return
-end
-
--- CSSE should make a toml file for us to load. Get it and error out if it doesn't exist.
-local csse_toml = toml.loadFile("csse.toml")
-if (csse_toml == nil) then
-	mwse.log("[CSSE] Could not load csse data to change Morrowind execution!")
-	return
-end
-
-local test_environment = csse_toml.test_environment
+local test_environment = require("csse.environment").test_environment
 if (test_environment == nil) then
-	mwse.log("[CSSE] No test environment exists!")
 	return
 end
 

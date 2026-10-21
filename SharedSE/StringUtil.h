@@ -34,18 +34,16 @@ namespace se::string {
 	bool niequal(std::string_view a, std::string_view b, size_t maxCount);
 
 	bool istarts_with(std::string_view string, std::string_view substring);
-	bool starts_with(const std::string_view& string, const std::string_view& substring);
-	bool ends_with(const std::string_view& string, const std::string_view& substring);
 
-	bool contains(const std::string_view& haystack, const std::string_view& needle);
-	bool cicontains(const std::string_view& haystack, const std::string_view& needle);
+	bool contains(std::string_view haystack, std::string_view needle);
+	bool cicontains(std::string_view haystack, std::string_view needle);
 
 	//
 	// Other string utility functions.
 	//
 
-	void strip_start(std::string& string, const std::string_view& substring);
-	void strip_end(std::string& string, const std::string_view& substring);
+	void strip_start(std::string& string, std::string_view substring);
+	void strip_end(std::string& string, std::string_view substring);
 
 	bool replace(std::string& str, const std::string_view from, const std::string_view to);
 
@@ -53,10 +51,10 @@ namespace se::string {
 		return std::isprint(c) || std::isspace(c);
 	}
 
-	static inline std::string from_wstring(const std::wstring& wstr) {
-		std::vector<char> buf(wstr.size());
+	static inline std::string from_wstring(std::wstring_view wstr) {
+		std::string buf(wstr.size(), '\0');
 		std::use_facet<std::ctype<wchar_t>>(std::locale{}).narrow(wstr.data(), wstr.data() + wstr.size(), '?', buf.data());
-		return std::string(buf.data(), buf.size());
+		return buf;
 	}
 
 	static inline void ltrim(std::string& s) {
@@ -144,7 +142,7 @@ namespace se::string {
 	//
 
 #if defined(SE_IS_CS) && SE_IS_CS == 1
-	bool complex_contains(const std::string_view& haystack, const std::string_view& needle, const se::cs::BaseObject::SearchSettings& settings, std::regex* regex);
+	bool complex_contains(std::string_view haystack, std::string_view needle, const se::cs::BaseObject::SearchSettings& settings, std::regex* regex);
 #endif
 
 }

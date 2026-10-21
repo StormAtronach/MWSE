@@ -2,6 +2,7 @@
 #include "DialogRenderWindow.h"
 #include "RenderWindowSelectionData.h"
 #include "WindowMain.h"
+#include "DarkMode.h"
 
 #define IDC_LAYERS_LIST 2001
 #define IDC_BTN_SAVE 2002
@@ -30,10 +31,9 @@ namespace se::cs::dialog::layer_window {
 	LayerData::~LayerData() noexcept {
 		clearLayer();
 
-		for (auto& kv : nodeMaterialData) {
-			NodeColorData* p = kv.second;
-			if (p) {
-				delete p;
+		for (auto& [_, colorData] : nodeMaterialData) {
+			if (colorData) {
+				delete colorData;
 			}
 		}
 		nodeMaterialData.clear();
@@ -335,8 +335,8 @@ namespace se::cs::dialog::layer_window {
 	void LayerData::clearLayer() {
 		// copy to avoid problems with modification during iteration
 		auto c_perCellReferences = this->perCellReferences;
-		for (auto& cell_data : c_perCellReferences) {
-			for (auto objRef : cell_data.second) {
+		for (auto& [_, references] : c_perCellReferences) {
+			for (auto objRef : references) {
 				this->removeObject(objRef);
 			}
 		}
@@ -366,8 +366,8 @@ namespace se::cs::dialog::layer_window {
 
 	size_t LayerData::get_counts() {
 		size_t total = 0;
-		for (auto& cell_data : perCellReferences) {
-			total += cell_data.second.size();
+		for (const auto& [_, references] : perCellReferences) {
+			total += references.size();
 		}
 		return total;
 	}
@@ -874,9 +874,15 @@ namespace se::cs::dialog::layer_window {
 				if (pDIS->itemID >= (int)g_Layers.size()) break;
 
 				LayerData* layer = g_Layers[pDIS->itemID];
+				const auto dark = darkmode::isActive();
 
 				// Background
-				if (pDIS->itemState & ODS_SELECTED) {
+				if (dark) {
+					SetDCBrushColor(pDIS->hDC, (pDIS->itemState & ODS_SELECTED) ? darkmode::palette::controlHot : darkmode::palette::surface);
+					FillRect(pDIS->hDC, &pDIS->rcItem, reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+					SetTextColor(pDIS->hDC, darkmode::palette::text);
+				}
+				else if (pDIS->itemState & ODS_SELECTED) {
 					FillRect(pDIS->hDC, &pDIS->rcItem, GetSysColorBrush(COLOR_HIGHLIGHT));
 					SetTextColor(pDIS->hDC, GetSysColor(COLOR_HIGHLIGHTTEXT));
 				}
@@ -902,16 +908,46 @@ namespace se::cs::dialog::layer_window {
 				InflateRect(&rcColor, -4, -4);
 				HBRUSH hBrush = CreateSolidBrush(NIColorToRef(layer->getLayerColor()));
 				FillRect(pDIS->hDC, &rcColor, hBrush);
-				FrameRect(pDIS->hDC, &rcColor, (HBRUSH)GetStockObject(BLACK_BRUSH));
+				if (dark) {
+					SetDCBrushColor(pDIS->hDC, darkmode::palette::border);
+					FrameRect(pDIS->hDC, &rcColor, reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+				}
+				else {
+					FrameRect(pDIS->hDC, &rcColor, reinterpret_cast<HBRUSH>(GetStockObject(BLACK_BRUSH)));
+				}
 				DeleteObject(hBrush);
 
-				// Visible checkbox
-				UINT stateVis = DFCS_BUTTONCHECK | (!layer->isLayerHidden ? DFCS_CHECKED : 0);
-				DrawFrameControl(pDIS->hDC, &rcVis, DFC_BUTTON, stateVis);
+				if (dark) {
+					const auto drawCheckbox = [&](RECT rect, bool checked) {
+						constexpr int size = 13;
+						const auto centerX = (rect.left + rect.right) / 2;
+						const auto centerY = (rect.top + rect.bottom) / 2;
+						RECT box = { centerX - size / 2, centerY - size / 2, centerX + size / 2 + 1, centerY + size / 2 + 1 };
 
-				// Overlay checkbox
-				UINT stateOver = DFCS_BUTTONCHECK | (layer->isOverlayActive ? DFCS_CHECKED : 0);
-				DrawFrameControl(pDIS->hDC, &rcOver, DFC_BUTTON, stateOver);
+						SetDCBrushColor(pDIS->hDC, darkmode::palette::control);
+						FillRect(pDIS->hDC, &box, reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+						SetDCBrushColor(pDIS->hDC, darkmode::palette::border);
+						FrameRect(pDIS->hDC, &box, reinterpret_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+
+						if (checked) {
+							const auto previousPen = SelectObject(pDIS->hDC, GetStockObject(DC_PEN));
+							SetDCPenColor(pDIS->hDC, darkmode::palette::text);
+							MoveToEx(pDIS->hDC, box.left + 3, box.top + 6, nullptr);
+							LineTo(pDIS->hDC, box.left + 6, box.top + 9);
+							LineTo(pDIS->hDC, box.right - 2, box.top + 3);
+							SelectObject(pDIS->hDC, previousPen);
+						}
+					};
+					drawCheckbox(rcVis, !layer->isLayerHidden);
+					drawCheckbox(rcOver, layer->isOverlayActive);
+				}
+				else {
+					UINT stateVis = DFCS_BUTTONCHECK | (!layer->isLayerHidden ? DFCS_CHECKED : 0);
+					DrawFrameControl(pDIS->hDC, &rcVis, DFC_BUTTON, stateVis);
+
+					UINT stateOver = DFCS_BUTTONCHECK | (layer->isOverlayActive ? DFCS_CHECKED : 0);
+					DrawFrameControl(pDIS->hDC, &rcOver, DFC_BUTTON, stateOver);
+				}
 
 				return TRUE;
 			}

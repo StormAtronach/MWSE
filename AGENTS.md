@@ -1,5 +1,8 @@
 # Agent Instructions
 
+- Do not take control of the user's PC unless explicitly and unambiguously asked to do so.
+- Do not alter EOF-newlines.
+
 
 ## Skills
 
@@ -108,11 +111,6 @@ autocomplete/
 ## Code Organization
 
 - Put helper functions on their associated controllers where appropriate.
-
-
-## Workflow
-
-- Do not bother doing git diff checks.
 
 
 ## Behavior Refinement

@@ -52,6 +52,11 @@ namespace mwse::lua {
 			usertypeDefinition["flags"] = &TES3::AnimationData::flags;
 			usertypeDefinition["hasOverrideAnimations"] = sol::readonly_property(&TES3::AnimationData::hasOverrideAnimations);
 			usertypeDefinition["headGeometry"] = &TES3::AnimationData::headGeometry;
+			usertypeDefinition["headLookAngleX"] = &TES3::AnimationData::headLookAngleX;
+			usertypeDefinition["headLookAngleZ"] = &TES3::AnimationData::headLookAngleZ;
+			usertypeDefinition["headLookClosestDistance"] = &TES3::AnimationData::headLookClosestDistance;
+			usertypeDefinition["headLookTargetAngleX"] = &TES3::AnimationData::headLookTargetAngleX;
+			usertypeDefinition["headLookTargetAngleZ"] = &TES3::AnimationData::headLookTargetAngleZ;
 			usertypeDefinition["headNode"] = &TES3::AnimationData::headNode;
 			usertypeDefinition["headMorphTiming"] = &TES3::AnimationData::headMorphTiming;
 			usertypeDefinition["keyframeSources"] = sol::readonly_property(&TES3::AnimationData::getKeyframeSources);

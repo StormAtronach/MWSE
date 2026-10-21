@@ -69,7 +69,7 @@ namespace se::cs {
 			ss << "<invalid effect>";
 		}
 
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	int MagicEffect::getNameGMST() const {
@@ -236,7 +236,7 @@ namespace se::cs {
 		BIT_SET(flags, EffectFlag::AllowEnchantingBit, value);
 	}
 
-	bool MagicEffect::search(const std::string_view& needle, const BaseObject::SearchSettings& settings, std::regex* regex, int attribute, int skill) const {
+	bool MagicEffect::search(std::string_view needle, const BaseObject::SearchSettings& settings, std::regex* regex, int attribute, int skill) const {
 		if (!settings.effect) {
 			return false;
 		}

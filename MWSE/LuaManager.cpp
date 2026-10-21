@@ -3,6 +3,7 @@
 #include "BitUtil.h"
 #include "BuildDate.h"
 #include "Log.h"
+#include "MathUtil.h"
 #include "MemoryUtil.h"
 #include "mwOffsets.h"
 #include "MWSEConfig.h"
@@ -279,6 +280,7 @@
 #include "LuaPreventRestEvent.h"
 #include "LuaProjectileExpireEvent.h"
 #include "LuaReferenceActivatedEvent.h"
+#include "LuaRenderEvent.h"
 #include "LuaRepairEvent.h"
 #include "LuaRestInterruptEvent.h"
 #include "LuaShieldBlockedEvent.h"
@@ -345,7 +347,7 @@ namespace mwse::lua {
 	static std::unordered_map<unsigned long, sol::object> scriptOverrides;
 
 	// The currently executing overwritten script.
-	static LuaScript* currentOverwrittenScript = NULL;
+	static LuaScript* currentOverwrittenScript = nullptr;
 
 	// We still abort the program if an unprotected lua error happens. Here we at least
 	// get it in the log so it can be debugged.
@@ -607,6 +609,7 @@ namespace mwse::lua {
 		if (searchResult == scriptOverrides.end()) {
 			return;
 		}
+		const auto& value = searchResult->second;
 
 		// Update the LuaManager to reference our current context.
 		lua::LuaManager& manager = lua::LuaManager::getInstance();
@@ -618,11 +621,11 @@ namespace mwse::lua {
 		const auto stateHandle = manager.getThreadSafeStateHandle();
 		auto& state = stateHandle.getState();
 		sol::protected_function execute;
-		if (searchResult->second.is<sol::function>()) {
-			execute = searchResult->second.as<sol::function>();
+		if (value.is<sol::function>()) {
+			execute = value.as<sol::function>();
 		}
-		else if (searchResult->second.get_type() == sol::type::table) {
-			execute = searchResult->second.as<sol::table>()["execute"];
+		else if (value.get_type() == sol::type::table) {
+			execute = value.as<sol::table>()["execute"];
 		}
 
 		if (execute) {
@@ -811,6 +814,17 @@ namespace mwse::lua {
 		if (!worldController->flagMenuMode && event::SimulateEvent::getEventEnabled()) {
 			luaManager.getThreadSafeStateHandle().triggerEvent(new event::SimulateEvent(worldController->deltaTime, highResolutionTimestamp));
 		}
+	}
+
+	//
+	// Hook: Render
+	//
+
+	void __fastcall Render(TES3::Game* game, DWORD _UNUSED_, int renderType) {
+		if (event::RenderEvent::getEventEnabled()) {
+			LuaManager::getInstance().getThreadSafeStateHandle().triggerEvent(new event::RenderEvent());
+		}
+		game->renderNextFrame(renderType);
 	}
 
 	//
@@ -1615,7 +1629,7 @@ namespace mwse::lua {
 
 	void __stdcall OnMagicCastSuccess(TES3::MagicSourceInstance* magicInstance, int* pExpGainSchool) {
 		// Ignore ability spells, as they are automatically activated as NPCs enter simulation range.
-		if (magicInstance->sourceCombo.sourceType == TES3::MagicSourceType::Spell && magicInstance->sourceCombo.source.asSpell->castType == TES3::SpellCastType::Ability) {
+		if (magicInstance->sourceCombo.sourceType == TES3::MagicSourceType::Spell && magicInstance->sourceCombo.source.asSpell->isAbility()) {
 			return;
 		}
 
@@ -1774,7 +1788,7 @@ namespace mwse::lua {
 
 	TES3::Object* __fastcall OnInterruptRest(TES3::LeveledCreature* leveledCreature, DWORD _UNUSED_) {
 		// Creature that we return.
-		TES3::Object* creature = NULL;
+		TES3::Object* creature = nullptr;
 
 		// Fire off an event and change the determined creature.
 		if (event::RestInterruptEvent::getEventEnabled()) {
@@ -1786,7 +1800,7 @@ namespace mwse::lua {
 				if (eventData.get_or("block", false)) {
 					tes3::setRestInterruptCount(0);
 					tes3::setRestHoursInterrupted(-1);
-					return NULL;
+					return nullptr;
 				}
 
 				// Allow overriding the spawn.
@@ -2668,7 +2682,7 @@ namespace mwse::lua {
 			const auto& lowerPath = maybeLowerPath.value();
 
 			// We only care about *-metadata.toml files.
-			if (!se::string::ends_with(lowerPath, "-metadata.toml")) {
+			if (!lowerPath.ends_with("-metadata.toml")) {
 				continue;
 			}
 
@@ -2722,7 +2736,7 @@ namespace mwse::lua {
 
 	const std::array<std::string, 2> disabledMarkers = { ".disabled", ".mohidden" };
 
-	bool isPathDisabled(const std::string_view& path) {
+	bool isPathDisabled(std::string_view path) {
 		const auto disabledPathItt = std::find_if(disabledMarkers.begin(), disabledMarkers.end(),
 			[&](std::string_view s) {
 				return path.find(s) != std::string::npos;
@@ -2730,7 +2744,7 @@ namespace mwse::lua {
 		return disabledPathItt != disabledMarkers.end();
 	}
 
-	void LuaManager::gatherMainModScripts(const std::string_view& path, bool core, const std::string_view& scriptFilename) {
+	void LuaManager::gatherMainModScripts(std::string_view path, bool core, const std::string_view& scriptFilename) {
 		if (!std::filesystem::exists(path)) {
 			return;
 		}
@@ -2747,7 +2761,7 @@ namespace mwse::lua {
 
 			try {
 				auto filename = it->path().filename();
-				
+
 				if (filename == ".git") {
 					// Skip .git subdirectories, as scanning their contents are likely to take the path length over the path limit and crash.
 					it.disable_recursion_pending();
@@ -4300,7 +4314,7 @@ namespace mwse::lua {
 	//
 	// Patch: calcMoveSpeed event for creatures.
 	//
-	
+
 	__declspec(naked) void patchCreatureCalcMoveSpeed() {
 		__asm {
 			mov ecx, esi	// Size: 0x2
@@ -4486,9 +4500,8 @@ namespace mwse::lua {
 
 		// Fire event.
 		if (event::CalcHitDetectionConeEvent::getEventEnabled()) {
-			const double radiansToDegrees = 57.29577951308232;
-			double degreesXY = radiansToDegrees * std::asin(fCombatAngleXY);
-			double degreesZ = radiansToDegrees * std::asin(fCombatAngleZ);
+			float degreesXY = se::math::radiansToDegrees(std::asin(fCombatAngleXY));
+			float degreesZ = se::math::radiansToDegrees(std::asin(fCombatAngleZ));
 
 			const auto stateHandle = mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle();
 			sol::object response = stateHandle.triggerEvent(new event::CalcHitDetectionConeEvent(attacker, nullptr, attackReach, degreesXY, degreesZ));
@@ -4497,8 +4510,8 @@ namespace mwse::lua {
 				attackReach = eventData["reach"];
 				degreesXY = eventData["angleXY"];
 				degreesZ = eventData["angleZ"];
-				fCombatAngleXY = float(std::sin(std::min(90.0, degreesXY) / radiansToDegrees));
-				fCombatAngleZ = float(std::sin(std::min(90.0, degreesZ) / radiansToDegrees));
+				fCombatAngleXY = std::sin(se::math::degreesToRadians(std::min(90.0f, degreesXY)));
+				fCombatAngleZ = std::sin(se::math::degreesToRadians(std::min(90.0f, degreesZ)));
 			}
 		}
 
@@ -4521,9 +4534,8 @@ namespace mwse::lua {
 
 		// Fire event.
 		if (event::CalcTouchSpellConeEvent::getEventEnabled()) {
-			const double radiansToDegrees = 57.29577951308232;
-			double degreesXY = radiansToDegrees * std::asin(fCombatAngleXY);
-			double degreesZ = radiansToDegrees * std::asin(fCombatAngleZ);
+			float degreesXY = se::math::radiansToDegrees(std::asin(fCombatAngleXY));
+			float degreesZ = se::math::radiansToDegrees(std::asin(fCombatAngleZ));
 
 			const auto stateHandle = mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle();
 			sol::object response = stateHandle.triggerEvent(new event::CalcTouchSpellConeEvent(attacker, sourceInstance, attackReach, degreesXY, degreesZ));
@@ -4532,8 +4544,8 @@ namespace mwse::lua {
 				attackReach = eventData["reach"];
 				degreesXY = eventData["angleXY"];
 				degreesZ = eventData["angleZ"];
-				fCombatAngleXY = float(std::sin(std::min(90.0, degreesXY) / radiansToDegrees));
-				fCombatAngleZ = float(std::sin(std::min(90.0, degreesZ) / radiansToDegrees));
+				fCombatAngleXY = std::sin(se::math::degreesToRadians(std::min(90.0f, degreesXY)));
+				fCombatAngleZ = std::sin(se::math::degreesToRadians(std::min(90.0f, degreesZ)));
 			}
 		}
 
@@ -4588,9 +4600,8 @@ namespace mwse::lua {
 
 		// Fire event.
 		if (event::CalcHitDetectionConeEvent::getEventEnabled()) {
-			const double radiansToDegrees = 57.29577951308232;
-			double degreesXY = radiansToDegrees * std::asin(fCombatAngleXY);
-			double degreesZ = radiansToDegrees * std::asin(fCombatAngleZ);
+			double degreesXY = se::math::radiansToDegrees(std::asin(fCombatAngleXY));
+			double degreesZ = se::math::radiansToDegrees(std::asin(fCombatAngleZ));
 
 			const auto stateHandle = mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle();
 			sol::object response = stateHandle.triggerEvent(new event::CalcHitDetectionConeEvent(attacker, target, attackReach, degreesXY, degreesZ));
@@ -4834,7 +4845,7 @@ namespace mwse::lua {
 		if (mwse::lua::event::PickpocketEvent::getEventEnabled()) {
 			const auto stateHandle = mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle();
 			sol::object response;
-			
+
 			if (tile) {
 				// On pickpocketing an item.
 				response = stateHandle.triggerEvent(new event::PickpocketEvent(mobile, tile->item, tile->itemData, count, chance));
@@ -5054,6 +5065,9 @@ namespace mwse::lua {
 		// Event: enterFrame. This hook can be in a couple of locations, because of MCP.
 		genCallEnforced(0x41ABB0, 0x40F610, reinterpret_cast<DWORD>(EnterFrame));
 		genCallEnforced(0x41ABA5, 0x40F610, reinterpret_cast<DWORD>(EnterFrame));
+
+		// Event: render. Wraps the main loop's `TES3Game::renderNextFrame` call.
+		genCallEnforced(0x41BE56, 0x41BE90, reinterpret_cast<DWORD>(Render));
 
 		// Event: equip.
 		genCallEnforced(0x5CB8E7, 0x5CE130, reinterpret_cast<DWORD>(OnPCEquip));
@@ -6904,6 +6918,8 @@ namespace mwse::lua {
 	}
 
 	void LuaManager::savePersistentTimers() {
+		const auto stateHandle = getThreadSafeStateHandle();
+
 		auto macp = TES3::WorldController::get()->getMobilePlayer();
 		if (macp == nullptr) {
 			return;
@@ -6942,6 +6958,8 @@ namespace mwse::lua {
 	}
 
 	void LuaManager::restorePersistentTimers() {
+		const auto stateHandle = getThreadSafeStateHandle();
+
 		auto macp = TES3::WorldController::get()->getMobilePlayer();
 		if (macp == nullptr) {
 			return;
@@ -6958,12 +6976,14 @@ namespace mwse::lua {
 
 		// Restore timer values.
 		auto list = timerData.get<sol::table>("list");
-		for (const auto& kvp : list) {
-			auto timer = Timer::createFromTable(kvp.second);
+		for (const auto& [_, data] : list) {
+			Timer::createFromTable(data);
 		}
 	}
 
 	void LuaManager::clearPersistentTimers() {
+		const auto stateHandle = getThreadSafeStateHandle();
+
 		auto macp = TES3::WorldController::get()->getMobilePlayer();
 		if (macp == nullptr) {
 			return;
@@ -6974,6 +6994,8 @@ namespace mwse::lua {
 	}
 
 	void LuaManager::clearTimers() {
+		const auto stateHandle = getThreadSafeStateHandle();
+
 		realTimers->clearTimers();
 		simulateTimers->clearTimers();
 		gameTimers->clearTimers();

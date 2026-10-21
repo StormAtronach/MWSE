@@ -151,6 +151,7 @@ namespace TES3 {
 		//
 
 		static Cell* create();
+		void dtor();
 
 		Reference * getFirstObjectOfType(ObjectType::ObjectType, bool) const;
 
@@ -185,6 +186,7 @@ namespace TES3 {
 
 		Land* getLandscape() const;
 		Region* getRegion() const;
+		void setRegion(Region* region);
 
 		NI::PackedColor* getAmbientColor();
 		NI::PackedColor* getFogColor();

@@ -139,7 +139,7 @@ namespace NI {
 	std::string Matrix33::toString() const {
 		std::ostringstream ss;
 		ss << std::fixed << std::setprecision(2) << std::dec << *this;
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	std::string Matrix33::toJson() const {
@@ -149,7 +149,7 @@ namespace NI {
 			<< "[" << m1.x << "," << m1.y << "," << m1.z << "],"
 			<< "[" << m2.x << "," << m2.y << "," << m2.z << "]"
 			<< "]";
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	Matrix33 Matrix33::copy() const {
@@ -217,8 +217,6 @@ namespace NI {
 	}
 
 	bool Matrix33::toRotationDifference(const Point3& a, const Point3& b) {
-		using se::math::M_PIf;
-
 		auto axis = a.crossProduct(&b);
 		auto norm = axis.length();
 		if (norm <= 1e-5) {
@@ -229,7 +227,7 @@ namespace NI {
 			axis = axis / norm;
 			auto angle = asin(norm);
 			if (a.dotProduct(&b) < 0) {
-				angle = M_PIf - angle;
+				angle = std::numbers::pi_v<float> - angle;
 			}
 			toRotation(-angle, axis);
 			return true;

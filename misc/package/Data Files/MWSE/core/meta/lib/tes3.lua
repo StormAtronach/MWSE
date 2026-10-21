@@ -963,15 +963,9 @@ function tes3.findQuest(params) end
 function tes3.findRace(id) end
 
 --- Fetches the core game region object for a given region ID. If the region with a given ID doesn't exist, nil is returned.
---- @param params tes3.findRegion.params This table accepts the following values:
---- 
---- `id`: string — ID of the region to search for.
+--- @param id string ID of the region to search for.
 --- @return tes3region? region No description yet available.
-function tes3.findRegion(params) end
-
----Table parameter definitions for `tes3.findRegion`.
---- @class tes3.findRegion.params
---- @field id string ID of the region to search for.
+function tes3.findRegion(id) end
 
 --- Forces the player's POV to first person the next simulation frame, and returns true if the POV has been changed.
 --- @return boolean changedPOV No description yet available.
@@ -1380,7 +1374,7 @@ function tes3.getModList() end
 
 --- Fetches the core game object for a given object ID.
 --- @param id string No description yet available.
---- @return tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3baseObject|tes3birthsign|tes3bodyPart|tes3book|tes3cell|tes3class|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3dialogue|tes3dialogueInfo|tes3door|tes3enchantment|tes3faction|tes3gameSetting|tes3globalVariable|tes3ingredient|tes3land|tes3landTexture|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3magicSourceInstance|tes3misc|tes3npc|tes3npcInstance|tes3pathGrid|tes3probe|tes3quest|tes3race|tes3reference|tes3region|tes3repairTool|tes3script|tes3skill|tes3sound|tes3soundGenerator|tes3spell|tes3startScript|tes3static|tes3weapon object No description yet available.
+--- @return tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3baseObject|tes3birthsign|tes3bodyPart|tes3book|tes3cell|tes3class|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3dialogue|tes3dialogueInfo|tes3door|tes3enchantment|tes3faction|tes3gameSetting|tes3globalVariable|tes3ingredient|tes3land|tes3landTexture|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3magicEffect|tes3magicSourceInstance|tes3misc|tes3npc|tes3npcInstance|tes3pathGrid|tes3probe|tes3quest|tes3race|tes3reference|tes3region|tes3repairTool|tes3script|tes3skill|tes3sound|tes3soundGenerator|tes3spell|tes3startScript|tes3static|tes3weapon object No description yet available.
 function tes3.getObject(id) end
 
 --- Returns the object's owner, or nil if the object is unowned.
@@ -1776,7 +1770,7 @@ function tes3.loopTArray(tarray) end
 --- Returns a safe handle for the object. To get the object use `:getObject()`. To check if it still exists use `:valid()`.
 ---
 --- [Examples available in online documentation](https://mwse.github.io/MWSE/apis/tes3/#tes3makesafeobjecthandle).
---- @param object tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3baseObject|tes3birthsign|tes3bodyPart|tes3book|tes3cell|tes3class|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3dialogue|tes3dialogueInfo|tes3door|tes3enchantment|tes3faction|tes3gameSetting|tes3globalVariable|tes3ingredient|tes3land|tes3landTexture|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3magicSourceInstance|tes3misc|tes3npc|tes3npcInstance|tes3pathGrid|tes3probe|tes3quest|tes3race|tes3reference|tes3region|tes3repairTool|tes3script|tes3skill|tes3sound|tes3soundGenerator|tes3spell|tes3startScript|tes3static|tes3weapon An object to make a safe handle for.
+--- @param object tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3baseObject|tes3birthsign|tes3bodyPart|tes3book|tes3cell|tes3class|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3dialogue|tes3dialogueInfo|tes3door|tes3enchantment|tes3faction|tes3gameSetting|tes3globalVariable|tes3ingredient|tes3land|tes3landTexture|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3magicEffect|tes3magicSourceInstance|tes3misc|tes3npc|tes3npcInstance|tes3pathGrid|tes3probe|tes3quest|tes3race|tes3reference|tes3region|tes3repairTool|tes3script|tes3skill|tes3sound|tes3soundGenerator|tes3spell|tes3startScript|tes3static|tes3weapon An object to make a safe handle for.
 --- @return mwseSafeObjectHandle safeObjectHandle No description yet available.
 function tes3.makeSafeObjectHandle(object) end
 
@@ -2638,7 +2632,7 @@ function tes3.setPlayerControlState(params) end
 --- @field viewSwitch? boolean *Default*: `false`. If this is false, it will block player changing view mod from 1st to 3rd person camera and vice versa.
 
 --- Sets an object (of any kind) to be sourceless, which are objects the game does not store in savegames. This can be useful for mod-created temporary objects which are not necessary to save.
---- @param object tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3baseObject|tes3birthsign|tes3bodyPart|tes3book|tes3cell|tes3class|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3dialogue|tes3dialogueInfo|tes3door|tes3enchantment|tes3faction|tes3gameSetting|tes3globalVariable|tes3ingredient|tes3land|tes3landTexture|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3magicSourceInstance|tes3misc|tes3npc|tes3npcInstance|tes3pathGrid|tes3probe|tes3quest|tes3race|tes3reference|tes3region|tes3repairTool|tes3script|tes3skill|tes3sound|tes3soundGenerator|tes3spell|tes3startScript|tes3static|tes3weapon The object whose sourceless flag to modify.
+--- @param object tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3baseObject|tes3birthsign|tes3bodyPart|tes3book|tes3cell|tes3class|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3dialogue|tes3dialogueInfo|tes3door|tes3enchantment|tes3faction|tes3gameSetting|tes3globalVariable|tes3ingredient|tes3land|tes3landTexture|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3magicEffect|tes3magicSourceInstance|tes3misc|tes3npc|tes3npcInstance|tes3pathGrid|tes3probe|tes3quest|tes3race|tes3reference|tes3region|tes3repairTool|tes3script|tes3skill|tes3sound|tes3soundGenerator|tes3spell|tes3startScript|tes3static|tes3weapon The object whose sourceless flag to modify.
 --- @param sourceless? boolean *Default*: `true`. Allows flagging an object as sourceless or undoing that action.
 function tes3.setSourceless(object, sourceless) end
 
@@ -4135,6 +4129,7 @@ tes3.event = require("tes3.event")
 ---| `tes3.event.referenceDeactivated`
 ---| `tes3.event.referenceSceneNodeCreated`
 ---| `tes3.event.removedEquipmentBodyParts`
+---| `tes3.event.render`
 ---| `tes3.event.repair`
 ---| `tes3.event.restInterrupt`
 ---| `tes3.event.save`

@@ -106,7 +106,7 @@ namespace mwse::lua {
 
 		// Prepare the lists we care about.
 		std::queue<TES3::Object*> objectListQueue;
-		auto searchingSpells = desiredTypes.count(TES3::ObjectType::Spell) > 0; // TODO: Change in C++20 to .contains.
+		auto searchingSpells = desiredTypes.contains(TES3::ObjectType::Spell);
 		if (searchingSpells) {
 			objectListQueue.push(ndd->spellsList->head);
 		}
@@ -279,7 +279,7 @@ namespace mwse::lua {
 			}
 		}
 
-		if (index >= TES3::GMST::sMonthMorningstar && index <= TES3::GMST::sWitchhunter) {
+		if (index >= TES3::GMST::FirstGMST && index <= TES3::GMST::LastGMST) {
 			return dataHandler->nonDynamicData->GMSTs[index];
 		}
 
@@ -301,14 +301,14 @@ namespace mwse::lua {
 
 		if (key.is<int>()) {
 			int index = key.as<int>();
-			if (index >= TES3::GMST::sMonthMorningstar && index <= TES3::GMST::sWitchhunter) {
+			if (index >= TES3::GMST::FirstGMST && index <= TES3::GMST::LastGMST) {
 				return dataHandler->nonDynamicData->GMSTs[index];
 			}
 		}
 		else if (key.is<std::string>()) {
 			int index = -1;
 			std::string keyStr = key.as<std::string>();
-			for (int i = 0; i <= TES3::GMST::sWitchhunter; ++i) {
+			for (int i = TES3::GMST::FirstGMST; i <= TES3::GMST::LastGMST; ++i) {
 				TES3::GameSettingInfo* info = TES3::GameSettingInfo::get(i);
 				if (strcmp(info->name, keyStr.c_str()) == 0) {
 					index = i;
@@ -403,8 +403,7 @@ namespace mwse::lua {
 		}
 
 		// Clamp volume.
-		volume = std::max(0.0, volume);
-		volume = std::min(volume, 1.0);
+		volume = se::math::clamp(volume, 0.0, 1.0);
 
 		// Apply mix and rescale to 0-250
 		volume *= TES3::WorldController::get()->audioController->getMixVolumeRaw(TES3::AudioMixType(mix));
@@ -645,7 +644,7 @@ namespace mwse::lua {
 		TES3::Reference* reference = getOptionalParamExecutionReference(params);
 		TES3::Item* item = getOptionalParamObject<TES3::Item>(params, "item");
 		auto state = getOptionalParam<bool>(params, "pickup", true) ? TES3::ItemSoundState::Up : TES3::ItemSoundState::Down;
-		if (item == NULL) {
+		if (!item) {
 			return;
 		}
 
@@ -661,9 +660,9 @@ namespace mwse::lua {
 			}
 			else if (filter.value().is<sol::table>()) {
 				sol::table filterTable = filter.value().as<sol::table>();
-				for (const auto& kv : filterTable) {
-					if (kv.second.is<unsigned int>()) {
-						filters.insert(kv.second.as<unsigned int>());
+				for (const auto& [_, value] : filterTable) {
+					if (value.is<unsigned int>()) {
+						filters.insert(value.as<unsigned int>());
 					}
 				}
 			}
@@ -685,7 +684,7 @@ namespace mwse::lua {
 		}
 	}
 
-	TES3::SoundGenerator* getSoundGenerator(std::string creatureId, unsigned int type) {
+	TES3::SoundGenerator* getSoundGenerator(std::string_view creatureId, unsigned int type) {
 		auto nonDynamicData = TES3::DataHandler::get()->nonDynamicData;
 		auto creature = nonDynamicData->resolveObjectByType<TES3::Creature>(creatureId);
 		if (creature == nullptr) {
@@ -756,7 +755,7 @@ namespace mwse::lua {
 
 		auto attribute = getOptionalParam<int>(params, "attribute", -1);
 		auto skill = getOptionalParam<int>(params, "skill", -1);
-		return std::move(effect->getComplexName(attribute, skill));
+		return effect->getComplexName(attribute, skill);
 	}
 
 	sol::optional<NI::Camera*> getCamera() {
@@ -975,8 +974,7 @@ namespace mwse::lua {
 		// Allow defining references/nodes to ignore from the raytest.
 		sol::optional<sol::table> ignoreTable = params["ignore"];
 		if (ignoreTable) {
-			for (const auto& kvPair : ignoreTable.value()) {
-				sol::object value = kvPair.second;
+			for (const auto& [_, value] : ignoreTable.value()) {
 				if (value.is<NI::Node>()) {
 					auto node = value.as<NI::Node*>();
 					if (!node->getAppCulled()) {
@@ -1017,8 +1015,8 @@ namespace mwse::lua {
 		Configuration::UseSkinnedAccurateActivationRaytests = existingUseNewSkinning;
 
 		// Restore previous cull states.
-		for (auto itt = ignoreRestoreList.begin(); itt != ignoreRestoreList.end(); ++itt) {
-			(*itt)->setAppCulled(false);
+		for (auto node : ignoreRestoreList) {
+			node->setAppCulled(false);
 		}
 
 		// Did we get any results?
@@ -1039,11 +1037,13 @@ namespace mwse::lua {
 				// Adjust distance as if direction was not normalized.
 				r->distance *= distanceScale;
 
-				// Skinned nodes only have usable scaled distance data.
+				// Explicit bounds picks still have scaled distance data for skinned nodes.
 				if (r->object->isInstanceOfType(NI::RTTIStaticPtr::NiTriBasedGeom)) {
 					const auto geometry = static_cast<const NI::TriBasedGeometry*>(r->object.get());
 					if (geometry->skinInstance) {
-						r->distance *= skinnedCorrection;
+						if (rayTestCache->intersectType != NI::PickIntersectType::TRIANGLE_INTERSECT) {
+							r->distance *= skinnedCorrection;
+						}
 						r->intersection = position.value() + direction.value() * r->distance;
 						r->normal = (r->intersection - geometry->worldBoundOrigin).normalized();
 					}
@@ -1151,7 +1151,7 @@ namespace mwse::lua {
 
 	TES3::EquipmentStack* getEquippedItem(sol::table params) {
 		// Find our equipment based on the object given.
-		NI::IteratedList<TES3::EquipmentStack*>* equipment = NULL;
+		NI::IteratedList<TES3::EquipmentStack*>* equipment = nullptr;
 		sol::object actor = params["actor"];
 		if (actor.valid()) {
 			if (actor.is<TES3::Reference*>()) {
@@ -1336,20 +1336,15 @@ namespace mwse::lua {
 		}
 
 		int effect = getOptionalParam<int>(params, "effect", -1);
-		int castType = getOptionalParam<int>(params, "castType", -1);
+		auto castType = (TES3::SpellCastType::SpellCastType)getOptionalParam<int>(params, "castType", -1);
 		int chance = getOptionalParam<int>(params, "chance", 100);
-		if (chance > 100) {
-			chance = 100;
-		}
-		else if (chance < 0) {
-			chance = 0;
-		}
+		chance = std::clamp(chance, 0, 100);
 
 		if (effect != -1) {
 			TES3::WorldController::get()->magicInstanceController->removeSpellsByEffect(reference, effect, chance);
 		}
 		else if (castType != -1) {
-			bool removeSpell = getOptionalParam<bool>(params, "removeSpell", castType != int(TES3::SpellCastType::Spell));
+			bool removeSpell = getOptionalParam<bool>(params, "removeSpell", castType != TES3::SpellCastType::Spell);
 			TES3::WorldController::get()->magicInstanceController->clearSpellEffect(reference, castType, chance, removeSpell);
 		}
 		else {
@@ -2477,7 +2472,7 @@ namespace mwse::lua {
 			std::swap(TES3::DataHandler::suppressThreadLoad, suppressThreadLoad);
 
 			if (userProvidedOrientation) {
-				reference->relocate(cell, &position.value(), static_cast<float>(orientation.value().z * (180.0f / se::math::M_PI)));
+				reference->relocate(cell, &position.value(), se::math::radiansToDegrees(orientation.value().z));
 			}
 			else {
 				reference->relocateNoRotation(cell, &position.value());
@@ -2536,23 +2531,27 @@ namespace mwse::lua {
 			unvisitedCells.pop_back();
 
 			for (auto refr : cell->persistentRefs) {
-				if (refr->baseObject->objectType == TES3::ObjectType::Door) {
-					auto destination = refr->getAttachedTravelDestination();
-					if (destination) {
-						auto destinationCell = destination->cell;
+				if (refr->baseObject->objectType != TES3::ObjectType::Door) {
+					continue;
+				}
 
-						if (destinationCell->getIsInterior()) {
-							// Queue up new unseen interior cells.
-							if (knownCells.count(destinationCell) == 0) {
-								knownCells.insert(destinationCell);
-								unvisitedCells.push_back(destinationCell);
-							}
-						}
-						else {
-							// For an exterior destination, return the door marker position.
-							return destination->destination->position;
-						}
+				auto destination = refr->getAttachedTravelDestination();
+				if (!destination) {
+					continue;
+				}
+
+				auto destinationCell = destination->cell;
+
+				if (destinationCell->getIsInterior()) {
+					// Queue up new unseen interior cells.
+					if (!knownCells.contains(destinationCell)) {
+						knownCells.insert(destinationCell);
+						unvisitedCells.push_back(destinationCell);
 					}
+				}
+				else {
+					// For an exterior destination, return the door marker position.
+					return destination->destination->position;
 				}
 			}
 		}
@@ -2771,7 +2770,7 @@ namespace mwse::lua {
 					}
 
 					// Magic menu spell list update.
-					if (spell->castType == TES3::SpellCastType::Spell) {
+					if (spell->isSpell()) {
 						TES3_UI_removeSpellFromGUIList(spell);
 					}
 					else {
@@ -3026,7 +3025,7 @@ namespace mwse::lua {
 		}
 
 		const auto updateCollisions = getOptionalParam<bool>(params, "updateCollisionGroups", true);
-		reference->handleUpdate(false, updateCollisions);
+		reference->handleUpdate(TES3::Reference::UpdateType::Enabled, updateCollisions);
 
 		// Make sure everything is set as modified.
 		reference->setObjectModified(true);
@@ -5711,8 +5710,8 @@ namespace mwse::lua {
 	sol::table getKillCounts(sol::this_state ts) {
 		sol::state_view state = ts;
 		sol::table killMap = state.create_table();
-		for (auto& itt : *TES3::WorldController::get()->playerKills->counter) {
-			killMap[itt.first] = itt.second;
+		for (auto& [actor, killCount] : *TES3::WorldController::get()->playerKills->counter) {
+			killMap[actor] = killCount;
 		}
 		return killMap;
 	}

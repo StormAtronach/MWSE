@@ -48,13 +48,13 @@ namespace NI {
 	std::string Quaternion::toString() const {
 		std::ostringstream ss;
 		ss << std::fixed << std::setprecision(2) << std::dec << *this;
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	std::string Quaternion::toJson() const {
 		std::ostringstream ss;
 		ss << "{\"w\":" << w << ",\"x\":" << x << ",\"y\":" << y << ",\"z\":" << z << "}";
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	Quaternion Quaternion::copy() const {
@@ -131,7 +131,7 @@ namespace NI {
 			half_theta = 0;
 		}
 		else if (dot_product <= -1.0) {
-			half_theta = se::math::M_PI;
+			half_theta = std::numbers::pi;
 		}
 		else {
 			half_theta = std::acos(dot_product);

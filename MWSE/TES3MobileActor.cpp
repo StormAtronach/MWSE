@@ -309,7 +309,7 @@ namespace TES3 {
 			Spell* spell = static_cast<Spell*>(source);
 
 			// Ignore spell that can not be casted.
-			if (spell->castType != SpellCastType::Spell && spell->castType != SpellCastType::Power) {
+			if (!spell->isActiveCast()) {
 				throw std::invalid_argument("Invalid 'source' parameter provided. Spell must be castable.");
 			}
 
@@ -686,7 +686,7 @@ namespace TES3 {
 		}
 
 		// Effect attribute based resistance/weakness.
-		if (resistIndex >= TES3::MagicEffectAttribute::AttackBonus && resistIndex <= TES3::MagicEffectAttribute::Invisibility) {
+		if (resistIndex >= TES3::EffectAttribute::AttackBonus && resistIndex <= TES3::EffectAttribute::Invisibility) {
 			adjustedDamage *= std::max(0, 100 - effectAttributes[resistIndex]) / 100.0f;
 		}
 
@@ -731,7 +731,7 @@ namespace TES3 {
 		}
 
 		// Effect attribute based resistance/weakness.
-		if (resistIndex >= TES3::MagicEffectAttribute::AttackBonus && resistIndex <= TES3::MagicEffectAttribute::Invisibility) {
+		if (resistIndex >= TES3::EffectAttribute::AttackBonus && resistIndex <= TES3::EffectAttribute::Invisibility) {
 			adjustedDamage *= std::max(0, 100 - effectAttributes[resistIndex]) / 100.0f;
 		}
 
@@ -1430,9 +1430,8 @@ namespace TES3 {
 			}
 			// Warning: Unequipping lights during menumode with updateGUI=true triggers a Morrowind crash.
 			// UI update has been moved to a separate function.
-			for (auto it : matches) {
-				s = it;
-				actor->unequipItem(s->object, true, this, false, s->itemData);
+			for (auto stack : matches) {
+				actor->unequipItem(stack->object, true, this, false, stack->itemData);
 			}
 			actor->postUnequipUIRefresh(this);
 		}
@@ -2156,8 +2155,8 @@ namespace TES3 {
 		return false;
 	}
 
-	bool MobileActor::hasSummonEffect() {
-		for (auto& activeEffect : activeMagicEffects) {
+	bool MobileActor::hasSummonEffect() const {
+		for (const auto& activeEffect : activeMagicEffects) {
 			if (activeEffect.isIllegalSummon) {
 				return true;
 			}

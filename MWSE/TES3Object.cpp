@@ -82,7 +82,7 @@ namespace TES3 {
 		mwse::ReferenceTracker::invalidateObject(this);
 
 		if (objectType == ObjectType::Cell && dataHandler && dataHandler->nonDynamicData) {
-			dataHandler->nonDynamicData->clearCellByNameCache(static_cast<const Cell*>(this));
+			dataHandler->nonDynamicData->clearCellNameCache(static_cast<const Cell*>(this));
 		}
 
 		if (UI::MenuInputController::lastTooltipObject == this) {
@@ -265,6 +265,20 @@ namespace TES3 {
 		}
 	}
 
+	bool BaseObject::isValidSpellTarget() const {
+		switch (objectType) {
+		case ObjectType::Container:
+		case ObjectType::Creature:
+		case ObjectType::CreatureClone:
+		case ObjectType::Door:
+		case ObjectType::NPC:
+		case ObjectType::NPCClone:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	bool BaseObject::isWeaponOrAmmo() const {
 		switch (objectType) {
 		case TES3::ObjectType::Ammo:
@@ -329,7 +343,7 @@ namespace TES3 {
 		case ObjectType::Static:
 			return true;
 		case ObjectType::Light:
-			return !static_cast<const Light*>(this)->getCanCarry();
+			return !static_cast<const Light*>(baseObject)->getCanCarry();
 		}
 		return false;
 	}
@@ -351,7 +365,7 @@ namespace TES3 {
 	std::string BaseObject::toJson() const {
 		std::ostringstream ss;
 		ss << "\"tes3baseObject:" << getObjectID() << "\"";
-		return std::move(ss.str());
+		return ss.str();
 	}
 
 	std::unordered_set<const BaseObject*> sourcelessObjects;
@@ -589,8 +603,8 @@ namespace TES3 {
 
 	void BaseObject::clearCachedLuaObjects() {
 		const auto stateHandle = mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle();
-		for (auto& item : baseObjectCache) {
-			mwse::lua::clearUserdataPointer(item.second);
+		for (auto& [_, object] : baseObjectCache) {
+			mwse::lua::clearUserdataPointer(object);
 		}
 		baseObjectCache.clear();
 	}
@@ -818,7 +832,7 @@ namespace TES3 {
 
 	Object* Object::skipDeletedObjects() {
 		TES3::Object* object = this;
-		while (object && (object->objectFlags & TES3::ObjectFlag::Delete) == TES3::ObjectFlag::Delete)
+		while (object && object->getDeleted())
 		{
 			object = object->nextInCollection;
 		}

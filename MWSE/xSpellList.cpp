@@ -26,8 +26,8 @@ namespace mwse {
 
 		// Arguments we will be returning.
 		long spellCount = 0;
-		char* spellId = NULL;
-		char* spellName = NULL;
+		char* spellId = nullptr;
+		char* spellName = nullptr;
 		long spellType = 0;
 		long spellCost = 0;
 		long spellEffectCount = 0;
@@ -35,7 +35,7 @@ namespace mwse {
 
 		// Get the reference we're checking.
 		TES3::Reference* reference = virtualMachine.getReference();
-		if (reference == NULL) {
+		if (reference == nullptr) {
 			if constexpr (DEBUG_MWSCRIPT_FUNCTIONS) {
 				mwse::log::getLog() << "xSpellList: Could not get reference." << std::endl;
 			}
@@ -54,17 +54,17 @@ namespace mwse {
 
 		// Make sure we have the base NPC.
 		TES3::NPC* npc = reinterpret_cast<TES3::NPC*>(reference->baseObject);
-		if (!(npc->actorFlags & TES3::ActorFlag::IsBase)) {
+		if (!npc->isBaseActor()) {
 			npc = reinterpret_cast<TES3::NPCInstance*>(npc)->baseNPC;
 		}
 
 
 		// If we're not provided a node, get the first node of the NPC.
-		if (node == NULL) {
+		if (node == nullptr) {
 			node = npc->spellList.list.head;
 
-			// If the node is still NULL, the reference has no spells.
-			if (node == NULL) {
+			// If the node is still nullptr, the reference has no spells.
+			if (node == nullptr) {
 				pushErrorResponse();
 				return 0.0f;
 			}

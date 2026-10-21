@@ -155,6 +155,13 @@ namespace TES3::UI {
 		long timingUpdate();
 
 		//
+		// Input event methods
+		//
+
+		void dispatchInputEvent(Property eventId, int data0, int data1, Element* source);
+		bool checkMouseEventInElement(int mouseX, int mouseY) const;
+
+		//
 		// Property methods
 		//
 
@@ -252,7 +259,7 @@ namespace TES3::UI {
 		bool getDisabled() const;
 		void setDisabled(bool value);
 		std::string getFlowDirectionString() const;
-		void setFlowDirectionString(std::string value);
+		void setFlowDirectionString(std::string_view value);
 		int getFont() const;
 		void setFont_lua(sol::optional<int> value = 0);
 		int getHeight() const;
@@ -270,7 +277,7 @@ namespace TES3::UI {
 		float getImageScaleY() const;
 		void setImageScaleY(float value);
 		std::string getJustifyTextString() const;
-		void setJustifyTextString(std::string value);
+		void setJustifyTextString(std::string_view value);
 		sol::optional<int> getMaxHeight_lua() const;
 		void setMaxHeight_lua(sol::optional<int> value = INT32_MAX);
 		sol::optional<int> getMaxWidth_lua() const;
@@ -330,8 +337,8 @@ namespace TES3::UI {
 
 		LuaData* getLuaDataContainer() const;
 		sol::object getAllLuaData() const;
-		sol::object getLuaData(const std::string_view& key) const;
-		void setLuaData(sol::this_state ts, const std::string_view& key, sol::object value);
+		sol::object getLuaData(std::string_view key) const;
+		void setLuaData(sol::this_state ts, std::string_view key, sol::object value);
 
 		void registerBefore_lua(const std::string& eventID, sol::protected_function callback, sol::optional<double> priority);
 		void registerAfter_lua(const std::string& eventID, sol::protected_function callback, sol::optional<double> priority);
