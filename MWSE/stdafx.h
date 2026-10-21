@@ -2,6 +2,7 @@
 
 // Standard template libraries.
 #include <algorithm>
+#include <atomic>
 #include <bit>
 #include <charconv>
 #include <chrono>
@@ -15,6 +16,7 @@
 #include <istream>
 #include <list>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <numbers>
 #include <numeric>

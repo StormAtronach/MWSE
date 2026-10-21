@@ -33,6 +33,12 @@ namespace TES3 {
 		void syncRotation();
 
 		//
+		// Other related this-call functions.
+		//
+
+		void updateCameraTransforms();
+
+		//
 		// Custom functions
 		//
 

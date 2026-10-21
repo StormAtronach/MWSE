@@ -18,6 +18,7 @@
 #include "CodePatchUtil.h"
 #include "MemoryUtil.h"
 #include "MGEApi.h"
+#include "NativeApi.h"
 #include "TES3Util.h"
 
 #include "LuaPlayItemSoundEvent.h"
@@ -688,6 +689,48 @@ namespace TES3 {
 	const auto TES3_WorldController_updateEnvironmentLightingWeather = reinterpret_cast<void(__thiscall*)(WorldController*)>(0x4100D0);
 	void WorldController::updateEnvironmentLightingWeather() {
 		TES3_WorldController_updateEnvironmentLightingWeather(this);
+	}
+
+	const auto TES3_WorldController_configureUIScaling = reinterpret_cast<void(__thiscall*)(WorldController*, int)>(0x40F2A0);
+	void WorldController::configureUIScaling(int windowWidth) {
+		TES3_WorldController_configureUIScaling(this, windowWidth);
+	}
+
+	void WorldController::initializeUIScaling(int windowWidth) {
+		auto& registry = mwse::native::Registry::get();
+		if (registry.uiScale.isRequested()) {
+			applyUIScale(registry.uiScale.getScale());
+		}
+		else {
+			configureUIScaling(windowWidth);
+		}
+
+		MwseNativeUIConfiguredV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.worldController = this;
+		packet.windowWidth = windowWidth;
+		packet.viewWidth = viewWidth;
+		packet.viewHeight = viewHeight;
+		registry.uiConfigured.fire(&packet);
+	}
+
+	void WorldController::applyUIScale(float scale) {
+		if (renderer == nullptr || mouseController == nullptr || scale <= 0.0f) {
+			return;
+		}
+
+		viewWidth = int(renderer->getBackBufferWidth() / scale);
+		viewHeight = int(renderer->getBackBufferHeight() / scale);
+		configureUIScaling(viewWidth);
+
+		const auto halfWidth = (viewWidth + 1) / 2;
+		const auto halfHeight = (viewHeight + 1) / 2;
+		mouseController->setCursorBounds(-halfWidth, -halfHeight, halfWidth, halfHeight);
+	}
+
+	const auto TES3_MouseController_setCursorBounds = reinterpret_cast<void(__thiscall*)(MouseController*, int, int, int, int)>(0x408740);
+	void MouseController::setCursorBounds(int minX, int minY, int maxX, int maxY) {
+		TES3_MouseController_setCursorBounds(this, minX, minY, maxX, maxY);
 	}
 
 	float WorldController::getAIDistance() const {

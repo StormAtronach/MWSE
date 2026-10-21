@@ -286,6 +286,8 @@
     <ClInclude Include="NIObjectLua.h" />
     <ClInclude Include="NIPickLua.h" />
     <ClInclude Include="NISwitchNodeLua.h" />
+    <ClInclude Include="MWSENativeApi.h" />
+    <ClInclude Include="NativeApi.h" />
     <ClInclude Include="PatchUtil.h" />
     <ClInclude Include="ScriptUtilLua.h" />
     <ClInclude Include="TES3ActorLua.h" />
@@ -741,6 +743,7 @@
     <ClCompile Include="NITimeControllerLua.cpp" />
     <ClCompile Include="NILinesLua.cpp" />
     <ClCompile Include="NITriShapeLua.cpp" />
+    <ClCompile Include="NativeApi.cpp" />
     <ClCompile Include="PatchUtil.cpp" />
     <ClCompile Include="RngUtil.cpp" />
     <ClCompile Include="ScriptUtil.cpp" />

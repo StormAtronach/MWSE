@@ -282,7 +282,6 @@ namespace TES3 {
 
 	const auto TES3_MobilePlayer_setupCameras = reinterpret_cast<void(__thiscall*)(MobilePlayer*)>(0x566500);
 	const auto TES3_MobilePlayer_update1stPersonTransform = reinterpret_cast<void(__thiscall*)(MobilePlayer*)>(0x5684E0);
-	const auto TES3_PlayerAnimationController_updateCameraPosition = reinterpret_cast<void(__thiscall*)(PlayerAnimationController*)>(0x542E60);
 
 	void Reference::setModelPath(const char* path, bool temporary) {
 		auto baseObject = static_cast<TES3::Object*>(getBaseObject());
@@ -381,7 +380,7 @@ namespace TES3 {
 					auto animController = macp->animationController.asPlayer;
 					animController->firstPersonHeadCameraNode->worldTransform.translation = savedArmCameraPosition;
 					TES3_MobilePlayer_update1stPersonTransform(macp);
-					TES3_PlayerAnimationController_updateCameraPosition(animController);
+					animController->updateCameraTransforms();
 				}
 			}
 			else {

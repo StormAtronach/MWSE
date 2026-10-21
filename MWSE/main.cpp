@@ -13,6 +13,7 @@
 #include "NIStream.h"
 
 #include "LuaManager.h"
+#include "NativeApi.h"
 #include "TES3Game.h"
 
 TES3MACHINE* mge_virtual_machine = nullptr;
@@ -67,6 +68,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved) {
 #else
 		mwse::log::getLog() << "Morrowind Script Extender v" << MWSE_VERSION_MAJOR << "." << MWSE_VERSION_MINOR << "." << MWSE_VERSION_PATCH << " (built " << __DATE__ << ") hooked." << std::endl;
 #endif
+
+		// The native ABI takes subscriptions on the thread that loads MWSE: the main thread of the game.
+		mwse::native::Registry::get().setMainThread(GetCurrentThreadId());
 
 		// Before we do anything else, ensure that we can make minidumps.
 		if (!mwse::patch::installMiniDumpHook()) {
@@ -196,6 +200,11 @@ extern "C"
 	__declspec(dllexport) bool MGEInterface(mge::MGEAPI*);
 	__declspec(dllexport) TES3MACHINE* MWSEGetVM();
 	__declspec(dllexport) bool MWSEAddInstruction(OPCODE op, INSTRUCTION* ins);
+}
+
+// The native ABI (MWSENativeApi.h).
+extern "C" __declspec(dllexport) const MwseNativeApiV1* __cdecl MWSE_GetNativeApi(uint32_t version) {
+	return mwse::native::Registry::getTable(version);
 }
 
 bool MGEInterface(mge::MGEAPI* api) {

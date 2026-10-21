@@ -3,6 +3,7 @@
 #include "LuaManager.h"
 #include "LuaUtil.h"
 #include "MemoryUtil.h"
+#include "NativeApi.h"
 #include "NINode.h"
 #include "TES3MobilePlayer.h"
 #include "TES3Reference.h"
@@ -38,6 +39,16 @@ namespace TES3 {
 
 	void PlayerAnimationController::setVanityCameraAngle(float angle) {
 		gVanityCameraAngle::set(angle);
+	}
+
+	const auto TES3_PlayerAnimationController_updateCameraTransforms = reinterpret_cast<void(__thiscall*)(PlayerAnimationController*)>(0x542E60);
+	void PlayerAnimationController::updateCameraTransforms() {
+		TES3_PlayerAnimationController_updateCameraTransforms(this);
+
+		MwseNativeCameraTransformsUpdatedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.playerAnimationController = this;
+		mwse::native::Registry::get().cameraTransformsUpdated.fire(&packet);
 	}
 
 	const auto TES3_PlayerAnimationController_syncRotation = reinterpret_cast<void(__thiscall*)(PlayerAnimationController*)>(0x5438F0);

@@ -13,6 +13,7 @@
 #include "LuaMeshLoadEvent.h"
 #include "LuaSavedGameEvent.h"
 #include "LuaSaveGameEvent.h"
+#include "NativeApi.h"
 
 #include "StringUtil.h"
 #include "TES3Util.h"
@@ -1057,6 +1058,11 @@ namespace TES3 {
 	const auto TES3_DataHandler_setDynamicLightingForReference = reinterpret_cast<void(__thiscall*)(DataHandler*, Reference*)>(0x485B00);
 	void DataHandler::setDynamicLightingForReference(Reference* reference) {
 		TES3_DataHandler_setDynamicLightingForReference(this, reference);
+	}
+
+	void DataHandler::testDynamicLight(NI::PointLight* light, NI::Node* node, int radius, int lightFlags, bool isLand, bool highPriority) {
+		const auto test = mwse::native::Registry::get().dynamicLightTest.getFunction<MwseNativeDynamicLightTest>();
+		test(light, node, radius, lightFlags, isLand, highPriority);
 	}
 
 	static bool& TES3_COLLISION_DATA_RESETTING = *reinterpret_cast<bool*>(0x7C9A78);

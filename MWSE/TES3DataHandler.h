@@ -419,6 +419,7 @@ namespace TES3 {
 		void updateLightsBetweenCells(Cell* cell, Cell* otherCell);
 		void relightExteriorCellsAfterCross();
 		void setDynamicLightingForReference(Reference* reference);
+		static void testDynamicLight(NI::PointLight* light, NI::Node* node, int radius, int lightFlags, bool isLand, bool highPriority);
 
 		void updateCollisionGroupsForActiveCells(bool force = true, bool isResettingData = false, bool resetCollisionGroups = true);
 		void updateCollisionGroupsForActiveCells_lua(sol::optional<bool> force, sol::optional<bool> isResettingData, sol::optional<bool> resetCollisionGroups);
