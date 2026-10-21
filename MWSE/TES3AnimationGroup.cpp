@@ -503,7 +503,7 @@ namespace TES3 {
 				}
 
 				// Set action timing. The conditional is a safety check to avoid array overrun.
-				if (actionIndex < animGroup->actionCount) {
+				if (actionIndex >= 0 && unsigned(actionIndex) < animGroup->actionCount) {
 					animGroup->actionTimings[actionIndex] = time;
 					animGroup->actionFrames[actionIndex] = timeToFrameNumber(time);
 

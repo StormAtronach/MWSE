@@ -19,7 +19,7 @@ namespace NI {
 	}
 
 	Pointer<KeyframeController> Sequence::getController(const char* name) const {
-		for (int i = 0; i < objectNames.endIndex; ++i) {
+		for (size_t i = 0; i < objectNames.endIndex; ++i) {
 			if (_stricmp(objectNames[i], name) == 0) {
 				return controllers[i].get();
 			}
