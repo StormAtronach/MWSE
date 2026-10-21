@@ -519,6 +519,23 @@ namespace mwse::patch {
 	}
 
 	//
+	// Patch: Add the MP3 decoder DMO to music filter graphs before rendering.
+	//
+
+	static DWORD PatchMusicRenderFile_target = reinterpret_cast<DWORD>(&TES3::AudioController::renderMusicFile);
+
+	__declspec(naked) void PatchMusicRenderFile() {
+		__asm {
+			// Reorder the stack into a stdcall frame: return, graph, file, playlist.
+			pop ecx
+			push edx
+			push eax
+			push ecx
+			jmp dword ptr [PatchMusicRenderFile_target]
+		}
+	}
+
+	//
 	// Patch: Fix crash when saving menu position if the derived key name is too long.
 	//
 
@@ -1170,19 +1187,21 @@ namespace mwse::patch {
 	}
 
 	//
-	// Patch: Guard against invalid light flicker/pulse updates.
+	// Patch: Guard against invalid light flicker/pulse updates, and make them independent of the frame rate.
 	//
 
-	const auto TES3_Light_UpdateFlickerPulse = reinterpret_cast<void(__thiscall*)(TES3::Light*, NI::Node*, float*, TES3::ItemData*)>(0x4D33D0);
-	void __fastcall PatchEntityLightFlickerPulseUpdate(TES3::Light* light, DWORD _EDX_, NI::Node* sgNode, float* flickerPhase, TES3::ItemData* itemData) {
-		if (sgNode == nullptr) {
+	bool __fastcall PatchEntityLightFlickerPulseUpdate(TES3::Light* light, DWORD _EDX_, NI::Pointer<NI::Light> sgLight, float* flickerPhase, TES3::ItemData* itemData) {
+		if (sgLight == nullptr) {
 #if _DEBUG
 			log::getLog() << "[MWSE] Warning: Light '" << light->getObjectID() << "' attempting to update update flicker/phase without a scene graph node." << std::endl;
 #endif
-			return;
+			return false;
 		}
 
-		TES3_Light_UpdateFlickerPulse(light, sgNode, flickerPhase, itemData);
+		if (Configuration::ReplaceLightFlicker) {
+			return light->updateFlickerPulseEased(sgLight, flickerPhase, itemData);
+		}
+		return light->updateFlickerPulse(sgLight, flickerPhase, itemData);
 	}
 
 	//
@@ -1605,6 +1624,46 @@ namespace mwse::patch {
 		std::swap(cachedYesToAll, AllowYesToAll);
 		tes3::logAndShowError(sGeneralMastPlugMismatchMsg);
 		std::swap(cachedYesToAll, AllowYesToAll);
+	}
+
+	//
+	// Patch: Write the warnings of the DataHandler and ModelLoader destructors to Warnings.txt with one file open.
+	//
+
+	static std::string& getExitWarnings() {
+		static std::string exitWarnings;
+		return exitWarnings;
+	}
+
+	static void __cdecl PatchCollectExitWarning(const char* format, ...) {
+		char line[1300];
+		va_list args;
+		va_start(args, format);
+		std::vsnprintf(line, sizeof(line), format, args);
+		va_end(args);
+
+		if (!Configuration::BufferExitWarnings) {
+			tes3::logAndShowError("%s", line);
+			return;
+		}
+
+		OutputDebugStringA(line);
+
+		auto& exitWarnings = getExitWarnings();
+		exitWarnings += line;
+		if (!exitWarnings.ends_with("\r\n")) {
+			exitWarnings += "\r\n";
+		}
+	}
+
+	static void __fastcall PatchWriteExitWarnings(TES3::DataHandler* dataHandler) {
+		dataHandler->dtor();
+
+		const auto& exitWarnings = getExitWarnings();
+		if (!exitWarnings.empty()) {
+			std::ofstream warnings("Warnings.txt", std::ios::app | std::ios::binary);
+			warnings << exitWarnings;
+		}
 	}
 
 	//
@@ -2350,6 +2409,14 @@ namespace mwse::patch {
 		auto Game_readSettings = &TES3::Game::readSettings;
 		overrideVirtualTableEnforced(0x74665C, offsetof(TES3::Game_vTable, ReadSettings), 0x4F54F0, *reinterpret_cast<DWORD*>(&Game_readSettings));
 
+		// Patch: Add the MP3 decoder DMO to music filter graphs before rendering.
+		{
+			constexpr BYTE expected[] = { 0x52, 0x50, 0xFF, 0x51, 0x34 }; // push edx; push eax; call [ecx+34h]
+			if (memcmp(reinterpret_cast<const void*>(0x4033D2), expected, sizeof(expected)) == 0) {
+				genCallUnprotected(0x4033D2, reinterpret_cast<DWORD>(PatchMusicRenderFile));
+			}
+		}
+
 		// Patch: Enable/Disable.
 		genCallUnprotected(0x508FEB, reinterpret_cast<DWORD>(PatchScriptOpEnable), 0x9);
 		genCallUnprotected(0x5090DB, reinterpret_cast<DWORD>(PatchScriptOpDisable), 0x9);
@@ -2844,7 +2911,7 @@ namespace mwse::patch {
 		genCallEnforced(0x4D260C, 0x4E5170, reinterpret_cast<DWORD>(PatchGetLightAttachmentIfItHasALight));
 		genCallEnforced(0x5243D6, 0x4E5170, reinterpret_cast<DWORD>(PatchGetLightAttachmentIfItHasALight));
 
-		// Patch: Guard against invalid light flicker/pulse updates.
+		// Patch: Guard against invalid light flicker/pulse updates, and make them independent of the frame rate.
 		genCallEnforced(0x49B75E, 0x4D33D0, reinterpret_cast<DWORD>(PatchEntityLightFlickerPulseUpdate));
 		genCallEnforced(0x4D33BF, 0x4D33D0, reinterpret_cast<DWORD>(PatchEntityLightFlickerPulseUpdate));
 
@@ -3032,6 +3099,15 @@ namespace mwse::patch {
 		// Patch: Suppress sGeneralMastPlugMismatchMsg message.
 		genCallUnprotected(0x477512, reinterpret_cast<DWORD>(GetCachedYesToAll), 0x477518 - 0x477512);
 		genCallEnforced(0x4BB55D, 0x477400, reinterpret_cast<DWORD>(SuppressGeneralMastPlugMismatchMsg));
+
+		// Patch: Write the warnings of the DataHandler and ModelLoader destructors to Warnings.txt with one file open.
+		genCallEnforced(0x40E133, 0x483C20, reinterpret_cast<DWORD>(PatchWriteExitWarnings));
+		genCallEnforced(0x483E2C, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDE70, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDEE2, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDF50, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDFD3, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
+		genCallEnforced(0x4EDFE2, 0x477400, reinterpret_cast<DWORD>(PatchCollectExitWarning));
 
 		// Patch: Clean up mobile collision data when a mobile is destroyed. Fixes probably a Todd-typo.
 		genNOPUnprotected(0x55E55B, 0x55E55F - 0x55E55B);
@@ -3229,6 +3305,9 @@ namespace mwse::patch {
 		if (Configuration::PatchNiFlipController) {
 			auto NiFlipController_clone = &NI::FlipController::copy;
 			genCallEnforced(0x715D26, DWORD(NI::FlipController::_copy), *reinterpret_cast<DWORD*>(&NiFlipController_clone));
+
+			// Patch: Fix NiFlipController::Update testing the base or dark map slot in place of the affected map's.
+			se::memory::writeValueEnforced<BYTE>(0x715AED, 0x8E, 0x86); // cmp [esi+ecx*4], ebx -> cmp [esi+eax*4], ebx
 		}
 
 		// Patch: Allow global audio.

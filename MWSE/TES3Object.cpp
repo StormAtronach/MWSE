@@ -80,6 +80,7 @@ namespace TES3 {
 
 		clearCachedLuaObject(this);
 		mwse::ReferenceTracker::invalidateObject(this);
+		setSourceless(false);
 
 		if (objectType == ObjectType::Cell && dataHandler && dataHandler->nonDynamicData) {
 			dataHandler->nonDynamicData->clearCellNameCache(static_cast<const Cell*>(this));

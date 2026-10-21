@@ -60,6 +60,7 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <control.h>
 #include <strmif.h>
+#include <dmodshow.h>
 #include <dinput.h>
 #include <dsound.h>
 
