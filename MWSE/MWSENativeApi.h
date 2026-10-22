@@ -95,6 +95,20 @@ typedef struct MwseNativeGameIdsResolvedV1 {
 	void* worldController;
 } MwseNativeGameIdsResolvedV1;
 
+// The engine drew the queue of an accumulator: 0x6CF0E0 `NiClusterAccumulator::FinishAccumulating`
+// (the slot 0x30 of the virtual tables of NiAlphaAccumulator 0x7468D0 and NiClusterAccumulator
+// 0x74FB4C) draws the queued objects in the order of its sort. `NiCamera::Click` calls it at the end
+// of a Click (0x6CC895) unless its argument keeps the queue open. Main thread. It fires after the
+// engine function returns. Latest subscribe: none.
+#define MWSE_NATIVE_EVENT_ACCUMULATOR_FINISHED 4u
+typedef struct MwseNativeAccumulatorFinishedV1 {
+	uint32_t structSize;
+	// The `NiAccumulator`.
+	void* accumulator;
+	// The camera of the accumulator before the call (the engine function clears it), or null.
+	void* camera;
+} MwseNativeAccumulatorFinishedV1;
+
 //
 // Overrides. The owner's function has the signature of the engine function. `engineFunction`
 // of `claim` gives the engine function, to call or not.
