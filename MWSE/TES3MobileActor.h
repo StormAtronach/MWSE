@@ -347,6 +347,8 @@ namespace TES3 {
 		bool isCreature() const;
 		bool isPlayer() const;
 
+		AIPackage* getActivePackage();
+
 		float getWidth() const;
 		float getHeight() const;
 

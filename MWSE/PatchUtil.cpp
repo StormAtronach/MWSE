@@ -3138,6 +3138,12 @@ namespace mwse::patch {
 		}
 		genNOPUnprotected(0x52F48D, 0x6); // mov [esi+0x100], edx: MACT::aiAfterCombatEnds restoring actionData.nockedProjectile.
 
+		// Patch: An actor without an AI planner has no active package in MACT::canReachPosition.
+		const BYTE patchReachPositionActivePackage[] = { 0x8B, 0xCE, 0x90, 0x90, 0x90, 0x90 }; // mov ecx, esi
+		writeBytesUnprotected(0x528785, patchReachPositionActivePackage, sizeof(patchReachPositionActivePackage));
+		auto mobileActorGetActivePackage = &TES3::MobileActor::getActivePackage;
+		genCallEnforced(0x52878B, 0x564DF0, *reinterpret_cast<DWORD*>(&mobileActorGetActivePackage));
+
 		// Patch: Fix invalid UI memory pointer.
 		genCallEnforced(0x5C48DB, 0x595370, reinterpret_cast<DWORD>(PatchEnchantingMenuPointer));
 

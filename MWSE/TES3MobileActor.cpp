@@ -20,6 +20,7 @@
 
 #include "TES3Actor.h"
 #include "TES3ActorAnimationController.h"
+#include "TES3AIData.h"
 #include "TES3Alchemy.h"
 #include "TES3AudioController.h"
 #include "TES3Cell.h"
@@ -1231,6 +1232,10 @@ namespace TES3 {
 
 	bool MobileActor::isPlayer() const {
 		return actorType == MobileActorType::Player;
+	}
+
+	AIPackage* MobileActor::getActivePackage() {
+		return aiPlanner ? aiPlanner->getActivePackage() : nullptr;
 	}
 
 	float MobileActor::getWidth() const {
