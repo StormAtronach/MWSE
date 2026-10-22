@@ -322,6 +322,38 @@ namespace TES3 {
 	unsigned int Script::getFloatVariableCount() const {
 		return header.floatCount;
 	}
+
+	// A resolved token: its letter after a space, a length byte, the record's pointer, and the
+	// fill 0x40 over the rest of the name. Returns the byte after it, or null when `at` is not one.
+	const char* Script::findEndOfResolvedToken(const char* at) {
+		constexpr std::string_view resolvedLetters = "ABCDMORTFLS";
+		constexpr unsigned char fill = 0x40;
+		constexpr size_t pointerSize = 4;
+		constexpr size_t longestName = 63;
+
+		if (resolvedLetters.find(*at) == std::string_view::npos || at[-1] != ' ') {
+			return nullptr;
+		}
+		const auto length = static_cast<unsigned char>(at[1]);
+		if (length < pointerSize || length > longestName) {
+			return nullptr;
+		}
+		for (size_t i = 2 + pointerSize; i < 2u + length; ++i) {
+			if (static_cast<unsigned char>(at[i]) != fill) {
+				return nullptr;
+			}
+		}
+		const auto end = at + 2 + length;
+		if (*end != ' ' && *end != '\0') {
+			return nullptr;
+		}
+		return end;
+	}
+
+	const char* __cdecl Script::findNextToken(const char* at, int character) {
+		const auto resolvedEnd = findEndOfResolvedToken(at);
+		return strchr(resolvedEnd ? resolvedEnd : at, character);
+	}
 }
 
 MWSE_SOL_CUSTOMIZED_PUSHER_DEFINE_TES3(TES3::Script)

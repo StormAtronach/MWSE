@@ -52,6 +52,38 @@ namespace mwse::native {
 	static const CallSites cameraTransformsSites({ 0x41C029, 0x45CDC3, 0x48F64A, 0x567A17, 0x56871C }, 0x542E60);
 	static const CallSites uiConfigureSites({ 0x40E55E }, 0x40F2A0);
 	static const CallSites dynamicLightTestSites({ 0x485B60, 0x4D2C9C, 0x4D2D04, 0x4D2D9F, 0x4D2F10, 0x4D3350 }, 0x4D2F40);
+	static const CallSites cameraRootCullShowSites({ 0x6CC874 }, 0x6EB480);
+	static const CallSites mapTileReadSites({ 0x42E4FD }, 0x42F6F0);
+	static const CallSites texturePurgeSites({ 0x41A8F7, 0x48535B, 0x486F2B, 0x489745, 0x489CC1, 0x4B52B0, 0x4C4B87, 0x5048A4 }, 0x485490);
+	static const CallSites mapCellPaintSites({ 0x4E32FE }, 0x4C81C0);
+	static const CallSites savePictureSites({ 0x4B586D }, 0x4B4F80);
+	static const CallSites renderTargetLockSites({ 0x42DFBC, 0x42F70B, 0x42FEA7 }, 0x42F3F0);
+	static const CallSites renderTargetUnlockSites({ 0x42E180, 0x42F756, 0x42FEF9 }, 0x42F620);
+	static const CallSites fogRenderSites({ 0x41F52A }, 0x42FC60);
+	static const CallSites fogBlobSites({ 0x42082C, 0x4208C2, 0x420A7F, 0x420BB9, 0x420CC8, 0x421CE4, 0x42FD7C }, 0x42FA50);
+	static const CallSites gameIdsResolvedSites({ 0x419AC4, 0x4C601D, 0x5FB11A, 0x5FE929 }, 0x40FC40);
+	static const CallSites lightPointSites({ 0x485BF0, 0x485C2A, 0x4D2C07, 0x4EB9E4 }, 0x4D2C20);
+	static const CallSites lightHelperSites({ 0x485DD8, 0x485E2D }, 0x4D32F0);
+
+	// The operands of the engine's uses of `timeGetTime`: `mov ebx, [timeGetTime]` at 0x403B50 and
+	// `call [timeGetTime]` at 0x4535FB, 0x453613 and 0x453636. Each names the import slot 0x7463E8.
+	constexpr DWORD FRAME_TIMER_OPERANDS[] = { 0x403B52, 0x4535FD, 0x453615, 0x453638 };
+	constexpr DWORD TIME_GET_TIME_IMPORT = 0x7463E8;
+	// The operands point here once a module owns the frame timer.
+	static uint32_t(__stdcall* frameTimerTarget)() = &Dispatch::frameTimer;
+
+	// The local light limit in NiNode::PushLocalEffects: `cmp ebp, <limit>; ja`.
+	constexpr DWORD LIGHT_LIMIT_COMPARE = 0x6C8FF0;
+	// The read of the ripple limit in WaterController::createRipple, and the code that makes it 0.
+	constexpr DWORD RIPPLES_READ = 0x51C2D4;
+	constexpr DWORD RIPPLES_ON = 0x33504D8B; // mov ecx, [ebp+50h]; (xor ...)
+	constexpr DWORD RIPPLES_OFF = 0x3390C931; // xor ecx, ecx; nop; (xor ...)
+	// The starts of the two intro movies, and the jump over each.
+	constexpr DWORD INTRO_MOVIE_SITES[] = { 0x418EF0, 0x5FC8F7 };
+	constexpr BYTE INTRO_MOVIE_CODE[][2] = { { 0x8B, 0x8D }, { 0x8B, 0x88 } };
+	constexpr BYTE INTRO_MOVIE_SKIP[] = { 0xEB, 0x16 };
+	// The jz over the emissive colour of a light's particles in sg_stopParticlesAndSetEmissiveMaterialToBlack.
+	constexpr DWORD LIGHT_PARTICLES_JUMP = 0x4D2789;
 
 	// The two reads of the back buffer size in NiRenderer::MapWindowPointToBufferPoint, and the reads of the
 	// UI's view size that replace them.
@@ -116,8 +148,36 @@ namespace mwse::native {
 		return installUIConfigure();
 	}
 
-	static MwseNativeStatus installDynamicLightTest() {
-		return redirectCallSites("the dynamic light test", dynamicLightTestSites, reinterpret_cast<DWORD>(&TES3::DataHandler::testDynamicLight));
+	static MwseNativeStatus installGameIdsResolved() {
+		auto function = &TES3::WorldController::resolveScriptInternalIDs;
+		return redirectCallSites("the resolve of the game's ids", gameIdsResolvedSites, *reinterpret_cast<DWORD*>(&function));
+	}
+
+	// Both groups of calls, or none: a part would attach lights at two radii.
+	static MwseNativeStatus installLightAttachRadius() {
+		for (const auto sites : { &lightPointSites, &lightHelperSites }) {
+			const auto changed = sites->findChangedSite();
+			if (changed) {
+				logChangedSite("the light attach radius", changed);
+				return MWSE_NATIVE_BYTES_CHANGED;
+			}
+		}
+		lightPointSites.redirect(reinterpret_cast<DWORD>(&Dispatch::updateDynamicLightingForPointLight));
+		lightHelperSites.redirect(reinterpret_cast<DWORD>(&Dispatch::updateLightHelper));
+		return MWSE_NATIVE_OK;
+	}
+
+	static MwseNativeStatus installFrameTimer() {
+		for (const auto operand : FRAME_TIMER_OPERANDS) {
+			if (*reinterpret_cast<const DWORD*>(operand) != TIME_GET_TIME_IMPORT) {
+				logChangedSite("the frame timer", operand);
+				return MWSE_NATIVE_BYTES_CHANGED;
+			}
+		}
+		for (const auto operand : FRAME_TIMER_OPERANDS) {
+			se::memory::writeDoubleWordUnprotected(operand, reinterpret_cast<DWORD>(&frameTimerTarget));
+		}
+		return MWSE_NATIVE_OK;
 	}
 
 	//
@@ -197,11 +257,21 @@ namespace mwse::native {
 	// OverrideSlot
 	//
 
+	OverrideSlot::OverrideSlot(uint32_t id, const char* name, const CallSites* sites, DWORD dispatcher) :
+		m_id(id),
+		m_name(name),
+		m_sites(sites),
+		m_dispatcher(dispatcher),
+		m_engineFunction(reinterpret_cast<void*>(sites->getEngineFunction()))
+	{
+
+	}
+
 	OverrideSlot::OverrideSlot(uint32_t id, const char* name, void* engineFunction, Installer installer) :
 		m_id(id),
 		m_name(name),
-		m_engineFunction(engineFunction),
-		m_installer(installer)
+		m_installer(installer),
+		m_engineFunction(engineFunction)
 	{
 
 	}
@@ -213,7 +283,7 @@ namespace mwse::native {
 		}
 
 		if (!m_installed) {
-			const auto status = m_installer();
+			const auto status = m_installer ? m_installer() : redirectCallSites(m_name, *m_sites, m_dispatcher);
 			if (status != MWSE_NATIVE_OK) {
 				return status;
 			}
@@ -316,13 +386,143 @@ namespace mwse::native {
 	}
 
 	//
+	// Dispatch
+	//
+
+	void __fastcall Dispatch::cameraRootCullShow(void* root, DWORD, void* camera) {
+		Registry::get().cameraRootCullShow.getFunction<MwseNativeCameraRootCullShow>()(root, nullptr, camera);
+	}
+
+	void __fastcall Dispatch::readMapTile(void* renderTarget, DWORD, bool skip) {
+		Registry::get().mapTileRead.getFunction<MwseNativeMapTileRead>()(renderTarget, nullptr, skip);
+	}
+
+	void __fastcall Dispatch::purgeTextures(void* dataHandler, DWORD) {
+		Registry::get().texturePurge.getFunction<MwseNativeTexturePurge>()(dataHandler, nullptr);
+	}
+
+	void __fastcall Dispatch::paintMapCell(void* recordsHandler, DWORD, void* cell) {
+		Registry::get().mapCellPaint.getFunction<MwseNativeMapCellPaint>()(recordsHandler, nullptr, cell);
+	}
+
+	void* __cdecl Dispatch::takeSavePicture(const char* fileName) {
+		return Registry::get().savePicture.getFunction<MwseNativeSavePicture>()(fileName);
+	}
+
+	D3DLOCKED_RECT* __fastcall Dispatch::lockRenderTarget(void* renderTarget, DWORD, void* texture) {
+		return static_cast<D3DLOCKED_RECT*>(Registry::get().renderTargetLock.getFunction<MwseNativeRenderTargetLock>()(renderTarget, nullptr, texture));
+	}
+
+	void __fastcall Dispatch::unlockRenderTarget(void* renderTarget, DWORD, D3DLOCKED_RECT* lockedRect, int copyBack) {
+		Registry::get().renderTargetUnlock.getFunction<MwseNativeRenderTargetUnlock>()(renderTarget, nullptr, lockedRect, copyBack);
+	}
+
+	void __fastcall Dispatch::renderFogOfWar(void* renderTarget, DWORD, void* texture, void* bitmap, bool smallBlobs) {
+		Registry::get().fogRender.getFunction<MwseNativeFogRender>()(renderTarget, nullptr, texture, bitmap, smallBlobs);
+	}
+
+	void __fastcall Dispatch::drawFogBlob(void* renderTarget, DWORD, void* texture, int x, int y, int size) {
+		Registry::get().fogBlob.getFunction<MwseNativeFogBlob>()(renderTarget, nullptr, texture, x, y, size);
+	}
+
+	void __cdecl Dispatch::updateDynamicLightingForPointLight(void* light, void* cell, int radius, int lightFlags, int isTorch) {
+		const auto attachRadius = Registry::get().lightAttachRadius.getFunction<MwseNativeLightAttachRadius>();
+		TES3::DataHandler::updateDynamicLightingForPointLight(static_cast<NI::PointLight*>(light), static_cast<TES3::Cell*>(cell), attachRadius(light, radius), lightFlags, isTorch);
+	}
+
+	void __cdecl Dispatch::updateLightHelper(void* light, void* reference, int radius, int lightFlags, int highPriority) {
+		const auto attachRadius = Registry::get().lightAttachRadius.getFunction<MwseNativeLightAttachRadius>();
+		TES3::DataHandler::updateLightHelper(static_cast<NI::PointLight*>(light), static_cast<TES3::Reference*>(reference), attachRadius(light, radius), lightFlags, highPriority);
+	}
+
+	int32_t __cdecl Dispatch::engineLightAttachRadius(const void*, int32_t radius) {
+		return radius;
+	}
+
+	uint32_t __stdcall Dispatch::frameTimer() {
+		return Registry::get().frameTimer.getFunction<MwseNativeFrameTimer>()();
+	}
+
+	uint32_t __stdcall Dispatch::engineFrameTimer() {
+		const auto timeGetTime = *reinterpret_cast<uint32_t(__stdcall**)()>(TIME_GET_TIME_IMPORT);
+		return timeGetTime();
+	}
+
+	//
+	// EngineSettings
+	//
+
+	MwseNativeStatus EngineSettings::requestLightLimit(const char* module, uint32_t limit) {
+		if (limit < 1 || limit > 127) {
+			return MWSE_NATIVE_BAD_ARGUMENT;
+		}
+		const auto code = reinterpret_cast<const BYTE*>(LIGHT_LIMIT_COMPARE);
+		if (code[0] != 0x83 || code[1] != 0xFD || code[3] != 0x77 || code[4] != 0x0A) {
+			logChangedSite("the light limit", LIGHT_LIMIT_COMPARE);
+			return MWSE_NATIVE_BYTES_CHANGED;
+		}
+		se::memory::writeByteUnprotected(LIGHT_LIMIT_COMPARE + 2, BYTE(limit));
+		log::getLog() << "[NativeApi] " << module << " requests a light limit of " << limit << " for each node." << std::endl;
+		return MWSE_NATIVE_OK;
+	}
+
+	MwseNativeStatus EngineSettings::requestRipples(const char* module, bool enabled) {
+		const auto current = *reinterpret_cast<const DWORD*>(RIPPLES_READ);
+		if (current != RIPPLES_ON && current != RIPPLES_OFF) {
+			logChangedSite("the ripples", RIPPLES_READ);
+			return MWSE_NATIVE_BYTES_CHANGED;
+		}
+		se::memory::writeDoubleWordUnprotected(RIPPLES_READ, enabled ? RIPPLES_ON : RIPPLES_OFF);
+		log::getLog() << "[NativeApi] " << module << " requests the ripples " << (enabled ? "on" : "off") << "." << std::endl;
+		return MWSE_NATIVE_OK;
+	}
+
+	MwseNativeStatus EngineSettings::requestIntroMovies(const char* module, bool play) {
+		for (size_t i = 0; i < std::size(INTRO_MOVIE_SITES); ++i) {
+			const auto code = reinterpret_cast<const BYTE*>(INTRO_MOVIE_SITES[i]);
+			if (memcmp(code, INTRO_MOVIE_CODE[i], 2) != 0 && memcmp(code, INTRO_MOVIE_SKIP, 2) != 0) {
+				logChangedSite("the intro movies", INTRO_MOVIE_SITES[i]);
+				return MWSE_NATIVE_BYTES_CHANGED;
+			}
+		}
+		for (size_t i = 0; i < std::size(INTRO_MOVIE_SITES); ++i) {
+			se::memory::writeBytesUnprotected(INTRO_MOVIE_SITES[i], play ? INTRO_MOVIE_CODE[i] : INTRO_MOVIE_SKIP, 2);
+		}
+		log::getLog() << "[NativeApi] " << module << " requests the intro movies " << (play ? "played" : "skipped") << "." << std::endl;
+		return MWSE_NATIVE_OK;
+	}
+
+	MwseNativeStatus EngineSettings::requestLightParticlesFix(const char* module) {
+		const auto code = *reinterpret_cast<const BYTE*>(LIGHT_PARTICLES_JUMP);
+		if (code != 0x74 && code != 0xEB) { // jz, or the jmp of the fix
+			logChangedSite("the light particles fix", LIGHT_PARTICLES_JUMP);
+			return MWSE_NATIVE_BYTES_CHANGED;
+		}
+		se::memory::writeByteUnprotected(LIGHT_PARTICLES_JUMP, 0xEB);
+		log::getLog() << "[NativeApi] " << module << " requests the light particles fix." << std::endl;
+		return MWSE_NATIVE_OK;
+	}
+
+	//
 	// Registry
 	//
 
 	Registry::Registry() :
 		cameraTransformsUpdated(MWSE_NATIVE_EVENT_CAMERA_TRANSFORMS_UPDATED, "the camera transforms update", installCameraTransformsUpdated),
 		uiConfigured(MWSE_NATIVE_EVENT_UI_CONFIGURED, "the UI configuration", installUIConfigured),
-		dynamicLightTest(MWSE_NATIVE_OVERRIDE_DYNAMIC_LIGHT_TEST, "the dynamic light test", reinterpret_cast<void*>(dynamicLightTestSites.getEngineFunction()), installDynamicLightTest)
+		gameIdsResolved(MWSE_NATIVE_EVENT_GAME_IDS_RESOLVED, "the resolve of the game's ids", installGameIdsResolved),
+		dynamicLightTest(MWSE_NATIVE_OVERRIDE_DYNAMIC_LIGHT_TEST, "the dynamic light test", &dynamicLightTestSites, reinterpret_cast<DWORD>(&TES3::DataHandler::testDynamicLight)),
+		cameraRootCullShow(MWSE_NATIVE_OVERRIDE_CAMERA_ROOT_CULL_SHOW, "the cull show of a camera's root", &cameraRootCullShowSites, reinterpret_cast<DWORD>(&Dispatch::cameraRootCullShow)),
+		mapTileRead(MWSE_NATIVE_OVERRIDE_MAP_TILE_READ, "the read of a map tile", &mapTileReadSites, reinterpret_cast<DWORD>(&Dispatch::readMapTile)),
+		texturePurge(MWSE_NATIVE_OVERRIDE_TEXTURE_PURGE, "the texture purge", &texturePurgeSites, reinterpret_cast<DWORD>(&Dispatch::purgeTextures)),
+		mapCellPaint(MWSE_NATIVE_OVERRIDE_MAP_CELL_PAINT, "the paint of a cell on the world map", &mapCellPaintSites, reinterpret_cast<DWORD>(&Dispatch::paintMapCell)),
+		savePicture(MWSE_NATIVE_OVERRIDE_SAVE_PICTURE, "the picture of a save", &savePictureSites, reinterpret_cast<DWORD>(&Dispatch::takeSavePicture)),
+		renderTargetLock(MWSE_NATIVE_OVERRIDE_RENDER_TARGET_LOCK, "the lock of a render target", &renderTargetLockSites, reinterpret_cast<DWORD>(&Dispatch::lockRenderTarget)),
+		renderTargetUnlock(MWSE_NATIVE_OVERRIDE_RENDER_TARGET_UNLOCK, "the unlock of a render target", &renderTargetUnlockSites, reinterpret_cast<DWORD>(&Dispatch::unlockRenderTarget)),
+		fogRender(MWSE_NATIVE_OVERRIDE_FOG_RENDER, "the render of the fog of war", &fogRenderSites, reinterpret_cast<DWORD>(&Dispatch::renderFogOfWar)),
+		fogBlob(MWSE_NATIVE_OVERRIDE_FOG_BLOB, "a blob of the fog of war", &fogBlobSites, reinterpret_cast<DWORD>(&Dispatch::drawFogBlob)),
+		lightAttachRadius(MWSE_NATIVE_OVERRIDE_LIGHT_ATTACH_RADIUS, "the light attach radius", reinterpret_cast<void*>(&Dispatch::engineLightAttachRadius), installLightAttachRadius),
+		frameTimer(MWSE_NATIVE_OVERRIDE_FRAME_TIMER, "the frame timer", reinterpret_cast<void*>(&Dispatch::engineFrameTimer), installFrameTimer)
 	{
 
 	}
@@ -456,6 +656,38 @@ namespace mwse::native {
 			}
 			return registry.uiScale.request(module, uiScale->scale);
 		}
+		case MWSE_NATIVE_REQUEST_LIGHT_LIMIT:
+		{
+			const auto lightLimit = static_cast<const MwseNativeLightLimitRequestV1*>(packet);
+			if (lightLimit->structSize < sizeof(MwseNativeLightLimitRequestV1)) {
+				return MWSE_NATIVE_BAD_ARGUMENT;
+			}
+			return registry.engineSettings.requestLightLimit(module, lightLimit->limit);
+		}
+		case MWSE_NATIVE_REQUEST_RIPPLES:
+		{
+			const auto ripples = static_cast<const MwseNativeRipplesRequestV1*>(packet);
+			if (ripples->structSize < sizeof(MwseNativeRipplesRequestV1)) {
+				return MWSE_NATIVE_BAD_ARGUMENT;
+			}
+			return registry.engineSettings.requestRipples(module, ripples->enabled != 0);
+		}
+		case MWSE_NATIVE_REQUEST_INTRO_MOVIES:
+		{
+			const auto introMovies = static_cast<const MwseNativeIntroMoviesRequestV1*>(packet);
+			if (introMovies->structSize < sizeof(MwseNativeIntroMoviesRequestV1)) {
+				return MWSE_NATIVE_BAD_ARGUMENT;
+			}
+			return registry.engineSettings.requestIntroMovies(module, introMovies->play != 0);
+		}
+		case MWSE_NATIVE_REQUEST_LIGHT_PARTICLES_FIX:
+		{
+			const auto fix = static_cast<const MwseNativeLightParticlesFixRequestV1*>(packet);
+			if (fix->structSize < sizeof(MwseNativeLightParticlesFixRequestV1)) {
+				return MWSE_NATIVE_BAD_ARGUMENT;
+			}
+			return registry.engineSettings.requestLightParticlesFix(module);
+		}
 		}
 
 		log::getLog() << "[NativeApi] " << module << " made request " << requestId << ": this MWSE does not have it." << std::endl;
@@ -484,7 +716,7 @@ namespace mwse::native {
 	}
 
 	EventPoint* Registry::findEvent(uint32_t id) {
-		for (auto event : { &cameraTransformsUpdated, &uiConfigured }) {
+		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved }) {
 			if (event->getID() == id) {
 				return event;
 			}
@@ -493,8 +725,10 @@ namespace mwse::native {
 	}
 
 	OverrideSlot* Registry::findOverride(uint32_t id) {
-		if (dynamicLightTest.getID() == id) {
-			return &dynamicLightTest;
+		for (auto slot : { &dynamicLightTest, &cameraRootCullShow, &mapTileRead, &texturePurge, &mapCellPaint, &savePicture, &renderTargetLock, &renderTargetUnlock, &fogRender, &fogBlob, &lightAttachRadius, &frameTimer }) {
+			if (slot->getID() == id) {
+				return slot;
+			}
 		}
 		return nullptr;
 	}

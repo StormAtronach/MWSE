@@ -58,11 +58,15 @@ namespace mwse::native {
 		std::vector<std::unique_ptr<ListenerList>> m_lists;
 	};
 
-	// An engine function that one module can replace.
+	// An engine function that one module can replace. MWSE redirects its call sites to
+	// `dispatcher`, which calls the owner's function or the engine function.
 	class OverrideSlot {
 	public:
 		using Installer = MwseNativeStatus(*)();
 
+		OverrideSlot(uint32_t id, const char* name, const CallSites* sites, DWORD dispatcher);
+		// A slot whose engine places are not one group of calls of the engine function: the
+		// installer writes them, and `engineFunction` is what the owner gets.
 		OverrideSlot(uint32_t id, const char* name, void* engineFunction, Installer installer);
 
 		MwseNativeStatus claim(const char* module, void* function, void** engineFunction, MwseNativeHandle handle);
@@ -80,8 +84,10 @@ namespace mwse::native {
 	private:
 		uint32_t m_id;
 		const char* m_name;
+		const CallSites* m_sites = nullptr;
+		DWORD m_dispatcher = 0;
+		Installer m_installer = nullptr;
 		void* m_engineFunction;
-		Installer m_installer;
 		bool m_installed = false;
 		std::atomic<void*> m_owner = nullptr;
 		MwseNativeHandle m_handle = 0;
@@ -106,6 +112,41 @@ namespace mwse::native {
 		bool m_configureInstalled = false;
 	};
 
+	// The targets of the redirected call sites of the overrides. Each calls the owner's function
+	// or the engine function. The engine's thiscall functions take __fastcall with an unused
+	// second parameter.
+	class Dispatch {
+	public:
+		static void __fastcall cameraRootCullShow(void* root, DWORD unused, void* camera);
+		static void __fastcall readMapTile(void* renderTarget, DWORD unused, bool skip);
+		static void __fastcall purgeTextures(void* dataHandler, DWORD unused);
+		static void __fastcall paintMapCell(void* recordsHandler, DWORD unused, void* cell);
+		static void* __cdecl takeSavePicture(const char* fileName);
+		static D3DLOCKED_RECT* __fastcall lockRenderTarget(void* renderTarget, DWORD unused, void* texture);
+		static void __fastcall unlockRenderTarget(void* renderTarget, DWORD unused, D3DLOCKED_RECT* lockedRect, int copyBack);
+		static void __fastcall renderFogOfWar(void* renderTarget, DWORD unused, void* texture, void* bitmap, bool smallBlobs);
+		static void __fastcall drawFogBlob(void* renderTarget, DWORD unused, void* texture, int x, int y, int size);
+
+		// The light attach radius: the two engine functions with the radius of the owner.
+		static void __cdecl updateDynamicLightingForPointLight(void* light, void* cell, int radius, int lightFlags, int isTorch);
+		static void __cdecl updateLightHelper(void* light, void* reference, int radius, int lightFlags, int highPriority);
+		static int32_t __cdecl engineLightAttachRadius(const void* light, int32_t radius);
+
+		// The frame timer: the target of the four uses of the engine's `timeGetTime`.
+		static uint32_t __stdcall frameTimer();
+		static uint32_t __stdcall engineFrameTimer();
+	};
+
+	// The requests that change a value in the engine's code: the light limit of a node, the
+	// ripples, the intro movies.
+	class EngineSettings {
+	public:
+		MwseNativeStatus requestLightLimit(const char* module, uint32_t limit);
+		MwseNativeStatus requestRipples(const char* module, bool enabled);
+		MwseNativeStatus requestIntroMovies(const char* module, bool play);
+		MwseNativeStatus requestLightParticlesFix(const char* module);
+	};
+
 	class Registry {
 	public:
 		static Registry& get();
@@ -118,8 +159,21 @@ namespace mwse::native {
 
 		EventPoint cameraTransformsUpdated;
 		EventPoint uiConfigured;
+		EventPoint gameIdsResolved;
 		OverrideSlot dynamicLightTest;
+		OverrideSlot cameraRootCullShow;
+		OverrideSlot mapTileRead;
+		OverrideSlot texturePurge;
+		OverrideSlot mapCellPaint;
+		OverrideSlot savePicture;
+		OverrideSlot renderTargetLock;
+		OverrideSlot renderTargetUnlock;
+		OverrideSlot fogRender;
+		OverrideSlot fogBlob;
+		OverrideSlot lightAttachRadius;
+		OverrideSlot frameTimer;
 		UIScale uiScale;
+		EngineSettings engineSettings;
 
 	private:
 		Registry();

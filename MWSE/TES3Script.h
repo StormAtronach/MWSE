@@ -108,6 +108,11 @@ namespace TES3 {
 		unsigned int getLongVariableCount() const;
 		unsigned int getFloatVariableCount() const;
 
+		// The search for the next token in resolveGlobalIDs: strchr, except that a token resolved
+		// before is crossed by its length, not searched byte by byte.
+		static const char* __cdecl findNextToken(const char* at, int character);
+		static const char* findEndOfResolvedToken(const char* at);
+
 		//
 		// Debug values.
 		//

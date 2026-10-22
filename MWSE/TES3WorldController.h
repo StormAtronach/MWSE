@@ -462,6 +462,7 @@ namespace TES3 {
 		_declspec(dllexport) void updateTiming();
 		_declspec(dllexport) void updateEnvironmentLightingWeather();
 
+		void resolveScriptInternalIDs();
 		void configureUIScaling(int windowWidth);
 		void initializeUIScaling(int windowWidth);
 		void applyUIScale(float scale);

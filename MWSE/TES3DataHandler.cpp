@@ -1065,6 +1065,16 @@ namespace TES3 {
 		test(light, node, radius, lightFlags, isLand, highPriority);
 	}
 
+	const auto TES3_updateDynamicLightingForPointLight = reinterpret_cast<void(__cdecl*)(NI::PointLight*, Cell*, int, int, int)>(0x4D2C20);
+	void DataHandler::updateDynamicLightingForPointLight(NI::PointLight* light, Cell* cell, int radius, int lightFlags, int isTorch) {
+		TES3_updateDynamicLightingForPointLight(light, cell, radius, lightFlags, isTorch);
+	}
+
+	const auto TES3_updateLightHelper = reinterpret_cast<void(__cdecl*)(NI::PointLight*, Reference*, int, int, int)>(0x4D32F0);
+	void DataHandler::updateLightHelper(NI::PointLight* light, Reference* reference, int radius, int lightFlags, int highPriority) {
+		TES3_updateLightHelper(light, reference, radius, lightFlags, highPriority);
+	}
+
 	static bool& TES3_COLLISION_DATA_RESETTING = *reinterpret_cast<bool*>(0x7C9A78);
 	static bool& COLLISION_DATA_RESET_COLLISION_GROUPS = *reinterpret_cast<bool*>(0x7C9BCC);
 	void DataHandler::updateCollisionGroupsForActiveCells(bool force, bool isResettingData, bool resetCollisionGroups) {

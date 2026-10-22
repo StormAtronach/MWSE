@@ -2496,7 +2496,15 @@ namespace mwse::patch {
 		genCallEnforced(0x4FE07A, 0x4B8F50, reinterpret_cast<DWORD>(PatchRecordsHandlerFindFirstInstanceOfObjectId));
 		genCallEnforced(0x4FF24C, 0x4B8F50, reinterpret_cast<DWORD>(PatchRecordsHandlerFindFirstInstanceOfObjectId));
 		genCallEnforced(0x5008E6, 0x4B8F50, reinterpret_cast<DWORD>(PatchRecordsHandlerFindFirstInstanceOfObjectId));
-		genCallEnforced(0x491E04, 0x4B90F0, reinterpret_cast<DWORD>(PatchRecordsHandlerFindEntityInWorld));
+
+		// Patch: The search for the next token in ScriptRecord::resolveGlobalIDs crosses a token resolved before by
+		// its length. strchr searched the record pointer inside it, and a space byte there began a false token.
+		{
+			constexpr BYTE callStrchr[] = { 0xFF, 0x15, 0x7C, 0x62, 0x74, 0x00 }; // call [strchr]
+			if (memcmp(reinterpret_cast<const void*>(0x4FF2A0), callStrchr, sizeof(callStrchr)) == 0) {
+				genCallUnprotected(0x4FF2A0, reinterpret_cast<DWORD>(&TES3::Script::findNextToken), sizeof(callStrchr));
+			}
+		}		genCallEnforced(0x491E04, 0x4B90F0, reinterpret_cast<DWORD>(PatchRecordsHandlerFindEntityInWorld));
 		genCallEnforced(0x50C2BC, 0x4B90F0, reinterpret_cast<DWORD>(PatchRecordsHandlerFindEntityInWorld));
 		genCallEnforced(0x48EEC7, 0x4B96F0, reinterpret_cast<DWORD>(PatchRecordsHandlerFindClosestReferenceOfObject));
 		genCallEnforced(0x48EFDE, 0x4B96F0, reinterpret_cast<DWORD>(PatchRecordsHandlerFindClosestReferenceOfObject));

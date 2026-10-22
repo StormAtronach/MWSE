@@ -51,14 +51,17 @@ namespace TES3 {
 	// WorldControllerRenderTarget
 	//
 
-	const auto TES3_WorldControllerRenderTarget_lockRenderTarget = reinterpret_cast<D3DLOCKED_RECT*(__thiscall*)(WorldControllerRenderTarget*, NI::Pointer<NI::Texture>)>(0x42F3F0);
 	D3DLOCKED_RECT* WorldControllerRenderTarget::lockRenderTarget(NI::Pointer<NI::Texture> texture) {
-		return TES3_WorldControllerRenderTarget_lockRenderTarget(this, texture);
+		// The lock lets go of one reference to its texture, as the engine function does.
+		NI::Texture* raw = texture;
+		if (raw) {
+			raw->refCount++;
+		}
+		return mwse::native::Dispatch::lockRenderTarget(this, 0, raw);
 	}
 
-	const auto TES3_WorldControllerRenderTarget_unlockRenderTarget = reinterpret_cast<void(__thiscall*)(WorldControllerRenderTarget*, D3DLOCKED_RECT*, int)>(0x42F620);
 	void WorldControllerRenderTarget::unlockRenderTarget(D3DLOCKED_RECT* lockedRect, int flag) {
-		TES3_WorldControllerRenderTarget_unlockRenderTarget(this, lockedRect, flag);
+		mwse::native::Dispatch::unlockRenderTarget(this, 0, lockedRect, flag);
 	}
 
 	const auto TES3_WorldControllerRenderTarget_getFogOfWarPixel = reinterpret_cast<unsigned char(__thiscall*)(WorldControllerRenderTarget*, NI::Pointer<NI::RenderedTexture>, float, float)>(0x42FE20);
@@ -689,6 +692,16 @@ namespace TES3 {
 	const auto TES3_WorldController_updateEnvironmentLightingWeather = reinterpret_cast<void(__thiscall*)(WorldController*)>(0x4100D0);
 	void WorldController::updateEnvironmentLightingWeather() {
 		TES3_WorldController_updateEnvironmentLightingWeather(this);
+	}
+
+	const auto TES3_WorldController_resolveScriptInternalIDs = reinterpret_cast<void(__thiscall*)(WorldController*)>(0x40FC40);
+	void WorldController::resolveScriptInternalIDs() {
+		TES3_WorldController_resolveScriptInternalIDs(this);
+
+		MwseNativeGameIdsResolvedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.worldController = this;
+		mwse::native::Registry::get().gameIdsResolved.fire(&packet);
 	}
 
 	const auto TES3_WorldController_configureUIScaling = reinterpret_cast<void(__thiscall*)(WorldController*, int)>(0x40F2A0);
