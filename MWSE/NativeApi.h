@@ -132,6 +132,9 @@ namespace mwse::native {
 		static void __cdecl updateLightHelper(void* light, void* reference, int radius, int lightFlags, int highPriority);
 		static int32_t __cdecl engineLightAttachRadius(const void* light, int32_t radius);
 
+		// The draw of an accumulator's queue: the engine function, then the event.
+		static void __fastcall finishAccumulating(void* accumulator, DWORD unused);
+
 		// The frame timer: the target of the four uses of the engine's `timeGetTime`.
 		static uint32_t __stdcall frameTimer();
 		static uint32_t __stdcall engineFrameTimer();
@@ -161,6 +164,7 @@ namespace mwse::native {
 		EventPoint cameraTransformsUpdated;
 		EventPoint uiConfigured;
 		EventPoint gameIdsResolved;
+		EventPoint accumulatorFinished;
 		OverrideSlot dynamicLightTest;
 		OverrideSlot cameraRootCullShow;
 		OverrideSlot mapTileRead;

@@ -5,6 +5,8 @@
 #include "MWSEDefs.h"
 #include "BuildDate.h"
 
+#include "NIAccumulator.h"
+
 #include "TES3DataHandler.h"
 #include "TES3PlayerAnimationController.h"
 #include "TES3WorldController.h"
@@ -64,6 +66,12 @@ namespace mwse::native {
 	static const CallSites gameIdsResolvedSites({ 0x419AC4, 0x4C601D, 0x5FB11A, 0x5FE929 }, 0x40FC40);
 	static const CallSites lightPointSites({ 0x485BF0, 0x485C2A, 0x4D2C07, 0x4EB9E4 }, 0x4D2C20);
 	static const CallSites lightHelperSites({ 0x485DD8, 0x485E2D }, 0x4D32F0);
+
+	// The slot of `FinishAccumulating` in the virtual tables of NiAlphaAccumulator and
+	// NiClusterAccumulator, and the engine function that both hold.
+	constexpr DWORD ACCUMULATOR_VTABLES[] = { 0x7468D0, 0x74FB4C };
+	constexpr DWORD ACCUMULATOR_FINISH_SLOT = 0x30;
+	constexpr DWORD ACCUMULATOR_FINISH = 0x6CF0E0;
 
 	// The operands of the engine's uses of `timeGetTime`: `mov ebx, [timeGetTime]` at 0x403B50 and
 	// `call [timeGetTime]` at 0x4535FB, 0x453613 and 0x453636. Each names the import slot 0x7463E8.
@@ -155,6 +163,20 @@ namespace mwse::native {
 	static MwseNativeStatus installGameIdsResolved() {
 		auto function = &TES3::WorldController::resolveScriptInternalIDs;
 		return redirectCallSites("the resolve of the game's ids", gameIdsResolvedSites, *reinterpret_cast<DWORD*>(&function));
+	}
+
+	// Both virtual tables, or none: a part would leave some flushes without the event.
+	static MwseNativeStatus installAccumulatorFinished() {
+		for (const auto vtable : ACCUMULATOR_VTABLES) {
+			if (*reinterpret_cast<const DWORD*>(vtable + ACCUMULATOR_FINISH_SLOT) != ACCUMULATOR_FINISH) {
+				logChangedSite("the draw of an accumulator's queue", vtable + ACCUMULATOR_FINISH_SLOT);
+				return MWSE_NATIVE_BYTES_CHANGED;
+			}
+		}
+		for (const auto vtable : ACCUMULATOR_VTABLES) {
+			se::memory::overrideVirtualTableEnforced(vtable, ACCUMULATOR_FINISH_SLOT, ACCUMULATOR_FINISH, reinterpret_cast<DWORD>(&Dispatch::finishAccumulating));
+		}
+		return MWSE_NATIVE_OK;
 	}
 
 	// Both groups of calls, or none: a part would attach lights at two radii.
@@ -443,6 +465,17 @@ namespace mwse::native {
 		return radius;
 	}
 
+	void __fastcall Dispatch::finishAccumulating(void* accumulator, DWORD) {
+		const auto camera = static_cast<NI::Accumulator*>(accumulator)->camera.get();
+		reinterpret_cast<void(__thiscall*)(void*)>(ACCUMULATOR_FINISH)(accumulator);
+
+		MwseNativeAccumulatorFinishedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.accumulator = accumulator;
+		packet.camera = camera;
+		Registry::get().accumulatorFinished.fire(&packet);
+	}
+
 	uint32_t __stdcall Dispatch::frameTimer() {
 		return Registry::get().frameTimer.getFunction<MwseNativeFrameTimer>()();
 	}
@@ -526,6 +559,7 @@ namespace mwse::native {
 		cameraTransformsUpdated(MWSE_NATIVE_EVENT_CAMERA_TRANSFORMS_UPDATED, "the camera transforms update", installCameraTransformsUpdated),
 		uiConfigured(MWSE_NATIVE_EVENT_UI_CONFIGURED, "the UI configuration", installUIConfigured),
 		gameIdsResolved(MWSE_NATIVE_EVENT_GAME_IDS_RESOLVED, "the resolve of the game's ids", installGameIdsResolved),
+		accumulatorFinished(MWSE_NATIVE_EVENT_ACCUMULATOR_FINISHED, "the draw of an accumulator's queue", installAccumulatorFinished),
 		dynamicLightTest(MWSE_NATIVE_OVERRIDE_DYNAMIC_LIGHT_TEST, "the dynamic light test", &dynamicLightTestSites, reinterpret_cast<DWORD>(&TES3::DataHandler::testDynamicLight)),
 		cameraRootCullShow(MWSE_NATIVE_OVERRIDE_CAMERA_ROOT_CULL_SHOW, "the cull show of a camera's root", &cameraRootCullShowSites, reinterpret_cast<DWORD>(&Dispatch::cameraRootCullShow)),
 		mapTileRead(MWSE_NATIVE_OVERRIDE_MAP_TILE_READ, "the read of a map tile", &mapTileReadSites, reinterpret_cast<DWORD>(&Dispatch::readMapTile)),
@@ -739,7 +773,7 @@ namespace mwse::native {
 	}
 
 	EventPoint* Registry::findEvent(uint32_t id) {
-		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved }) {
+		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved, &accumulatorFinished }) {
 			if (event->getID() == id) {
 				return event;
 			}
