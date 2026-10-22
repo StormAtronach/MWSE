@@ -75,6 +75,17 @@ namespace TES3 {
 		return effectInstance ? effectInstance->isSummon() : false;
 	}
 
+	const auto TES3_MobileActor_dtor = reinterpret_cast<void(__thiscall*)(MobileActor*)>(0x51F970);
+	void MobileActor::dtor() {
+		// Clean up active projectiles fired by this mobile.
+		const auto worldController = WorldController::get();
+		if (worldController && worldController->mobManager && worldController->mobManager->projectileManager) {
+			worldController->mobManager->projectileManager->cleanupFiringActor(this);
+		}
+
+		TES3_MobileActor_dtor(this);
+	}
+
 	void MobileActor::cleanupCollisionReference(Reference* reference) {
 		MobileObject::cleanupCollisionReference(reference);
 

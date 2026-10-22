@@ -6782,6 +6782,16 @@ namespace mwse::lua {
 		genCallEnforced(0x4E45A3, 0x4E45C0, *reinterpret_cast<DWORD*>(&referenceObjectDestructor));
 		genJumpEnforced(0x72D1B4, 0x4E45C0, *reinterpret_cast<DWORD*>(&referenceObjectDestructor));
 
+		// Clean up the projectiles of a mobile actor when the mobile is destroyed.
+		auto mobileActorDestructor = &TES3::MobileActor::dtor;
+		genCallEnforced(0x51F943, 0x51F970, *reinterpret_cast<DWORD*>(&mobileActorDestructor));
+		genCallEnforced(0x54CAD5, 0x51F970, *reinterpret_cast<DWORD*>(&mobileActorDestructor));
+		genCallEnforced(0x55A3DA, 0x51F970, *reinterpret_cast<DWORD*>(&mobileActorDestructor));
+		genJumpEnforced(0x72EB13, 0x51F970, *reinterpret_cast<DWORD*>(&mobileActorDestructor));
+		genJumpEnforced(0x72EB43, 0x51F970, *reinterpret_cast<DWORD*>(&mobileActorDestructor));
+		genJumpEnforced(0x72EBA3, 0x51F970, *reinterpret_cast<DWORD*>(&mobileActorDestructor));
+		genJumpEnforced(0x72EBD3, 0x51F970, *reinterpret_cast<DWORD*>(&mobileActorDestructor));
+
 		// Allow area-of-effect magic effects and tes3.findActorsInProximity to hit/find incapacitated actors.
 		genJumpUnprotected(0x570341, 0x57034C);
 
