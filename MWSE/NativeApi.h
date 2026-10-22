@@ -145,6 +145,7 @@ namespace mwse::native {
 		MwseNativeStatus requestRipples(const char* module, bool enabled);
 		MwseNativeStatus requestIntroMovies(const char* module, bool play);
 		MwseNativeStatus requestLightParticlesFix(const char* module);
+		MwseNativeStatus requestSunGlare(const char* module, bool enabled);
 	};
 
 	class Registry {
