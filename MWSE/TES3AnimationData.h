@@ -141,6 +141,7 @@ namespace TES3 {
 		// Returns false if no named group with that name is loaded.
 		bool playNamedAnimationGroup(std::string_view name, int bodySection, int startFlag = 0, int loopCount = -1);
 		bool setSourceKeyframes(KeyframeDefinition* kfData, int sourceIndex, bool isBiped);
+		bool linkAnimationSequenceToBones(NI::Sequence** sequences, int sourceIndex);
 		void updateMovementDelta(float timing, NI::Point3* inout_startingPosition, bool dontUpdatePositionDelta);
 
 		//

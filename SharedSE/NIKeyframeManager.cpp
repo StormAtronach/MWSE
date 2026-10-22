@@ -18,6 +18,15 @@ namespace NI {
 #endif
 	}
 
+	Sequence* Sequence::clone() const {
+#if defined(SE_NI_SEQUENCE_FNADDR_CLONE) && SE_NI_SEQUENCE_FNADDR_CLONE > 0
+		const auto NI_Sequence_clone = reinterpret_cast<Sequence*(__cdecl*)(const Sequence*, bool)>(SE_NI_SEQUENCE_FNADDR_CLONE);
+		return NI_Sequence_clone(this, false);
+#else
+		throw not_implemented_exception();
+#endif
+	}
+
 	Pointer<KeyframeController> Sequence::getController(const char* name) const {
 		for (size_t i = 0; i < objectNames.endIndex; ++i) {
 			if (_stricmp(objectNames[i], name) == 0) {
