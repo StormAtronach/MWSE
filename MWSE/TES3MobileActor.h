@@ -372,6 +372,7 @@ namespace TES3 {
 		void resurrect_lua(sol::table params);
 		void cleanupCollisionReference(Reference* reference);
 		void overrideHeadTrackingThisFrame(Reference* target);
+		void dtor();
 
 		ActorAnimationController* getAnimationController() const;
 		BaseObject* getCurrentSpell() const;
