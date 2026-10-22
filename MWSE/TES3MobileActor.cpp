@@ -625,6 +625,23 @@ namespace TES3 {
 		TES3_MobileActor_notifyActorDeadOrDestroyed(this, mobileActor);
 	}
 
+	void MobileActor::notifyActorDestroyed(MobileActor* mobileActor) {
+		notifyActorDeadOrDestroyed(mobileActor);
+
+		// Remove the crimes that name the destroyed actor as the criminal or the victim.
+		for (auto crimes : { &committedCrimes, &witnessedCrimes }) {
+			for (auto itt = crimes->begin(); itt != crimes->end();) {
+				const auto& crime = *itt;
+				if (crime.criminal == mobileActor || crime.victim == mobileActor) {
+					itt = crimes->erase(itt);
+				}
+				else {
+					++itt;
+				}
+			}
+		}
+	}
+
 	const auto TES3_MobileActor_retireMagic = reinterpret_cast<void(__thiscall*)(MobileActor*)>(0x52C990);
 	void MobileActor::retireMagic() {
 		TES3_MobileActor_retireMagic(this);
