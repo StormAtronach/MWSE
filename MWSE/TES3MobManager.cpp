@@ -169,30 +169,27 @@ namespace TES3 {
 			}
 		};
 
-		criticalSection.enter("MWSE:ProcessManager::cleanupCollisionReferences");
-
-		if (mobilePlayer) {
-			mobilePlayer->cleanupCollisionReference(reference);
-			if (mobilePlayer->collisionGroup) {
-				if (mobilePlayer->reference == reference) {
-					mobilePlayer->collisionGroup->removeAll();
-				}
-				else {
-					removeCollidees(mobilePlayer->collisionGroup);
-				}
-			}
+		const auto worldController = WorldController::get();
+		if (worldController == nullptr || worldController->allMobileActors == nullptr) {
+			return;
 		}
 
-		for (auto planner : aiPlanners) {
-			if (planner && planner->mobileActor) {
-				planner->mobileActor->cleanupCollisionReference(reference);
-				if (planner->mobileActor->collisionGroup) {
-					if (planner->mobileActor->reference == reference) {
-						planner->mobileActor->collisionGroup->removeAll();
-					}
-					else {
-						removeCollidees(planner->mobileActor->collisionGroup);
-					}
+		criticalSection.enter("MWSE:ProcessManager::cleanupCollisionReferences");
+
+		// Every mobile actor, the player included, whether or not its AI planner is listed.
+		for (auto mobileActor : *worldController->allMobileActors) {
+			if (mobileActor == nullptr) {
+				continue;
+			}
+
+			mobileActor->cleanupCollisionReference(reference);
+
+			if (mobileActor->collisionGroup) {
+				if (mobileActor->reference == reference) {
+					mobileActor->collisionGroup->removeAll();
+				}
+				else {
+					removeCollidees(mobileActor->collisionGroup);
 				}
 			}
 		}
