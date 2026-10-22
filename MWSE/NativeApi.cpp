@@ -84,6 +84,10 @@ namespace mwse::native {
 	constexpr BYTE INTRO_MOVIE_SKIP[] = { 0xEB, 0x16 };
 	// The jz over the emissive colour of a light's particles in sg_stopParticlesAndSetEmissiveMaterialToBlack.
 	constexpr DWORD LIGHT_PARTICLES_JUMP = 0x4D2789;
+	// The jz to the visible branch in WeatherController::sunGlareTests, and the nops that replace it.
+	constexpr DWORD SUN_GLARE_JUMP = 0x4404FB;
+	constexpr BYTE SUN_GLARE_ON[] = { 0x74, 0x51 };
+	constexpr BYTE SUN_GLARE_OFF[] = { 0x90, 0x90 };
 
 	// The two reads of the back buffer size in NiRenderer::MapWindowPointToBufferPoint, and the reads of the
 	// UI's view size that replace them.
@@ -503,6 +507,17 @@ namespace mwse::native {
 		return MWSE_NATIVE_OK;
 	}
 
+	MwseNativeStatus EngineSettings::requestSunGlare(const char* module, bool enabled) {
+		const auto code = reinterpret_cast<const BYTE*>(SUN_GLARE_JUMP);
+		if (memcmp(code, SUN_GLARE_ON, 2) != 0 && memcmp(code, SUN_GLARE_OFF, 2) != 0) {
+			logChangedSite("the sun glare", SUN_GLARE_JUMP);
+			return MWSE_NATIVE_BYTES_CHANGED;
+		}
+		se::memory::writeBytesUnprotected(SUN_GLARE_JUMP, enabled ? SUN_GLARE_ON : SUN_GLARE_OFF, 2);
+		log::getLog() << "[NativeApi] " << module << " requests the sun glare " << (enabled ? "on" : "off") << "." << std::endl;
+		return MWSE_NATIVE_OK;
+	}
+
 	//
 	// Registry
 	//
@@ -687,6 +702,14 @@ namespace mwse::native {
 				return MWSE_NATIVE_BAD_ARGUMENT;
 			}
 			return registry.engineSettings.requestLightParticlesFix(module);
+		}
+		case MWSE_NATIVE_REQUEST_SUN_GLARE:
+		{
+			const auto sunGlare = static_cast<const MwseNativeSunGlareRequestV1*>(packet);
+			if (sunGlare->structSize < sizeof(MwseNativeSunGlareRequestV1)) {
+				return MWSE_NATIVE_BAD_ARGUMENT;
+			}
+			return registry.engineSettings.requestSunGlare(module, sunGlare->enabled != 0);
 		}
 		}
 

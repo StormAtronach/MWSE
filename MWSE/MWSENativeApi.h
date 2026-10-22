@@ -224,6 +224,16 @@ typedef struct MwseNativeLightParticlesFixRequestV1 {
 	uint32_t structSize;
 } MwseNativeLightParticlesFixRequestV1;
 
+// The engine's sun glare (`WeatherController::sunGlareTests`, the jz at 0x4404FB): on or off. Off
+// takes the occluded branch each frame, so the glare fades out and stays culled; the occlusion test
+// and its result stay the same. Latest request: none.
+#define MWSE_NATIVE_REQUEST_SUN_GLARE 6u
+typedef struct MwseNativeSunGlareRequestV1 {
+	uint32_t structSize;
+	// 1: the engine shows its sun glare (its own behaviour). 0: no sun glare.
+	uint32_t enabled;
+} MwseNativeSunGlareRequestV1;
+
 //
 // Queries.
 //
