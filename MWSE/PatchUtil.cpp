@@ -3131,6 +3131,13 @@ namespace mwse::patch {
 		writePatchCodeUnprotected(0x4968E1, (BYTE*)&PatchUnequipIndexedProjectileSetup, PatchUnequipIndexedProjectileSetup_size);
 		genCallUnprotected(0x4968E1 + 0x2, reinterpret_cast<DWORD>(PatchUnequipIndexedProjectile));
 
+		// Patch: Keep the nocked projectile out of the action data an actor saves before combat and restores after it.
+		auto actionDataCopy = &TES3::ActionData::copy;
+		for (const DWORD site : { 0x52F0E9u, 0x52F142u, 0x52F812u, 0x52F9C0u, 0x52FA96u, 0x52FCEFu, 0x5300DFu, 0x530546u, 0x531115u, 0x531EF2u }) {
+			genCallEnforced(site, 0x52F690, *reinterpret_cast<DWORD*>(&actionDataCopy));
+		}
+		genNOPUnprotected(0x52F48D, 0x6); // mov [esi+0x100], edx: MACT::aiAfterCombatEnds restoring actionData.nockedProjectile.
+
 		// Patch: Fix invalid UI memory pointer.
 		genCallEnforced(0x5C48DB, 0x595370, reinterpret_cast<DWORD>(PatchEnchantingMenuPointer));
 

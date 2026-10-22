@@ -77,6 +77,12 @@ namespace TES3 {
 		~ActionData() = delete;
 
 		//
+		// Other related this-call functions.
+		//
+
+		ActionData* copy(const ActionData* from);
+
+		//
 		// Custom functions.
 		//
 
