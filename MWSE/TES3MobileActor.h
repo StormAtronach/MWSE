@@ -367,6 +367,7 @@ namespace TES3 {
 
 		void updateOpacity();
 		void notifyActorDeadOrDestroyed(MobileActor* mobileActor);
+		void notifyActorDestroyed(MobileActor* mobileActor);
 		void removeFiredProjectiles(bool includeSpellProjectiles);
 		void resurrect(bool resetState, bool moveToStartingLocation);
 		void resurrect_lua(sol::table params);

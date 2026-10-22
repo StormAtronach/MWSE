@@ -3131,6 +3131,10 @@ namespace mwse::patch {
 		writePatchCodeUnprotected(0x4968E1, (BYTE*)&PatchUnequipIndexedProjectileSetup, PatchUnequipIndexedProjectileSetup_size);
 		genCallUnprotected(0x4968E1 + 0x2, reinterpret_cast<DWORD>(PatchUnequipIndexedProjectile));
 
+		// Patch: Remove the crimes that name a destroyed mobile actor from every other mobile actor.
+		auto mobileActorNotifyActorDestroyed = &TES3::MobileActor::notifyActorDestroyed;
+		genCallEnforced(0x51F9CD, 0x51FEB0, *reinterpret_cast<DWORD*>(&mobileActorNotifyActorDestroyed));
+
 		// Patch: Fix invalid UI memory pointer.
 		genCallEnforced(0x5C48DB, 0x595370, reinterpret_cast<DWORD>(PatchEnchantingMenuPointer));
 
