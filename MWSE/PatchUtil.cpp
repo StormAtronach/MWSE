@@ -3060,6 +3060,10 @@ namespace mwse::patch {
 		auto mobileActorGetActivePackage = &TES3::MobileActor::getActivePackage;
 		genCallEnforced(0x52878B, 0x564DF0, *reinterpret_cast<DWORD*>(&mobileActorGetActivePackage));
 
+		// Patch: Remove the crimes that name a destroyed mobile actor from every other mobile actor.
+		auto mobileActorNotifyActorDestroyed = &TES3::MobileActor::notifyActorDestroyed;
+		genCallEnforced(0x51F9CD, 0x51FEB0, *reinterpret_cast<DWORD*>(&mobileActorNotifyActorDestroyed));
+
 		// Patch: Fix invalid UI memory pointer.
 		genCallEnforced(0x5C48DB, 0x595370, reinterpret_cast<DWORD>(PatchEnchantingMenuPointer));
 
