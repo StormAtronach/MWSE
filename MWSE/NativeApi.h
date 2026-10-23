@@ -128,10 +128,14 @@ namespace mwse::native {
 		static void __fastcall renderFogOfWar(void* renderTarget, DWORD unused, void* texture, void* bitmap, bool smallBlobs);
 		static void __fastcall drawFogBlob(void* renderTarget, DWORD unused, void* texture, int x, int y, int size);
 
-		// The light attach radius: the two engine functions with the radius of the owner.
+		// The light attach radius: the two engine functions with the radius of the owner, then
+		// the event of the light placed.
 		static void __cdecl updateDynamicLightingForPointLight(void* light, void* cell, int radius, int lightFlags, int isTorch);
 		static void __cdecl updateLightHelper(void* light, void* reference, int radius, int lightFlags, int highPriority);
 		static int32_t __cdecl engineLightAttachRadius(const void* light, int32_t radius);
+
+		// The removal of a light from the world: the event, then the engine function.
+		static void __cdecl resetLightDynamicEffect(void* light);
 
 		// The draw of an accumulator's queue: the engine function, then the event.
 		static void __fastcall finishAccumulating(void* accumulator, DWORD unused);
@@ -173,6 +177,8 @@ namespace mwse::native {
 		EventPoint gameIdsResolved;
 		EventPoint accumulatorFinished;
 		EventPoint playerCellChanged;
+		EventPoint lightPlaced;
+		EventPoint lightRemoved;
 		OverrideSlot dynamicLightTest;
 		OverrideSlot cameraRootCullShow;
 		OverrideSlot mapTileRead;
