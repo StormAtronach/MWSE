@@ -423,6 +423,12 @@ namespace TES3 {
 		static void updateDynamicLightingForPointLight(NI::PointLight* light, Cell* cell, int radius, int lightFlags, int isTorch);
 		static void updateLightHelper(NI::PointLight* light, Reference* reference, int radius, int lightFlags, int highPriority);
 
+		// The player's change of cell (0x45CEF0, 0x45C9B0), then the native event of it
+		// (MWSE_NATIVE_EVENT_PLAYER_CELL_CHANGED). `gameLoad`: the load of a saved game made it.
+		static void changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad = false);
+		static void changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell);
+		static void firePlayerCellChanged(Cell* previousCell, bool gameLoad);
+
 		void updateCollisionGroupsForActiveCells(bool force = true, bool isResettingData = false, bool resetCollisionGroups = true);
 		void updateCollisionGroupsForActiveCells_lua(sol::optional<bool> force, sol::optional<bool> isResettingData, sol::optional<bool> resetCollisionGroups);
 		void updateCollisionGroupsForActiveCells_raw(bool force = true);

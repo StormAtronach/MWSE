@@ -1075,6 +1075,29 @@ namespace TES3 {
 		TES3_updateLightHelper(light, reference, radius, lightFlags, highPriority);
 	}
 
+	const auto TES3_cellChange = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, Cell*, int)>(0x45CEF0);
+	void DataHandler::changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad) {
+		const auto previousCell = get()->currentCell;
+		TES3_cellChange(position, orientation, cell, updateCollision);
+		firePlayerCellChanged(previousCell, gameLoad);
+	}
+
+	const auto TES3_cellChangeWithCompanions = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, Cell*)>(0x45C9B0);
+	void DataHandler::changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell) {
+		const auto previousCell = get()->currentCell;
+		TES3_cellChangeWithCompanions(position, orientation, cell);
+		firePlayerCellChanged(previousCell, false);
+	}
+
+	void DataHandler::firePlayerCellChanged(Cell* previousCell, bool gameLoad) {
+		MwseNativePlayerCellChangedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.previousCell = previousCell;
+		packet.cell = get()->currentCell;
+		packet.gameLoad = gameLoad ? 1 : 0;
+		mwse::native::Registry::get().playerCellChanged.fire(&packet);
+	}
+
 	static bool& TES3_COLLISION_DATA_RESETTING = *reinterpret_cast<bool*>(0x7C9A78);
 	static bool& COLLISION_DATA_RESET_COLLISION_GROUPS = *reinterpret_cast<bool*>(0x7C9BCC);
 	void DataHandler::updateCollisionGroupsForActiveCells(bool force, bool isResettingData, bool resetCollisionGroups) {

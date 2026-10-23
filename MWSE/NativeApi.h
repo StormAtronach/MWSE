@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MWSENativeApi.h"
+#include "NIDefines.h"
 
 namespace mwse::native {
 	// The calls of an engine function at its call sites. MWSE redirects all of them or none.
@@ -135,6 +136,12 @@ namespace mwse::native {
 		// The draw of an accumulator's queue: the engine function, then the event.
 		static void __fastcall finishAccumulating(void* accumulator, DWORD unused);
 
+		// The player's change of cell at the engine's calls: the engine function, then the
+		// event. The calls of the load of a saved game take `changePlayerCellAtGameLoad`.
+		static void __cdecl changePlayerCell(NI::Point3 position, NI::Point3 orientation, void* cell, int updateCollision);
+		static void __cdecl changePlayerCellAtGameLoad(NI::Point3 position, NI::Point3 orientation, void* cell, int updateCollision);
+		static void __cdecl changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, void* cell);
+
 		// The frame timer: the target of the four uses of the engine's `timeGetTime`.
 		static uint32_t __stdcall frameTimer();
 		static uint32_t __stdcall engineFrameTimer();
@@ -165,6 +172,7 @@ namespace mwse::native {
 		EventPoint uiConfigured;
 		EventPoint gameIdsResolved;
 		EventPoint accumulatorFinished;
+		EventPoint playerCellChanged;
 		OverrideSlot dynamicLightTest;
 		OverrideSlot cameraRootCullShow;
 		OverrideSlot mapTileRead;
