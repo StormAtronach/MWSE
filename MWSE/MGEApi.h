@@ -117,6 +117,9 @@ namespace mge {
 		BlurReflections = 19,
 		DynamicRipples = 20,
 		CrosshairAutoHide = 21,
+		// A debug view of the run, not a setting: MGE XE does not save it. An MGE XE without
+		// it reads false and ignores a set.
+		LightDebug = 22,
 	};
 
 	struct MGEAPIv1 : public MGEAPI {

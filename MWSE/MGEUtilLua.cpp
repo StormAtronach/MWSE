@@ -99,6 +99,7 @@ namespace mwse::lua {
 			RenderFeatures::bindFeature<RenderFeature::ExponentialFog>(usertypeDefinition, "exponentialFog");
 			RenderFeatures::bindFeature<RenderFeature::FPSCounter>(usertypeDefinition, "fpsCounter");
 			RenderFeatures::bindFeature<RenderFeature::Grass>(usertypeDefinition, "grass");
+			RenderFeatures::bindFeature<RenderFeature::LightDebug>(usertypeDefinition, "lightDebug");
 			RenderFeatures::bindFeature<RenderFeature::NoMWMGEBlending>(usertypeDefinition, "noMWMGEBlending");
 			RenderFeatures::bindFeature<RenderFeature::NoMWSunglare>(usertypeDefinition, "noMWSunglare");
 			RenderFeatures::bindFeature<RenderFeature::PauseRenderingInMenus>(usertypeDefinition, "pauseRenderingInMenus");
