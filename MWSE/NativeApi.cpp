@@ -64,6 +64,9 @@ namespace mwse::native {
 	static const CallSites fogRenderSites({ 0x41F52A }, 0x42FC60);
 	static const CallSites fogBlobSites({ 0x42082C, 0x4208C2, 0x420A7F, 0x420BB9, 0x420CC8, 0x421CE4, 0x42FD7C }, 0x42FA50);
 	static const CallSites gameIdsResolvedSites({ 0x419AC4, 0x4C601D, 0x5FB11A, 0x5FE929 }, 0x40FC40);
+	static const CallSites playerCellChangeSites({ 0x45C9A2, 0x45D356, 0x45D3C4, 0x4637B0, 0x4EA137, 0x50497D, 0x5062FD, 0x568360, 0x56A735, 0x56B7D2, 0x619BBF }, 0x45CEF0);
+	static const CallSites playerCellGameLoadSites({ 0x4C4B4F, 0x4C51AE }, 0x45CEF0);
+	static const CallSites playerCellCompanionSites({ 0x4EA0E8, 0x619B84 }, 0x45C9B0);
 	static const CallSites lightPointSites({ 0x485BF0, 0x485C2A, 0x4D2C07, 0x4EB9E4 }, 0x4D2C20);
 	static const CallSites lightHelperSites({ 0x485DD8, 0x485E2D }, 0x4D32F0);
 
@@ -176,6 +179,21 @@ namespace mwse::native {
 		for (const auto vtable : ACCUMULATOR_VTABLES) {
 			se::memory::overrideVirtualTableEnforced(vtable, ACCUMULATOR_FINISH_SLOT, ACCUMULATOR_FINISH, reinterpret_cast<DWORD>(&Dispatch::finishAccumulating));
 		}
+		return MWSE_NATIVE_OK;
+	}
+
+	// The three groups of calls, or none: a part would leave some changes of cell without the event.
+	static MwseNativeStatus installPlayerCellChanged() {
+		for (const auto sites : { &playerCellChangeSites, &playerCellGameLoadSites, &playerCellCompanionSites }) {
+			const auto changed = sites->findChangedSite();
+			if (changed) {
+				logChangedSite("the player's change of cell", changed);
+				return MWSE_NATIVE_BYTES_CHANGED;
+			}
+		}
+		playerCellChangeSites.redirect(reinterpret_cast<DWORD>(&Dispatch::changePlayerCell));
+		playerCellGameLoadSites.redirect(reinterpret_cast<DWORD>(&Dispatch::changePlayerCellAtGameLoad));
+		playerCellCompanionSites.redirect(reinterpret_cast<DWORD>(&Dispatch::changePlayerCellWithCompanions));
 		return MWSE_NATIVE_OK;
 	}
 
@@ -476,6 +494,18 @@ namespace mwse::native {
 		Registry::get().accumulatorFinished.fire(&packet);
 	}
 
+	void __cdecl Dispatch::changePlayerCell(NI::Point3 position, NI::Point3 orientation, void* cell, int updateCollision) {
+		TES3::DataHandler::changePlayerCell(position, orientation, static_cast<TES3::Cell*>(cell), updateCollision != 0);
+	}
+
+	void __cdecl Dispatch::changePlayerCellAtGameLoad(NI::Point3 position, NI::Point3 orientation, void* cell, int updateCollision) {
+		TES3::DataHandler::changePlayerCell(position, orientation, static_cast<TES3::Cell*>(cell), updateCollision != 0, true);
+	}
+
+	void __cdecl Dispatch::changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, void* cell) {
+		TES3::DataHandler::changePlayerCellWithCompanions(position, orientation, static_cast<TES3::Cell*>(cell));
+	}
+
 	uint32_t __stdcall Dispatch::frameTimer() {
 		return Registry::get().frameTimer.getFunction<MwseNativeFrameTimer>()();
 	}
@@ -560,6 +590,7 @@ namespace mwse::native {
 		uiConfigured(MWSE_NATIVE_EVENT_UI_CONFIGURED, "the UI configuration", installUIConfigured),
 		gameIdsResolved(MWSE_NATIVE_EVENT_GAME_IDS_RESOLVED, "the resolve of the game's ids", installGameIdsResolved),
 		accumulatorFinished(MWSE_NATIVE_EVENT_ACCUMULATOR_FINISHED, "the draw of an accumulator's queue", installAccumulatorFinished),
+		playerCellChanged(MWSE_NATIVE_EVENT_PLAYER_CELL_CHANGED, "the player's change of cell", installPlayerCellChanged),
 		dynamicLightTest(MWSE_NATIVE_OVERRIDE_DYNAMIC_LIGHT_TEST, "the dynamic light test", &dynamicLightTestSites, reinterpret_cast<DWORD>(&TES3::DataHandler::testDynamicLight)),
 		cameraRootCullShow(MWSE_NATIVE_OVERRIDE_CAMERA_ROOT_CULL_SHOW, "the cull show of a camera's root", &cameraRootCullShowSites, reinterpret_cast<DWORD>(&Dispatch::cameraRootCullShow)),
 		mapTileRead(MWSE_NATIVE_OVERRIDE_MAP_TILE_READ, "the read of a map tile", &mapTileReadSites, reinterpret_cast<DWORD>(&Dispatch::readMapTile)),
@@ -773,7 +804,7 @@ namespace mwse::native {
 	}
 
 	EventPoint* Registry::findEvent(uint32_t id) {
-		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved, &accumulatorFinished }) {
+		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved, &accumulatorFinished, &playerCellChanged }) {
 			if (event->getID() == id) {
 				return event;
 			}

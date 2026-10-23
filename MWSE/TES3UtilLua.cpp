@@ -2452,13 +2452,11 @@ namespace mwse::lua {
 
 			sol::optional<bool> teleportCompanions = params["teleportCompanions"];
 			if (teleportCompanions.value_or(true) && macp->listFriendlyActors.size() > 0) {
-				const auto TES3_cellChangeWithCompanions = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, TES3::Cell*)>(0x45C9B0);
-				TES3_cellChangeWithCompanions(position.value(), orientation.value(), cell);
+				TES3::DataHandler::changePlayerCellWithCompanions(position.value(), orientation.value(), cell);
 			}
 			else {
-				const auto TES3_cellChange = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, TES3::Cell*, int)>(0x45CEF0);
 				sol::optional<bool> flag = params["flag"];
-				TES3_cellChange(position.value(), orientation.value(), cell, flag.value_or(true));
+				TES3::DataHandler::changePlayerCell(position.value(), orientation.value(), cell, flag.value_or(true));
 			}
 
 			std::swap(TES3::DataHandler::suppressThreadLoad, suppressThreadLoad);
