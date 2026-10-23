@@ -69,6 +69,7 @@ namespace mwse::native {
 	static const CallSites playerCellCompanionSites({ 0x4EA0E8, 0x619B84 }, 0x45C9B0);
 	static const CallSites lightPointSites({ 0x485BF0, 0x485C2A, 0x4D2C07, 0x4EB9E4 }, 0x4D2C20);
 	static const CallSites lightHelperSites({ 0x485DD8, 0x485E2D }, 0x4D32F0);
+	static const CallSites lightResetSites({ 0x485BD2, 0x4E49BA, 0x4E4B39, 0x4E94F7, 0x4EBA22, 0x4EBA60, 0x562523, 0x56BA3E }, 0x4D3360);
 
 	// The slot of `FinishAccumulating` in the virtual tables of NiAlphaAccumulator and
 	// NiClusterAccumulator, and the engine function that both hold.
@@ -197,18 +198,30 @@ namespace mwse::native {
 		return MWSE_NATIVE_OK;
 	}
 
-	// Both groups of calls, or none: a part would attach lights at two radii.
-	static MwseNativeStatus installLightAttachRadius() {
+	// The passes that attach a light to the nodes near it. Both groups of calls, or none: a part
+	// would attach lights at two radii and leave some placed lights without the event. The
+	// override of the light attach radius and the event of a placed light share them.
+	static MwseNativeStatus installLightPasses() {
+		static bool installed = false;
+		if (installed) {
+			return MWSE_NATIVE_OK;
+		}
+
 		for (const auto sites : { &lightPointSites, &lightHelperSites }) {
 			const auto changed = sites->findChangedSite();
 			if (changed) {
-				logChangedSite("the light attach radius", changed);
+				logChangedSite("the light passes", changed);
 				return MWSE_NATIVE_BYTES_CHANGED;
 			}
 		}
 		lightPointSites.redirect(reinterpret_cast<DWORD>(&Dispatch::updateDynamicLightingForPointLight));
 		lightHelperSites.redirect(reinterpret_cast<DWORD>(&Dispatch::updateLightHelper));
+		installed = true;
 		return MWSE_NATIVE_OK;
+	}
+
+	static MwseNativeStatus installLightRemoved() {
+		return redirectCallSites("the removal of a light", lightResetSites, reinterpret_cast<DWORD>(&Dispatch::resetLightDynamicEffect));
 	}
 
 	static MwseNativeStatus installFrameTimer() {
@@ -472,15 +485,40 @@ namespace mwse::native {
 	void __cdecl Dispatch::updateDynamicLightingForPointLight(void* light, void* cell, int radius, int lightFlags, int isTorch) {
 		const auto attachRadius = Registry::get().lightAttachRadius.getFunction<MwseNativeLightAttachRadius>();
 		TES3::DataHandler::updateDynamicLightingForPointLight(static_cast<NI::PointLight*>(light), static_cast<TES3::Cell*>(cell), attachRadius(light, radius), lightFlags, isTorch);
+
+		MwseNativeLightPlacedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.light = light;
+		packet.cell = cell;
+		packet.radius = radius;
+		packet.flags = lightFlags;
+		Registry::get().lightPlaced.fire(&packet);
 	}
 
 	void __cdecl Dispatch::updateLightHelper(void* light, void* reference, int radius, int lightFlags, int highPriority) {
 		const auto attachRadius = Registry::get().lightAttachRadius.getFunction<MwseNativeLightAttachRadius>();
 		TES3::DataHandler::updateLightHelper(static_cast<NI::PointLight*>(light), static_cast<TES3::Reference*>(reference), attachRadius(light, radius), lightFlags, highPriority);
+
+		MwseNativeLightPlacedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.light = light;
+		packet.cell = nullptr;
+		packet.radius = radius;
+		packet.flags = lightFlags;
+		Registry::get().lightPlaced.fire(&packet);
 	}
 
 	int32_t __cdecl Dispatch::engineLightAttachRadius(const void*, int32_t radius) {
 		return radius;
+	}
+
+	void __cdecl Dispatch::resetLightDynamicEffect(void* light) {
+		MwseNativeLightRemovedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.light = light;
+		Registry::get().lightRemoved.fire(&packet);
+
+		reinterpret_cast<void(__cdecl*)(void*)>(lightResetSites.getEngineFunction())(light);
 	}
 
 	void __fastcall Dispatch::finishAccumulating(void* accumulator, DWORD) {
@@ -591,6 +629,8 @@ namespace mwse::native {
 		gameIdsResolved(MWSE_NATIVE_EVENT_GAME_IDS_RESOLVED, "the resolve of the game's ids", installGameIdsResolved),
 		accumulatorFinished(MWSE_NATIVE_EVENT_ACCUMULATOR_FINISHED, "the draw of an accumulator's queue", installAccumulatorFinished),
 		playerCellChanged(MWSE_NATIVE_EVENT_PLAYER_CELL_CHANGED, "the player's change of cell", installPlayerCellChanged),
+		lightPlaced(MWSE_NATIVE_EVENT_LIGHT_PLACED, "the placement of a light", installLightPasses),
+		lightRemoved(MWSE_NATIVE_EVENT_LIGHT_REMOVED, "the removal of a light", installLightRemoved),
 		dynamicLightTest(MWSE_NATIVE_OVERRIDE_DYNAMIC_LIGHT_TEST, "the dynamic light test", &dynamicLightTestSites, reinterpret_cast<DWORD>(&TES3::DataHandler::testDynamicLight)),
 		cameraRootCullShow(MWSE_NATIVE_OVERRIDE_CAMERA_ROOT_CULL_SHOW, "the cull show of a camera's root", &cameraRootCullShowSites, reinterpret_cast<DWORD>(&Dispatch::cameraRootCullShow)),
 		mapTileRead(MWSE_NATIVE_OVERRIDE_MAP_TILE_READ, "the read of a map tile", &mapTileReadSites, reinterpret_cast<DWORD>(&Dispatch::readMapTile)),
@@ -601,7 +641,7 @@ namespace mwse::native {
 		renderTargetUnlock(MWSE_NATIVE_OVERRIDE_RENDER_TARGET_UNLOCK, "the unlock of a render target", &renderTargetUnlockSites, reinterpret_cast<DWORD>(&Dispatch::unlockRenderTarget)),
 		fogRender(MWSE_NATIVE_OVERRIDE_FOG_RENDER, "the render of the fog of war", &fogRenderSites, reinterpret_cast<DWORD>(&Dispatch::renderFogOfWar)),
 		fogBlob(MWSE_NATIVE_OVERRIDE_FOG_BLOB, "a blob of the fog of war", &fogBlobSites, reinterpret_cast<DWORD>(&Dispatch::drawFogBlob)),
-		lightAttachRadius(MWSE_NATIVE_OVERRIDE_LIGHT_ATTACH_RADIUS, "the light attach radius", reinterpret_cast<void*>(&Dispatch::engineLightAttachRadius), installLightAttachRadius),
+		lightAttachRadius(MWSE_NATIVE_OVERRIDE_LIGHT_ATTACH_RADIUS, "the light attach radius", reinterpret_cast<void*>(&Dispatch::engineLightAttachRadius), installLightPasses),
 		frameTimer(MWSE_NATIVE_OVERRIDE_FRAME_TIMER, "the frame timer", reinterpret_cast<void*>(&Dispatch::engineFrameTimer), installFrameTimer)
 	{
 
@@ -804,7 +844,7 @@ namespace mwse::native {
 	}
 
 	EventPoint* Registry::findEvent(uint32_t id) {
-		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved, &accumulatorFinished, &playerCellChanged }) {
+		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved, &accumulatorFinished, &playerCellChanged, &lightPlaced, &lightRemoved }) {
 			if (event->getID() == id) {
 				return event;
 			}
