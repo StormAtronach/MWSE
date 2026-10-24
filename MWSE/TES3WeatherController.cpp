@@ -178,4 +178,18 @@ namespace TES3 {
 			weatherEventGuard = false;
 		}
 	}
+
+	NI::Pointer<NI::Property>* __fastcall WeatherController::getPrecipitationProperty(NI::AVObject* precipitation, DWORD _EDX_, NI::Pointer<NI::Property>* out, NI::PropertyType type) {
+		new (out) NI::Pointer<NI::Property>(precipitation->getProperty(type));
+		if (out->get() == nullptr && type == NI::PropertyType::Material) {
+			auto material = NI::MaterialProperty::create();
+			NI::Color white(1.0f, 1.0f, 1.0f);
+			material->setAmbient(white);
+			material->setDiffuse(white);
+			material->flags |= 0x1;
+			precipitation->attachProperty(material);
+			*out = material.get();
+		}
+		return out;
+	}
 }

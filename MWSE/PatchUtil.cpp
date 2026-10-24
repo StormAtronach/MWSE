@@ -40,6 +40,7 @@
 #include "TES3UIMenuController.h"
 #include "TES3VFXManager.h"
 #include "TES3VoiceStreamer.h"
+#include "TES3WeatherController.h"
 #include "TES3WorldController.h"
 #include "ReferenceTracker.h"
 
@@ -50,9 +51,11 @@
 #include "NIPoint3.h"
 #include "NIFlipController.h"
 #include "NILinesData.h"
+#include "NIParticleSystemController.h"
 #include "NIPick.h"
 #include "NIPointLight.h"
 #include "NISortAdjustNode.h"
+#include "NITGAReader.h"
 #include "NITriShape.h"
 #include "NITriShapeData.h"
 #include "NIUVController.h"
@@ -3230,6 +3233,22 @@ namespace mwse::patch {
 			auto NiFlipController_clone = &NI::FlipController::copy;
 			genCallEnforced(0x715D26, DWORD(NI::FlipController::_copy), *reinterpret_cast<DWORD*>(&NiFlipController_clone));
 		}
+
+		// Patch: Fix the image readers' lock staying held when a NIF image file does not have exactly one root.
+		// jz loc_706006; pop edi; xor eax, eax -> jnz loc_706028 (unlock, return null); jmp loc_706006
+		se::memory::writeDoubleWordEnforced(0x705FFD, 0x335F0774, 0x05EB2975);
+
+		// Patch: Fix a crash when a TGA file has a pixel size that the reader cannot unpack.
+		auto TGAReader_decodeHeader = &NI::TGAReader::decodeHeader;
+		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiTGAReader, 0xC, DWORD(NI::TGAReader::_decodeHeader), *reinterpret_cast<DWORD*>(&TGAReader_decodeHeader));
+
+		// Patch: Fix a crash when the rain or snow mesh has no material property.
+		genCallEnforced(0x43C249, 0x6EAD20, reinterpret_cast<DWORD>(TES3::WeatherController::getPrecipitationProperty));
+		genCallEnforced(0x43C5EC, 0x6EAD20, reinterpret_cast<DWORD>(TES3::WeatherController::getPrecipitationProperty));
+
+		// Patch: Fix a memory leak when a particle system with plain particle data is cloned.
+		auto ParticleSystemController_createClone = &NI::ParticleSystemController::createCloneNoLeak;
+		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&ParticleSystemController_createClone));
 
 		// Patch: Allow global audio.
 		if (Configuration::UseGlobalAudio) {
