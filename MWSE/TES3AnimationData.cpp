@@ -1157,7 +1157,9 @@ namespace TES3 {
 	}
 
 	float __fastcall updateWorldDataBeforeScale(TES3::Reference* reference) {
-		reference->sceneNode->update();
+		if (reference->getAttachedAnimationData()) {
+			reference->sceneNode->update();
+		}
 		return reference->getScale();
 	}
 
