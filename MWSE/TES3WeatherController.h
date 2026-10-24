@@ -7,6 +7,7 @@
 #include "NIPoint3.h"
 
 #include "NINode.h"
+#include "NIProperty.h"
 
 namespace TES3 {
 	constexpr int WEATHER_ID_INVALID = -1;
@@ -180,6 +181,8 @@ namespace TES3 {
 
 		void switchImmediate(int weather);
 		void switchTransition(int weather);
+
+		static NI::Pointer<NI::Property>* __fastcall getPrecipitationProperty(NI::AVObject* precipitation, DWORD _EDX_, NI::Pointer<NI::Property>* out, NI::PropertyType type);
 	};
 	static_assert(sizeof(WeatherController) == 0x1F0, "TES3::WeatherController failed size validation");
 	static_assert(offsetof(WeatherController, currentWeather) == 0x3C, "TES3::WeatherController::currentWeather failed offset validation");

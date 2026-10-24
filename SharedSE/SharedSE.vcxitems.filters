@@ -81,6 +81,9 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)NITimeController.h">
       <Filter>Header Files\NI</Filter>
     </ClInclude>
+    <ClInclude Include="$(MSBuildThisFileDirectory)NITGAReader.h">
+      <Filter>Header Files\NI</Filter>
+    </ClInclude>
     <ClInclude Include="$(MSBuildThisFileDirectory)ExceptionUtil.h">
       <Filter>Header Files\Util</Filter>
     </ClInclude>
@@ -540,6 +543,9 @@
       <Filter>Source Files\NI</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)NITimeController.cpp">
+      <Filter>Source Files\NI</Filter>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)NITGAReader.cpp">
       <Filter>Source Files\NI</Filter>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)NITriangle.cpp">
