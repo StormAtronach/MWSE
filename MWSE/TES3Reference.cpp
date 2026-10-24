@@ -156,13 +156,6 @@ namespace TES3 {
 		TES3_Reference_ensureScriptDataIsInstanced(this);
 	}
 
-	const auto TES3_Reference_resetParticleAnchors = reinterpret_cast<void(__cdecl*)(NI::Node*)>(0x6FB0B0);
-	void Reference::resetParticleAnchors() {
-		if (sceneNode) {
-			TES3_Reference_resetParticleAnchors(sceneNode);
-		}
-	}
-
 	const auto TES3_Reference_detachDynamicLightFromAffectedNodes = reinterpret_cast<void(__thiscall*)(Reference*)>(0x4EBA00);
 	void Reference::detachDynamicLightFromAffectedNodes() {
 		TES3_Reference_detachDynamicLightFromAffectedNodes(this);
