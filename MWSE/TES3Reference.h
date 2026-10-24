@@ -64,6 +64,7 @@ namespace TES3 {
 		void removeAttachment(TES3::Attachment* attachment);
 		void removeAllAttachments();
 		void ensureScriptDataIsInstanced();
+		void resetParticleAnchors();
 
 		void detachDynamicLightFromAffectedNodes();
 		void deleteDynamicLightAttachment(sol::optional<bool> removeLightFromParent = false);
