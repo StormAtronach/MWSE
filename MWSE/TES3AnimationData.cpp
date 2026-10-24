@@ -277,6 +277,24 @@ namespace TES3 {
 		return this;
 	}
 
+	const auto TES3_AnimationData_linkAnimationSequenceToBones = reinterpret_cast<bool(__thiscall*)(AnimationData*, NI::Sequence**, int)>(0x46BB50);
+	bool AnimationData::linkAnimationSequenceToBones(NI::Sequence** sequences, int sourceIndex) {
+		auto original = sequences[0];
+		if (original == nullptr || sequences[1] != nullptr) {
+			return TES3_AnimationData_linkAnimationSequenceToBones(this, sequences, sourceIndex);
+		}
+
+		// Split a copy, so that a failed split leaves the shared definition intact.
+		sequences[0] = original->clone();
+		if (TES3_AnimationData_linkAnimationSequenceToBones(this, sequences, sourceIndex)) {
+			original->release();
+			return true;
+		}
+
+		sequences[0] = original;
+		return false;
+	}
+
 	const auto TES3_AnimationData_dtor = reinterpret_cast<void(__thiscall*)(AnimationData*)>(0x46B830);
 	void AnimationData::dtor() {
 		const auto NI_Sequence_deleting_dtor = reinterpret_cast<void(__thiscall*)(NI::Sequence*, char)>(0x4F05E0);
@@ -323,11 +341,22 @@ namespace TES3 {
 			customSources.resize(sourceIndex + 1);
 		}
 
+		// A definition without a sequence has nothing to set up.
+		if (kfData && kfData->sequences[0] == nullptr) {
+			return false;
+		}
+
 		// Store anim source. This is read by extension code inside setSourceKeyframes.
 		customAnimDefinitions[sourceIndex] = kfData;
 
 		// Call original function, which has some patches applied.
 		bool result = TES3_AnimationData_setSourceKeyframes(this, kfData, sourceIndex, isBiped);
+
+		// A biped source whose sequence could not be split into body sections is not set up.
+		if (result && isBiped && kfData && kfData->sequences[1] == nullptr && actorNode->getObjectByName("Bip01")) {
+			customAnimDefinitions[sourceIndex] = nullptr;
+			return false;
+		}
 
 		if (result && isBiped) {
 			// Check cloned sequences for bones that don't exist and remove them.
@@ -1128,7 +1157,9 @@ namespace TES3 {
 	}
 
 	float __fastcall updateWorldDataBeforeScale(TES3::Reference* reference) {
-		reference->sceneNode->update();
+		if (reference->getAttachedAnimationData()) {
+			reference->sceneNode->update();
+		}
 		return reference->getScale();
 	}
 
@@ -1224,6 +1255,10 @@ namespace TES3 {
 		genCallEnforced(0x4E6B05, 0x46BA30, *reinterpret_cast<DWORD*>(&AnimationDataExtended_setSourceKeyframes));
 		genCallEnforced(0x4E6B4B, 0x46BA30, *reinterpret_cast<DWORD*>(&AnimationDataExtended_setSourceKeyframes));
 		genCallEnforced(0x4E6BA0, 0x46BA30, *reinterpret_cast<DWORD*>(&AnimationDataExtended_setSourceKeyframes));
+
+		// Patch the split of a biped's sequence into body sections.
+		auto AnimationDataExtended_linkAnimationSequenceToBones = &AnimationData::linkAnimationSequenceToBones;
+		genCallEnforced(0x46BA90, 0x46BB50, *reinterpret_cast<DWORD*>(&AnimationDataExtended_linkAnimationSequenceToBones));
 
 		// Patch every keyframeSources access.
 		genCallUnprotected(0x46B979, reinterpret_cast<DWORD>(addData_getLowerGroup), 0x9);

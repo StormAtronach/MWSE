@@ -43,6 +43,7 @@ namespace NI {
 		NI::Point3 m_kTempTranslation;
 
 		Pointer<KeyframeController> getController(const char* name) const;
+		Sequence* clone() const;
 		void release();
 	};
 	static_assert(sizeof(Sequence) == 0xC0, "NI::Sequence failed size validation");
