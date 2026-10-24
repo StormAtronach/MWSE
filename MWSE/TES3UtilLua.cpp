@@ -3009,6 +3009,8 @@ namespace mwse::lua {
 		// Create reference.
 		TES3::Reference* reference = new TES3::Reference();
 		reference->baseObject = object;
+		reference->position = maybePosition.value();
+		reference->orientation = orientation;
 
 		// Add it to the cell lists/data handler.
 		bool cellWasCreated = false;
@@ -3024,7 +3026,6 @@ namespace mwse::lua {
 
 		const auto updateCollisions = getOptionalParam<bool>(params, "updateCollisionGroups", true);
 		reference->handleUpdate(TES3::Reference::UpdateType::Enabled, updateCollisions);
-		reference->resetParticleAnchors();
 
 		// Make sure everything is set as modified.
 		reference->setObjectModified(true);
