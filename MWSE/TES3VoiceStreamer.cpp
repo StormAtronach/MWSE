@@ -375,16 +375,16 @@ namespace mwse::patch::voice {
 		void __fastcall releaseSoundBuffer_replacement(TES3::AudioController* /*audio*/, void* /*edx*/, TES3::SoundBuffer* sb) {
 			if (!sb) return;
 
-			if (isPending(sb)) {
-				// Worker may still hold a reference. Refcount; whoever zeros it deletes.
-				std::atomic<int>* rc = nullptr;
-				{
-					std::lock_guard lk(g_stubRefMutex);
-					auto it = g_stubRefcounts.find(sb);
-					if (it != g_stubRefcounts.end()) rc = it->second;
-				}
-				if (rc) decRef(sb, rc);
-				else delete sb; // unknown stub (refcount table missed it); free directly
+			// A stub keeps its refcount after the worker publishes or fails, when it is no
+			// longer pending, so look it up either way. Whoever zeros the refcount deletes.
+			std::atomic<int>* rc = nullptr;
+			{
+				std::lock_guard lk(g_stubRefMutex);
+				auto it = g_stubRefcounts.find(sb);
+				if (it != g_stubRefcounts.end()) rc = it->second;
+			}
+			if (rc) {
+				decRef(sb, rc);
 				return;
 			}
 
