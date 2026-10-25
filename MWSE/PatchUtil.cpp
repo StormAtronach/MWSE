@@ -2017,7 +2017,7 @@ namespace mwse::patch {
 	// call site and re-reads the configured interval on every invocation, so
 	// the MCM slider can be tweaked live without restarting the game.
 	static void __stdcall PatchBackgroundLoadSleep(DWORD) {
-		Sleep(Configuration::BackgroundLoadPollIntervalMs);
+		lua::LuaManager::getInstance().sleepYieldingStateLock(Configuration::BackgroundLoadPollIntervalMs);
 	}
 	
 	//
