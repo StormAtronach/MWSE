@@ -342,6 +342,7 @@ namespace mwse::lua {
 
 	// Initialize singleton.
 	LuaManager LuaManager::singleton;
+	thread_local unsigned int LuaManager::threadStateLockHolds = 0;
 
 	// Fast-access mapping from a TES3::Script* to its associated Lua module.
 	static std::unordered_map<unsigned long, sol::object> scriptOverrides;
@@ -4940,13 +4941,13 @@ namespace mwse::lua {
 
 	ThreadedStateHandle::ThreadedStateHandle(LuaManager* manager) :
 		luaManager(manager),
-		mutexGuard(manager->stateThreadMutex)
+		mutexGuard(std::adopt_lock, manager->acquireStateMutex())
 	{
-
+		LuaManager::threadStateLockHolds++;
 	}
 
 	ThreadedStateHandle::~ThreadedStateHandle() {
-
+		LuaManager::threadStateLockHolds--;
 	}
 
 	sol::state& ThreadedStateHandle::getState() const {
@@ -4971,6 +4972,33 @@ namespace mwse::lua {
 			return true;
 		}
 		return false;
+	}
+
+	std::recursive_mutex& LuaManager::acquireStateMutex() {
+		if (!stateThreadMutex.try_lock()) {
+			InterlockedIncrement(&stateLockWaiters);
+			stateThreadMutex.lock();
+			InterlockedDecrement(&stateLockWaiters);
+		}
+		return stateThreadMutex;
+	}
+
+	void LuaManager::sleepYieldingStateLock(DWORD milliseconds) {
+		const auto holds = threadStateLockHolds;
+		if (holds == 0 || stateLockWaiters == 0) {
+			Sleep(milliseconds);
+			return;
+		}
+
+		for (auto i = 0u; i < holds; i++) {
+			stateThreadMutex.unlock();
+		}
+		threadStateLockHolds = 0;
+		Sleep(milliseconds);
+		for (auto i = 0u; i < holds; i++) {
+			stateThreadMutex.lock();
+		}
+		threadStateLockHolds = holds;
 	}
 
 	const sol::state_view& LuaManager::getReadOnlyStateView() {

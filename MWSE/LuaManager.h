@@ -46,6 +46,9 @@ namespace mwse::lua {
 		ThreadedStateHandle getThreadSafeStateHandle();
 		bool canLockLuaThread();
 
+		// Sleeps; gives the Lua state to a thread that waits for it during the sleep.
+		void sleepYieldingStateLock(DWORD milliseconds);
+
 		const sol::state_view& getReadOnlyStateView();
 
 		// Uses the MemoryUtil library to create the necessary injections into Morrowind.
@@ -102,6 +105,9 @@ namespace mwse::lua {
 		sol::state luaState;
 
 		std::recursive_mutex stateThreadMutex;
+		std::recursive_mutex& acquireStateMutex();
+		static thread_local unsigned int threadStateLockHolds;
+		volatile LONG stateLockWaiters = 0;
 
 		//
 		TES3::Script* currentScript = nullptr;
