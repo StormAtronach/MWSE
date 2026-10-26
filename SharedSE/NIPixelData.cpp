@@ -215,6 +215,7 @@ namespace NI {
 		else {
 			throw std::runtime_error("Pixel data does not support 3 or 4-byte pixel values.");
 		}
+		revisionID++;
 	}
 #endif
 }
