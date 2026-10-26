@@ -116,7 +116,7 @@ myObject:exportTGA(path)
 ### `fill`
 <div class="search_terms" style="display: none">fill</div>
 
-Fills this pixel data with the provided color.
+Fills this pixel data with the provided color. Like `setPixelsByte` and `setPixelsFloat`, this marks the pixel data as changed: a texture that uses it and is not static (`niSourceTexture.isStatic` is `false`) shows the new pixels from its next draw.
 
 ```lua
 myObject:fill(data, mipMapLevel)

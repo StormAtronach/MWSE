@@ -24,7 +24,7 @@ function niPixelData:createSourceTexture() end
 --- @param path string The path to write the file at, relative to the Morrowind installation folder. The `.tga` extension needs to be specified manually.
 function niPixelData:exportTGA(path) end
 
---- Fills this pixel data with the provided color.
+--- Fills this pixel data with the provided color. Like `setPixelsByte` and `setPixelsFloat`, this marks the pixel data as changed: a texture that uses it and is not static (`niSourceTexture.isStatic` is `false`) shows the new pixels from its next draw.
 --- @param data number[] The color data to be set (1-indexed). The values should be in range [0.0, 1.0]. The first three values are RGB color channels, while the last one is alpha channel. The array length must be equal to the `bytesPerPixel` property of this niPixelData object, because alpha can be assigned only to the niPixelData object that has an alpha channel.
 --- @param mipMapLevel? number *Default*: `0`. The mipmap level to fill with the provided color. The finest (largest) mipmap level is level 0.
 function niPixelData:fill(data, mipMapLevel) end
