@@ -179,6 +179,7 @@ namespace mwse::native {
 		EventPoint playerCellChanged;
 		EventPoint lightPlaced;
 		EventPoint lightRemoved;
+		EventPoint frameStarted;
 		OverrideSlot dynamicLightTest;
 		OverrideSlot cameraRootCullShow;
 		OverrideSlot mapTileRead;

@@ -543,6 +543,11 @@ namespace TES3 {
 
 	const auto TES3_WorldController_mainLoopBeforeInput = reinterpret_cast<void(__thiscall*)(WorldController*)>(0x40F610);
 	void WorldController::mainLoopBeforeInput() {
+		MwseNativeFrameStartedV1 packet = {};
+		packet.structSize = sizeof(packet);
+		packet.menuMode = flagMenuMode ? 1 : 0;
+		mwse::native::Registry::get().frameStarted.fire(&packet);
+
 		TES3_WorldController_mainLoopBeforeInput(this);
 	}
 

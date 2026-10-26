@@ -220,6 +220,12 @@ namespace mwse::native {
 		return MWSE_NATIVE_OK;
 	}
 
+	// The start of a frame fires from MWSE's own hook of 0x41ABB0 (`EnterFrame` of the Lua
+	// manager), which MWSE always installs: nothing to redirect.
+	static MwseNativeStatus installFrameStarted() {
+		return MWSE_NATIVE_OK;
+	}
+
 	static MwseNativeStatus installLightRemoved() {
 		return redirectCallSites("the removal of a light", lightResetSites, reinterpret_cast<DWORD>(&Dispatch::resetLightDynamicEffect));
 	}
@@ -631,6 +637,7 @@ namespace mwse::native {
 		playerCellChanged(MWSE_NATIVE_EVENT_PLAYER_CELL_CHANGED, "the player's change of cell", installPlayerCellChanged),
 		lightPlaced(MWSE_NATIVE_EVENT_LIGHT_PLACED, "the placement of a light", installLightPasses),
 		lightRemoved(MWSE_NATIVE_EVENT_LIGHT_REMOVED, "the removal of a light", installLightRemoved),
+		frameStarted(MWSE_NATIVE_EVENT_FRAME_STARTED, "the start of a frame", installFrameStarted),
 		dynamicLightTest(MWSE_NATIVE_OVERRIDE_DYNAMIC_LIGHT_TEST, "the dynamic light test", &dynamicLightTestSites, reinterpret_cast<DWORD>(&TES3::DataHandler::testDynamicLight)),
 		cameraRootCullShow(MWSE_NATIVE_OVERRIDE_CAMERA_ROOT_CULL_SHOW, "the cull show of a camera's root", &cameraRootCullShowSites, reinterpret_cast<DWORD>(&Dispatch::cameraRootCullShow)),
 		mapTileRead(MWSE_NATIVE_OVERRIDE_MAP_TILE_READ, "the read of a map tile", &mapTileReadSites, reinterpret_cast<DWORD>(&Dispatch::readMapTile)),
@@ -844,7 +851,7 @@ namespace mwse::native {
 	}
 
 	EventPoint* Registry::findEvent(uint32_t id) {
-		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved, &accumulatorFinished, &playerCellChanged, &lightPlaced, &lightRemoved }) {
+		for (auto event : { &cameraTransformsUpdated, &uiConfigured, &gameIdsResolved, &accumulatorFinished, &playerCellChanged, &lightPlaced, &lightRemoved, &frameStarted }) {
 			if (event->getID() == id) {
 				return event;
 			}
