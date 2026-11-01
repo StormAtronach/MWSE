@@ -2,6 +2,8 @@
 
 #include "NIBound.h"
 
+#include "ExceptionUtil.h"
+
 namespace NI {
 
 	namespace {
@@ -13,6 +15,15 @@ namespace NI {
 		Bound* getAVObjectWorldBound(AVObject* object) {
 			return reinterpret_cast<Bound*>(&object->worldBoundOrigin);
 		}
+	}
+
+	BSAnimationManager* BSAnimationManager::create() {
+#if defined(SE_NI_BSANIMATIONMANAGER_FNADDR_CTOR) && SE_NI_BSANIMATIONMANAGER_FNADDR_CTOR > 0
+		const auto NI_BSAnimationManager_ctor = reinterpret_cast<BSAnimationManager*(__thiscall*)(void*)>(SE_NI_BSANIMATIONMANAGER_FNADDR_CTOR);
+		return NI_BSAnimationManager_ctor(Object::operator new(sizeof(BSAnimationManager)));
+#else
+		throw not_implemented_exception();
+#endif
 	}
 
 	void BSAnimationManager::growWorldBoundFromChild(AVObject* child) {

@@ -36,6 +36,7 @@ namespace NI {
 	struct BoundingVolume;
 	struct BoxBound;
 	struct BoxBoundingVolume;
+	struct BSAnimationManager;
 	struct BSAnimationNode;
 	struct BSParticleNode;
 	struct Camera;
