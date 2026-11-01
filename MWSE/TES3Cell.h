@@ -168,6 +168,10 @@ namespace TES3 {
 		void insertReference(Reference* reference);
 
 		NI::Node* getOrCreateActivatorsNode();
+		NI::Node* getOrCreateStaticsNode();
+		NI::BSAnimationManager* createSceneRoot() const;
+		void nameSceneRoot(NI::BSAnimationManager* root) const;
+		static NI::Node* publishSceneRoot(NI::Node** field, NI::BSAnimationManager* root);
 
 		//
 		// Other getter/setter functions.

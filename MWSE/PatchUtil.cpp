@@ -3220,6 +3220,12 @@ namespace mwse::patch {
 		writeDoubleWordEnforced(0x750C6C, 0x6C8410, reinterpret_cast<DWORD>(PatchNiBSAnimationManagerAttachChild));
 		writeDoubleWordEnforced(0x750C78, 0x6C8780, reinterpret_cast<DWORD>(PatchNiBSAnimationManagerSetChildAt));
 
+		// Patch: Let only one thread publish each scene root of a cell.
+		auto Cell_getOrCreateActivatorsNode = &TES3::Cell::getOrCreateActivatorsNode;
+		genJumpUnprotected(0x4E2680, *reinterpret_cast<DWORD*>(&Cell_getOrCreateActivatorsNode), 0x5);
+		auto Cell_getOrCreateStaticsNode = &TES3::Cell::getOrCreateStaticsNode;
+		genJumpUnprotected(0x4E2330, *reinterpret_cast<DWORD*>(&Cell_getOrCreateStaticsNode), 0x5);
+
 		// Patch: Store last read key state.
 		auto InputController_readButtonPressed = &TES3::InputController::readButtonPressed;
 		genCallEnforced(0x58E8C6, 0x406950, *reinterpret_cast<DWORD*>(&InputController_readButtonPressed));
