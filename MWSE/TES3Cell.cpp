@@ -2,6 +2,8 @@
 
 #include "MemoryUtil.h"
 
+#include "NIBSAnimationManager.h"
+
 #include "LuaManager.h"
 
 #include "LuaCellActivatedEvent.h"
@@ -107,9 +109,60 @@ namespace TES3 {
 		}
 	}
 
-	const auto TES3_Cell_getOrCreateActivatorsNode = reinterpret_cast<NI::Node*(__thiscall*)(Cell*)>(0x4E2680);
 	NI::Node* Cell::getOrCreateActivatorsNode() {
-		return TES3_Cell_getOrCreateActivatorsNode(this);
+		const auto existing = pickObjectsRoot;
+		if (existing) {
+			return existing;
+		}
+
+		const auto root = createSceneRoot();
+		nameSceneRoot(root);
+		return publishSceneRoot(&pickObjectsRoot, root);
+	}
+
+	NI::Node* Cell::getOrCreateStaticsNode() {
+		getOrCreateActivatorsNode();
+
+		const auto existing = staticObjectsRoot;
+		if (existing) {
+			return existing;
+		}
+
+		const auto root = createSceneRoot();
+		root->clearTransforms();
+		nameSceneRoot(root);
+		root->update();
+		return publishSceneRoot(&staticObjectsRoot, root);
+	}
+
+	NI::BSAnimationManager* Cell::createSceneRoot() const {
+		const auto root = NI::BSAnimationManager::create();
+		root->refCount = 1;
+		return root;
+	}
+
+	void Cell::nameSceneRoot(NI::BSAnimationManager* root) const {
+		char name[512];
+		if (getIsInterior()) {
+			std::snprintf(name, sizeof(name), "Cell \"%s\" (Interior) ", getObjectID());
+		}
+		else {
+			std::snprintf(name, sizeof(name), "Cell \"%s\" (%d, %d) ", getObjectID(), variantData.exterior.gridX, variantData.exterior.gridY);
+		}
+		root->setName(name);
+	}
+
+	// Only one root takes the field. The field keeps the reference that createSceneRoot set, so a
+	// winner does not touch the count again: other threads can now change it.
+	NI::Node* Cell::publishSceneRoot(NI::Node** field, NI::BSAnimationManager* root) {
+		NI::Node* const candidate = root;
+		const auto winner = static_cast<NI::Node*>(InterlockedCompareExchangePointer(reinterpret_cast<PVOID volatile*>(field), candidate, nullptr));
+		if (winner == nullptr) {
+			return candidate;
+		}
+
+		root->release();
+		return winner;
 	}
 
 	const char* Cell::getName() const {
