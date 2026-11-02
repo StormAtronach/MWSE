@@ -6863,9 +6863,10 @@ namespace mwse::lua {
 	}
 
 	void LuaManager::cleanup() {
-		// Clean up our handles to our override tables. Helps to prevent a crash when
-		// closing mid-execution.
 		scriptOverrides.clear();
+		clearPersistentTimers();
+		clearTimers();
+		luaState["event"]["_cleanup"]();
 
 		// Clear cached userdata.
 		TES3::BaseObject::clearCachedLuaObjects();
@@ -6873,6 +6874,9 @@ namespace mwse::lua {
 		TES3::Weather::clearCachedLuaObjects();
 		TES3::UI::Element::clearCachedLuaObjects();
 		NI::Object::clearCachedLuaObjects();
+
+		// Force a garbage collection cycle.
+		luaState["collectgarbage"]("collect");
 	}
 
 	TES3::Script* LuaManager::getCurrentScript() {
@@ -7022,7 +7026,12 @@ namespace mwse::lua {
 	void LuaManager::clearPersistentTimers() {
 		const auto stateHandle = getThreadSafeStateHandle();
 
-		auto macp = TES3::WorldController::get()->getMobilePlayer();
+		const auto worldController = TES3::WorldController::get();
+		if (worldController == nullptr) {
+			return;
+		}
+
+		const auto macp = worldController->getMobilePlayer();
 		if (macp == nullptr) {
 			return;
 		}
@@ -7041,7 +7050,9 @@ namespace mwse::lua {
 		// Reset the clocks for each timer.
 		realTimers->setClock(0.0);
 		simulateTimers->setClock(0.0);
-		gameTimers->setClock(TES3::WorldController::get()->getHighPrecisionSimulationTimestamp());
+		const auto worldController = TES3::WorldController::get();
+		const auto gameTime = worldController && worldController->gvarGameHour ? worldController->getHighPrecisionSimulationTimestamp() : 0.0;
+		gameTimers->setClock(gameTime);
 	}
 
 	std::shared_ptr<TimerController> LuaManager::getTimerController(TimerType type) {
