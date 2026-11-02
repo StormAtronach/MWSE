@@ -3359,6 +3359,9 @@ namespace mwse::patch {
 		// Patch: Fix a memory leak when a particle system with plain particle data is cloned.
 		auto ParticleSystemController_createClone = &NI::ParticleSystemController::createCloneNoLeak;
 		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&ParticleSystemController_createClone));
+		// Patch: An off-by-default light or an expired torch blackens a material of its own, not the one its mesh shares.
+		genCallEnforced(0x4D2869, 0x4D26D0, reinterpret_cast<DWORD>(TES3::Light::extinguishNode));
+		genCallEnforced(0x52512B, 0x4D26D0, reinterpret_cast<DWORD>(TES3::Light::extinguishNode));
 
 		// Patch: Allow global audio.
 		if (Configuration::UseGlobalAudio) {

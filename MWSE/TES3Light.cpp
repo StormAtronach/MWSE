@@ -10,6 +10,10 @@
 
 #include "NILight.h"
 
+#include "NINode.h"
+#include "NIParticleSystemController.h"
+#include "NIProperty.h"
+
 namespace TES3 {
 	const auto TES3_Light_ctor = reinterpret_cast<void(__thiscall*)(Light*)>(0x4D1BA0);
 	Light::Light() {
@@ -88,6 +92,52 @@ namespace TES3 {
 
 		sgLight->setDimmer(dimmer);
 		return false;
+	}
+
+	void Light::extinguishNode(NI::Node* node) {
+		// MGE XE's jump at this address keeps the emissive.
+		constexpr auto EMISSIVE_JUMP = 0x4D2789u;
+		const auto keepEmissive = *reinterpret_cast<const BYTE*>(EMISSIVE_JUMP) == 0xEB;
+
+		for (const auto& child : node->children) {
+			if (!child) {
+				continue;
+			}
+
+			if (child->isInstanceOfType(NI::RTTIStaticPtr::NiNode)) {
+				extinguishNode(static_cast<NI::Node*>(child.get()));
+				continue;
+			}
+
+			const auto controller = child->controllers.get();
+			if (controller && controller->isInstanceOfType(NI::RTTIStaticPtr::NiParticleSystemController)) {
+				static_cast<NI::ParticleSystemController*>(controller)->birthRate = 0.0f;
+			}
+
+			if (!keepEmissive) {
+				blackenOwnEmissive(child);
+			}
+		}
+	}
+
+	void Light::blackenOwnEmissive(NI::AVObject* object) {
+		const auto material = object->getMaterialProperty();
+		const NI::Color black(0.0f, 0.0f, 0.0f);
+		if (!material || material->emissive == black) {
+			return;
+		}
+
+		// The object's list and the pointer above hold one reference each.
+		if (material->refCount <= 2) {
+			material->emissive = black;
+			material->incrementRevisionId();
+			return;
+		}
+
+		const NI::Pointer<NI::MaterialProperty> own = static_cast<NI::MaterialProperty*>(material->createClone());
+		own->emissive = black;
+		object->setMaterialProperty(own);
+		object->updateProperties();
 	}
 
 	bool Light::getIsDynamic() const {

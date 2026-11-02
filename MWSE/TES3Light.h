@@ -50,6 +50,8 @@ namespace TES3 {
 		//
 
 		bool updateFlickerPulseEased(NI::Light* sgLight, float* flickerPhase, const ItemData* itemData) const;
+		static void extinguishNode(NI::Node* node);
+		static void blackenOwnEmissive(NI::AVObject* object);
 
 		bool getIsDynamic() const;
 		void setIsDynamic(bool);
