@@ -140,7 +140,7 @@ local result = myObject:setRenderTarget(texture)
 ### `takeScreenshot`
 <div class="search_terms" style="display: none">takescreenshot</div>
 
-This method returns the last rendered frame in the form of niPixelData.
+This method returns the last rendered frame in the form of niPixelData. It returns `nil` when the renderer cannot read its back buffer. The game's device does not ask for a lockable back buffer, so that is the result on plain Direct3D 8, without MGE XE.
 
 ```lua
 local screenshot = myObject:takeScreenshot(bounds)
@@ -148,9 +148,9 @@ local screenshot = myObject:takeScreenshot(bounds)
 
 **Parameters**:
 
-* `bounds` (integer[]): *Optional*. These four values are used to take only a specific sub region (in pixels) from the framebuffer. If not provided, the taken screenshot will include the whole screen.
+* `bounds` (integer[]): *Optional*. These four values are used to take only a specific sub region (in pixels) from the framebuffer, in the order left, right, top, bottom. The right and bottom are inclusive. If not provided, the taken screenshot will include the whole screen.
 
 **Returns**:
 
-* `screenshot` ([niPixelData](../types/niPixelData.md))
+* `screenshot` ([niPixelData](../types/niPixelData.md), nil)
 

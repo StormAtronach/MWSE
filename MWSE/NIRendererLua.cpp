@@ -21,7 +21,7 @@ namespace mwse::lua {
 		setUserdataForNIObject(usertypeDefinition);
 
 		// Basic function binding.
-		usertypeDefinition["takeScreenshot"] = &NI::Renderer::takeScreenshot;
+		usertypeDefinition["takeScreenshot"] = &NI::Renderer::takeScreenshot_lua;
 		usertypeDefinition["setRenderTarget"] = &NI::Renderer::setRenderTarget;
 	}
 }

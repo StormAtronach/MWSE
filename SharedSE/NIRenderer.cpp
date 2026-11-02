@@ -50,6 +50,21 @@ namespace NI {
 		return pixelData;
 	}
 
+#if defined(SE_USE_LUA) && SE_USE_LUA == 1
+	PixelData* Renderer::takeScreenshot_lua(sol::optional<sol::table> bounds) {
+		if (!bounds) {
+			return takeScreenshot(nullptr);
+		}
+
+		const auto& values = bounds.value();
+		if (values.size() != 4) {
+			throw std::invalid_argument("Invalid 'bounds' parameter provided. It must have the four values left, right, top and bottom.");
+		}
+		const Rect<unsigned int> rect(values.get<unsigned int>(1), values.get<unsigned int>(2), values.get<unsigned int>(3), values.get<unsigned int>(4));
+		return takeScreenshot(&rect);
+	}
+#endif
+
 	bool Renderer::getTextureMemoryStats(unsigned int& total, unsigned int& available) {
 		return vTable.asRenderer->getTextureMemoryStats(this, total, available);
 	}

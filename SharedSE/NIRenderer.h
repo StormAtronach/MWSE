@@ -94,6 +94,9 @@ namespace NI {
 		int getBackBufferHeight() const;
 		bool setRenderTarget(RenderedTexture* texture = nullptr);
 		PixelData* takeScreenshot(const Rect<unsigned int>* bounds);
+#if defined(SE_USE_LUA) && SE_USE_LUA == 1
+		PixelData* takeScreenshot_lua(sol::optional<sol::table> bounds);
+#endif
 		bool getTextureMemoryStats(unsigned int& total, unsigned int& available);
 		bool getTextureStats(unsigned int& loadedTextures, unsigned int& usedTextures, unsigned int& stateChanges, unsigned int& newTextures, unsigned int& evictedTextures, unsigned int& bytesTransferred);
 

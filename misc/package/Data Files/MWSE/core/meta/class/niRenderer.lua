@@ -12,8 +12,8 @@ niRenderer = {}
 --- @return boolean result No description yet available.
 function niRenderer:setRenderTarget(texture) end
 
---- This method returns the last rendered frame in the form of niPixelData.
---- @param bounds? integer[] *Optional*. These four values are used to take only a specific sub region (in pixels) from the framebuffer. If not provided, the taken screenshot will include the whole screen.
---- @return niPixelData screenshot No description yet available.
+--- This method returns the last rendered frame in the form of niPixelData. It returns `nil` when the renderer cannot read its back buffer. The game's device does not ask for a lockable back buffer, so that is the result on plain Direct3D 8, without MGE XE.
+--- @param bounds? integer[] *Optional*. These four values are used to take only a specific sub region (in pixels) from the framebuffer, in the order left, right, top, bottom. The right and bottom are inclusive. If not provided, the taken screenshot will include the whole screen.
+--- @return niPixelData|nil screenshot No description yet available.
 function niRenderer:takeScreenshot(bounds) end
 
