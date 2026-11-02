@@ -179,6 +179,9 @@ namespace TES3 {
 
 		void updateVisuals();
 
+		// The acos of a dot product of two unit vectors, which can round past the range of acos.
+		static double __cdecl getSunGlareAcos(float dotProduct);
+
 		void switchImmediate(int weather);
 		void switchTransition(int weather);
 

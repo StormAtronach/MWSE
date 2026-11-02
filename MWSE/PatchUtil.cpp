@@ -2482,6 +2482,11 @@ namespace mwse::patch {
 		genCallEnforced(0x4BEF97, 0x4E25E0, *reinterpret_cast<DWORD*>(&cell_setName));
 		genCallEnforced(0x4DD4B5, 0x4BA610, reinterpret_cast<DWORD>(PatchCellLoadGetRegionSetup));
 
+		// Patch: Keep the dot product of the sun glare angle in the range of acos.
+		// The function reads the stored float as its stack argument, so the load before the call goes.
+		genNOPUnprotected(0x4531CC, 0x4);
+		genCallEnforced(0x4531D0, 0x72780A, reinterpret_cast<DWORD>(TES3::WeatherController::getSunGlareAcos));
+
 		// Patch: Implement map-based lookup of references.
 		genJumpUnprotected(0x4F19F0, reinterpret_cast<DWORD>(PatchEntityListInsertAfter), 0x5);
 		genJumpUnprotected(0x4F19A0, reinterpret_cast<DWORD>(PatchEntityListRemove), 0x5);
