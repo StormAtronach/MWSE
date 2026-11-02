@@ -48,6 +48,7 @@
 #include "NIBound.h"
 #include "NICollisionGroup.h"
 #include "NICollisionSwitch.h"
+#include "NIDX8TexturePass.h"
 #include "NIPoint3.h"
 #include "NIFlipController.h"
 #include "NILinesData.h"
@@ -2798,6 +2799,10 @@ namespace mwse::patch {
 		// Patch: Add deterministic subtree ordering mode to NiSortAdjustNode. Fix cloning with no accumulator.
 		overrideVirtualTableEnforced(0x750580, 0x78, 0x6DE030, reinterpret_cast<DWORD>(PatchNISortAdjustNodeDisplay));
 		genCallUnprotected(0x6DE21B, reinterpret_cast<DWORD>(PatchNISortAdjustNodeCloneAccumulator));
+
+		// Patch: A shape with more than 8 maps that have a texture faulted the texture pass. Keep the first 8 stages.
+		auto NiDX8TexturePass_setCTPipelineState = &NI::DX8TexturePass::setCTPipelineStateWithinStageBudget;
+		overrideVirtualTableEnforced(0x74F650, 0x8, 0x6B41B0, *reinterpret_cast<DWORD*>(&NiDX8TexturePass_setCTPipelineState));
 
 		// Patch: Add pick proxy behaviour to NiCollisionSwitch.
 		auto CollisionSwitch_linkObject = &NI::CollisionSwitch::linkObject;
