@@ -118,10 +118,9 @@ namespace TES3 {
 	const auto TES3_WeatherController_updateSunCols = reinterpret_cast<void(__thiscall*)(WeatherController*, float)>(0x43F5F0);
 	const auto TES3_WeatherController_updateSun = reinterpret_cast<void(__thiscall*)(WeatherController*, float)>(0x43FF80);
 	const auto TES3_WeatherController_updateTick = reinterpret_cast<void(__thiscall*)(WeatherController*, NI::Property*, float, bool, float)>(0x440C80);
-	double __cdecl WeatherController::getSunGlareAcos(float dotProduct) {
+	float __cdecl WeatherController::clampSunGlareDot(float dotProduct) {
 		// A NaN takes the last branch too.
-		const auto clamped = dotProduct >= 1.0f ? 1.0f : (dotProduct > -1.0f ? dotProduct : -1.0f);
-		return std::acos(clamped);
+		return dotProduct >= 1.0f ? 1.0f : (dotProduct > -1.0f ? dotProduct : -1.0f);
 	}
 
 	void WeatherController::updateVisuals() {
