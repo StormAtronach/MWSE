@@ -61,6 +61,9 @@ namespace NI {
 			throw std::invalid_argument("Invalid 'bounds' parameter provided. It must have the four values left, right, top and bottom.");
 		}
 		const Rect<unsigned int> rect(values.get<unsigned int>(1), values.get<unsigned int>(2), values.get<unsigned int>(3), values.get<unsigned int>(4));
+		if (rect.left > rect.right || rect.top > rect.bottom) {
+			throw std::invalid_argument("Invalid 'bounds' parameter provided. Left must not be past right, and top must not be past bottom.");
+		}
 		return takeScreenshot(&rect);
 	}
 #endif
