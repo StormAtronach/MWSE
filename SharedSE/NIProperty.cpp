@@ -494,13 +494,13 @@ namespace NI {
 	}
 
 	unsigned int TexturingProperty::addDecalMap(Texture* texture) {
+		if (!canAddDecalMap()) {
+			return (size_t)MapType::INVALID;
+		}
+
 		unsigned int index = (unsigned int)MapType::DECAL_FIRST;
 		while (index < maps.size() && maps[index] != nullptr) {
 			++index;
-		}
-
-		if (index > (size_t)MapType::DECAL_LAST) {
-			return (size_t)MapType::INVALID;
 		}
 
 		maps.growToFit(index);
