@@ -255,7 +255,8 @@ namespace mge {
 	struct MGEAPIv4 : public MGEAPIv3 {
 		// Sets the options of a view; options == nullptr clears them. False when MGE XE refuses the key
 		// (a null key, the world camera). The options last until changed, cleared, or until the key's
-		// object is freed.
+		// object is freed (with the Direct3D 9 renderer an address that the engine reuses keeps the
+		// old options in viewOptionsGet).
 		virtual bool viewOptionsSet(ViewKeyKind kind, void* key, const ViewOptions* options);
 		// Reads the options of a view. False when the key has none.
 		virtual bool viewOptionsGet(ViewKeyKind kind, void* key, ViewOptions* options);

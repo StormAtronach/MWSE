@@ -1,10 +1,10 @@
 return {
 	type = "function",
-	description = [[Sets the options of a view that a mod draws with a camera or a rendered texture. A view with options gets the parts that are named in the table, in addition to what a view of its kind draws without options (the full tier of the wgpu renderer of MGE XE). A part that is off in `mge.render` stays off in every view. A part that the table does not name stays off in this view.
+	description = [[Sets the options of a view that a mod draws with a camera or a rendered texture. A view with options gets the parts that are named in the table, in addition to what a view of its kind draws without options (the full tier of the wgpu renderer of MGE XE). A part that is off in `mge.render` stays off in every view. A part that the table does not name stays off in this view. A name in the table that is not one of these, or a value that is not a boolean (`1` is an error, not `true`), throws an error that names it.
 
 The key is the object that names the view: a `niRenderedTexture` (the view that renders into that texture), or a `niCamera` other than the world camera (that camera into the back buffer). The world camera is refused, because it is the main view.
 
-The options last until you change them, until you pass `nil`, or until the key's object is freed. A view that is idle keeps them.
+The options last until you change them, until you pass `nil`, or until the key's object is freed. A view that is idle keeps them. With the Direct3D 9 renderer MGE XE cannot see the free: an address that the engine reuses keeps the old options, and `getViewOptions` can return them for a new object.
 
 The player's setting `views.full_tier_max` limits how many views of a frame get the options. With the Direct3D 9 renderer the call stores the options and draws nothing more.
 

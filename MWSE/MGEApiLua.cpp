@@ -214,9 +214,20 @@ namespace mge::lua {
 
 		ViewOptions value = { sizeof(ViewOptions), 0 };
 		const sol::table table = options.as<sol::table>();
-		for (const auto& [name, part] : viewPartNames) {
-			if (table[name].get_or(false)) {
-				value.parts |= part;
+		for (const auto& [nameObject, valueObject] : table) {
+			if (nameObject.get_type() != sol::type::string) {
+				throw std::invalid_argument("The view options must have names that are strings.");
+			}
+			const std::string name = nameObject.as<std::string>();
+			const auto part = std::find_if(std::begin(viewPartNames), std::end(viewPartNames), [&](const auto& entry) { return name == entry.first; });
+			if (part == std::end(viewPartNames)) {
+				throw std::invalid_argument("The view option '" + name + "' is not known.");
+			}
+			if (valueObject.get_type() != sol::type::boolean) {
+				throw std::invalid_argument("The view option '" + name + "' must be a boolean.");
+			}
+			if (valueObject.as<bool>()) {
+				value.parts |= part->second;
 			}
 		}
 		return v4->viewOptionsSet(kind, address, &value);
