@@ -49,6 +49,10 @@ namespace mge::lua {
 		// API v3+ for following functions
 		static float getNearRenderDistance();
 		static void setNearRenderDistance(float distance);
+
+		// API v4+ for following functions
+		static bool setViewOptions(sol::object key, sol::object options);
+		static sol::object getViewOptions(sol::object key, sol::this_state ts);
 	};
 
 	class RenderFeatures {

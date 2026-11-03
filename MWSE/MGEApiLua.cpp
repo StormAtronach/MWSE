@@ -2,7 +2,9 @@
 
 #include "TES3Game.h"
 
+#include "NICamera.h"
 #include "NIPoint4.h"
+#include "NIRenderedTexture.h"
 
 #include "LuaUtil.h"
 
@@ -165,6 +167,79 @@ namespace mge::lua {
 
 	void CameraConfig::setNearRenderDistance(float distance) {
 		static_cast<MGEAPIv3*>(api)->nearRenderDistanceSet(distance);
+	}
+
+	namespace {
+		// The parts of a view, with the names of mge.render.
+		constexpr std::pair<const char*, ViewPart> viewPartNames[] = {
+			{ "distantLand", VIEW_PART_DISTANT_LAND },
+			{ "distantStatics", VIEW_PART_DISTANT_STATICS },
+			{ "grass", VIEW_PART_GRASS },
+			{ "distantWater", VIEW_PART_DISTANT_WATER },
+			{ "shaders", VIEW_PART_SHADERS },
+			{ "glows", VIEW_PART_GLOWS },
+		};
+
+		// The kind and the address of a view key: a niRenderedTexture or a niCamera.
+		bool getViewKey(const sol::object& key, ViewKeyKind& kind, void*& address) {
+			if (key.is<NI::RenderedTexture*>()) {
+				kind = ViewKeyKind::RenderedTexture;
+				address = key.as<NI::RenderedTexture*>();
+			}
+			else if (key.is<NI::Camera*>()) {
+				kind = ViewKeyKind::Camera;
+				address = key.as<NI::Camera*>();
+			}
+			else {
+				throw std::invalid_argument("The view key must be a niRenderedTexture or a niCamera.");
+			}
+			return address != nullptr;
+		}
+	}
+
+	bool CameraConfig::setViewOptions(sol::object key, sol::object options) {
+		ViewKeyKind kind;
+		void* address;
+		if (!getViewKey(key, kind, address)) {
+			return false;
+		}
+
+		auto v4 = static_cast<MGEAPIv4*>(api);
+		if (options == sol::nil) {
+			return v4->viewOptionsSet(kind, address, nullptr);
+		}
+		if (!options.is<sol::table>()) {
+			throw std::invalid_argument("The view options must be a table or nil.");
+		}
+
+		ViewOptions value = { sizeof(ViewOptions), 0 };
+		const sol::table table = options.as<sol::table>();
+		for (const auto& [name, part] : viewPartNames) {
+			if (table[name].get_or(false)) {
+				value.parts |= part;
+			}
+		}
+		return v4->viewOptionsSet(kind, address, &value);
+	}
+
+	sol::object CameraConfig::getViewOptions(sol::object key, sol::this_state ts) {
+		ViewKeyKind kind;
+		void* address;
+		if (!getViewKey(key, kind, address)) {
+			return sol::nil;
+		}
+
+		ViewOptions value = { sizeof(ViewOptions), 0 };
+		if (!static_cast<MGEAPIv4*>(api)->viewOptionsGet(kind, address, &value)) {
+			return sol::nil;
+		}
+
+		sol::state_view state(ts);
+		sol::table table = state.create_table();
+		for (const auto& [name, part] : viewPartNames) {
+			table[name] = (value.parts & part) != 0;
+		}
+		return table;
 	}
 
 	//
