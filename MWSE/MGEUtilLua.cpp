@@ -157,6 +157,11 @@ namespace mwse::lua {
 			if (mge::apiVersion >= 3) {
 				usertypeDefinition["nearRenderDistance"] = sol::property(&CameraConfig::getNearRenderDistance, &CameraConfig::setNearRenderDistance);
 			}
+
+			if (mge::apiVersion >= 4) {
+				usertypeDefinition["setViewOptions"] = &CameraConfig::setViewOptions;
+				usertypeDefinition["getViewOptions"] = &CameraConfig::getViewOptions;
+			}
 		}
 		lua_mge["camera"] = mge::lua::CameraConfig();
 

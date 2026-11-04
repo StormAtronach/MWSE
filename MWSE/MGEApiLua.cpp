@@ -2,7 +2,9 @@
 
 #include "TES3Game.h"
 
+#include "NICamera.h"
 #include "NIPoint4.h"
+#include "NIRenderedTexture.h"
 
 #include "LuaUtil.h"
 
@@ -165,6 +167,114 @@ namespace mge::lua {
 
 	void CameraConfig::setNearRenderDistance(float distance) {
 		static_cast<MGEAPIv3*>(api)->nearRenderDistanceSet(distance);
+	}
+
+	namespace {
+		// The parts of a view, with the names of mge.render.
+		constexpr std::pair<const char*, ViewPart> viewPartNames[] = {
+			{ "distantLand", VIEW_PART_DISTANT_LAND },
+			{ "distantStatics", VIEW_PART_DISTANT_STATICS },
+			{ "grass", VIEW_PART_GRASS },
+			{ "distantWater", VIEW_PART_DISTANT_WATER },
+			{ "shaders", VIEW_PART_SHADERS },
+			{ "glows", VIEW_PART_GLOWS },
+		};
+
+		// The flag of a view key that gives a camera's default for every texture it draws into.
+		constexpr const char* intoTexturesName = "intoTextures";
+
+		// The kind and the address of a view key: a niRenderedTexture or a niCamera. The flags are
+		// nil or a table; with { intoTextures = true } a niCamera names its default for the textures
+		// that it draws into, in place of its view into the back buffer.
+		bool getViewKey(const sol::object& key, const sol::object& flags, ViewKeyKind& kind, void*& address) {
+			bool intoTextures = false;
+			if (flags != sol::nil) {
+				if (!flags.is<sol::table>()) {
+					throw std::invalid_argument("The view key's flags must be a table or nil.");
+				}
+				for (const auto& [nameObject, valueObject] : flags.as<sol::table>()) {
+					if (nameObject.get_type() != sol::type::string || nameObject.as<std::string>() != intoTexturesName) {
+						throw std::invalid_argument("The view key's flags know only 'intoTextures'.");
+					}
+					if (valueObject.get_type() != sol::type::boolean) {
+						throw std::invalid_argument("The view key's flag 'intoTextures' must be a boolean.");
+					}
+					intoTextures = valueObject.as<bool>();
+				}
+			}
+
+			if (key.is<NI::RenderedTexture*>()) {
+				if (intoTextures) {
+					throw std::invalid_argument("The view key's flag 'intoTextures' needs a niCamera.");
+				}
+				kind = ViewKeyKind::RenderedTexture;
+				address = key.as<NI::RenderedTexture*>();
+			}
+			else if (key.is<NI::Camera*>()) {
+				kind = intoTextures ? ViewKeyKind::CameraTextures : ViewKeyKind::Camera;
+				address = key.as<NI::Camera*>();
+			}
+			else {
+				throw std::invalid_argument("The view key must be a niRenderedTexture or a niCamera.");
+			}
+			return address != nullptr;
+		}
+	}
+
+	bool CameraConfig::setViewOptions(sol::object key, sol::object options, sol::object flags) {
+		ViewKeyKind kind;
+		void* address;
+		if (!getViewKey(key, flags, kind, address)) {
+			return false;
+		}
+
+		auto v4 = static_cast<MGEAPIv4*>(api);
+		if (options == sol::nil) {
+			return v4->viewOptionsSet(kind, address, nullptr);
+		}
+		if (!options.is<sol::table>()) {
+			throw std::invalid_argument("The view options must be a table or nil.");
+		}
+
+		ViewOptions value = { sizeof(ViewOptions), 0 };
+		const sol::table table = options.as<sol::table>();
+		for (const auto& [nameObject, valueObject] : table) {
+			if (nameObject.get_type() != sol::type::string) {
+				throw std::invalid_argument("The view options must have names that are strings.");
+			}
+			const std::string name = nameObject.as<std::string>();
+			const auto part = std::find_if(std::begin(viewPartNames), std::end(viewPartNames), [&](const auto& entry) { return name == entry.first; });
+			if (part == std::end(viewPartNames)) {
+				throw std::invalid_argument("The view option '" + name + "' is not known.");
+			}
+			if (valueObject.get_type() != sol::type::boolean) {
+				throw std::invalid_argument("The view option '" + name + "' must be a boolean.");
+			}
+			if (valueObject.as<bool>()) {
+				value.parts |= part->second;
+			}
+		}
+		return v4->viewOptionsSet(kind, address, &value);
+	}
+
+	sol::object CameraConfig::getViewOptions(sol::object key, sol::object flags, sol::this_state ts) {
+		ViewKeyKind kind;
+		void* address;
+		if (!getViewKey(key, flags, kind, address)) {
+			return sol::nil;
+		}
+
+		ViewOptions value = { sizeof(ViewOptions), 0 };
+		if (!static_cast<MGEAPIv4*>(api)->viewOptionsGet(kind, address, &value)) {
+			return sol::nil;
+		}
+
+		sol::state_view state(ts);
+		sol::table table = state.create_table();
+		for (const auto& [name, part] : viewPartNames) {
+			table[name] = (value.parts & part) != 0;
+		}
+		return table;
 	}
 
 	//
