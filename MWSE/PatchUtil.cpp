@@ -52,6 +52,7 @@
 #include "NILinesData.h"
 #include "NIPick.h"
 #include "NIPointLight.h"
+#include "NIProperty.h"
 #include "NISortAdjustNode.h"
 #include "NITriShape.h"
 #include "NITriShapeData.h"
@@ -2887,6 +2888,24 @@ namespace mwse::patch {
 		// 0x6B42AC: `mov [edi+28h], ebp` — replace with CALL + NOP the leftover byte at 0x6B42B1.
 		genNOPUnprotected(0x6B42B1, 1);
 		genCallUnprotected(0x6B42AC, reinterpret_cast<DWORD>(PatchNiDX8TexturePass_BaseMapTexcoord));
+
+		// Patch: Do not write to the default material property when it is already null, as it is after the engine's exit handlers.
+		// 0x6C2578-0x6C2595 (release of the default material's renderer data in NiDX8MaterialManager::~NiDX8MaterialManager)
+		// becomes a call, and the write at 0x6C259B (`mov [eax+18h], ebp`) is removed.
+		{
+			constexpr BYTE originalCode[] = {
+				0xA1, 0x9C, 0xE2, 0x7D, 0x00, 0x85, 0xC0, 0x74, 0x15, 0x8B, 0x48, 0x18, 0x85, 0xC9, 0x74, 0x0E,
+				0x51, 0xE8, 0xA2, 0x4F, 0x06, 0x00, 0xA1, 0x9C, 0xE2, 0x7D, 0x00, 0x83, 0xC4, 0x04, 0x33, 0xED,
+				0x8D, 0x7B, 0x08, 0x89, 0x68, 0x18,
+			};
+			if (se::memory::matchesBytes(0x6C2578, originalCode, sizeof(originalCode))) {
+				genCallUnprotected(0x6C2578, reinterpret_cast<DWORD>(&NI::PropertyState::releaseDefaultMaterialRendererData), 0x1E);
+				genNOPUnprotected(0x6C259B, 0x3);
+			}
+			else {
+				mwse::log::getLog() << "[MWSE] Skipped the default material patch: the code at 0x6C2578 is not the expected code." << std::endl;
+			}
+		}
 
 		// Patch: Fix cure spells incorrectly triggering MagicEffectState_Ending for magic that hasn't taken effect yet.
 		genCallUnprotected(0x4559B2, reinterpret_cast<DWORD>(PatchRemoveMagicsByEffect), 0x8);

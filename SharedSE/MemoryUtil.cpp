@@ -306,6 +306,10 @@ namespace se::memory {
 		writeBytesUnprotected(address, patch, size);
 	}
 
+	bool matchesBytes(DWORD address, const BYTE* expected, size_t count) {
+		return memcmp(reinterpret_cast<const void*>(address), expected, count) == 0;
+	}
+
 	DWORD getCallAddress(DWORD address) {
 		// Make sure we're doing a call.
 		BYTE instruction = *reinterpret_cast<BYTE*>(address);
