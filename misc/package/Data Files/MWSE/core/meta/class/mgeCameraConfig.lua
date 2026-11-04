@@ -15,16 +15,25 @@
 --- @field zoomEnable boolean Set if camera zoom is enabled.
 mgeCameraConfig = {}
 
---- Returns the options that `mge.camera.setViewOptions` set for a view, or `nil` if the key has none.
+--- Returns the options that `mge.camera.setViewOptions` set for a view, or `nil` if the key has none. With the flag `intoTextures`, a `niCamera` key returns the camera's default for the textures that it draws into. A texture's result is its own options only: it is `nil` for a texture that takes its camera's default.
 --- 
 --- This function exists when the MGE XE API version is 4 or higher.
 --- @param key niRenderedTexture|niCamera No description yet available.
+--- @param flags? mgeCameraConfig.getViewOptions.flags This table accepts the following values:
+--- 
+--- `intoTextures?`: boolean — *Default*: `false`. With a `niCamera` key: read the camera's default for every `niRenderedTexture` that it draws into. With a `niRenderedTexture` key this flag is an error.
 --- @return table|nil options No description yet available.
-function mgeCameraConfig.getViewOptions(key) end
+function mgeCameraConfig.getViewOptions(key, flags) end
+
+---Table parameter definitions for `mgeCameraConfig.getViewOptions`.
+--- @class mgeCameraConfig.getViewOptions.flags
+--- @field intoTextures? boolean *Default*: `false`. With a `niCamera` key: read the camera's default for every `niRenderedTexture` that it draws into. With a `niRenderedTexture` key this flag is an error.
 
 --- Sets the options of a view that a mod draws with a camera or a rendered texture. A view with options gets the parts that are named in the table, in addition to what a view of its kind draws without options (the full tier of the wgpu renderer of MGE XE). A part that is off in `mge.render` stays off in every view. A part that the table does not name stays off in this view. A name in the table that is not one of these, or a value that is not a boolean (`1` is an error, not `true`), throws an error that names it.
 --- 
 --- The key is the object that names the view: a `niRenderedTexture` (the view that renders into that texture), or a `niCamera` other than the world camera (that camera into the back buffer). The world camera is refused, because it is the main view.
+--- 
+--- With the flag `intoTextures`, a `niCamera` key sets the camera's default for every `niRenderedTexture` that the camera draws into, for example one clone that draws the mirrors of a mod. A view into a texture takes the texture's own options when it has some. Otherwise it takes the default of the camera that draws into it, and otherwise it has none. A texture's own options replace the default whole: `{}` set on the texture gives that view no parts, whatever the default. A camera can hold its options for the back buffer and its default for its textures at the same time; each is set, read and cleared with its own flag.
 --- 
 --- The options last until you change them, until you pass `nil`, or until the key's object is freed. A view that is idle keeps them. With the Direct3D 9 renderer MGE XE cannot see the free: an address that the engine reuses keeps the old options, and `getViewOptions` can return them for a new object.
 --- 
@@ -45,8 +54,11 @@ function mgeCameraConfig.getViewOptions(key) end
 --- `shaders?`: boolean — *Default*: `false`. The post-processing chain for this view.
 --- 
 --- `glows?`: boolean — *Default*: `false`. No description yet available.
---- @return boolean accepted `false` if MGE XE refuses the key, for example the world camera.
-function mgeCameraConfig.setViewOptions(key, options) end
+--- @param flags? mgeCameraConfig.setViewOptions.flags This table accepts the following values:
+--- 
+--- `intoTextures?`: boolean — *Default*: `false`. With a `niCamera` key: the options are the camera's default for every `niRenderedTexture` that it draws into, not its view into the back buffer. With a `niRenderedTexture` key this flag is an error.
+--- @return boolean accepted `false` if MGE XE refuses the key, for example the world camera, or `intoTextures` with an MGE XE that does not know the flag.
+function mgeCameraConfig.setViewOptions(key, options, flags) end
 
 ---Table parameter definitions for `mgeCameraConfig.setViewOptions`.
 --- @class mgeCameraConfig.setViewOptions.options
@@ -56,6 +68,9 @@ function mgeCameraConfig.setViewOptions(key, options) end
 --- @field distantWater? boolean *Default*: `false`. MGE XE's water and its reflection for this view.
 --- @field shaders? boolean *Default*: `false`. The post-processing chain for this view.
 --- @field glows? boolean *Default*: `false`. No description yet available.
+
+--- @class mgeCameraConfig.setViewOptions.flags
+--- @field intoTextures? boolean *Default*: `false`. With a `niCamera` key: the options are the camera's default for every `niRenderedTexture` that it draws into, not its view into the back buffer. With a `niRenderedTexture` key this flag is an error.
 
 --- Stops any continuous camera zoom.
 function mgeCameraConfig.stopZoom() end

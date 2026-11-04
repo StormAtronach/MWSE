@@ -180,14 +180,38 @@ namespace mge::lua {
 			{ "glows", VIEW_PART_GLOWS },
 		};
 
-		// The kind and the address of a view key: a niRenderedTexture or a niCamera.
-		bool getViewKey(const sol::object& key, ViewKeyKind& kind, void*& address) {
+		// The flag of a view key that gives a camera's default for every texture it draws into.
+		constexpr const char* intoTexturesName = "intoTextures";
+
+		// The kind and the address of a view key: a niRenderedTexture or a niCamera. The flags are
+		// nil or a table; with { intoTextures = true } a niCamera names its default for the textures
+		// that it draws into, in place of its view into the back buffer.
+		bool getViewKey(const sol::object& key, const sol::object& flags, ViewKeyKind& kind, void*& address) {
+			bool intoTextures = false;
+			if (flags != sol::nil) {
+				if (!flags.is<sol::table>()) {
+					throw std::invalid_argument("The view key's flags must be a table or nil.");
+				}
+				for (const auto& [nameObject, valueObject] : flags.as<sol::table>()) {
+					if (nameObject.get_type() != sol::type::string || nameObject.as<std::string>() != intoTexturesName) {
+						throw std::invalid_argument("The view key's flags know only 'intoTextures'.");
+					}
+					if (valueObject.get_type() != sol::type::boolean) {
+						throw std::invalid_argument("The view key's flag 'intoTextures' must be a boolean.");
+					}
+					intoTextures = valueObject.as<bool>();
+				}
+			}
+
 			if (key.is<NI::RenderedTexture*>()) {
+				if (intoTextures) {
+					throw std::invalid_argument("The view key's flag 'intoTextures' needs a niCamera.");
+				}
 				kind = ViewKeyKind::RenderedTexture;
 				address = key.as<NI::RenderedTexture*>();
 			}
 			else if (key.is<NI::Camera*>()) {
-				kind = ViewKeyKind::Camera;
+				kind = intoTextures ? ViewKeyKind::CameraTextures : ViewKeyKind::Camera;
 				address = key.as<NI::Camera*>();
 			}
 			else {
@@ -197,10 +221,10 @@ namespace mge::lua {
 		}
 	}
 
-	bool CameraConfig::setViewOptions(sol::object key, sol::object options) {
+	bool CameraConfig::setViewOptions(sol::object key, sol::object options, sol::object flags) {
 		ViewKeyKind kind;
 		void* address;
-		if (!getViewKey(key, kind, address)) {
+		if (!getViewKey(key, flags, kind, address)) {
 			return false;
 		}
 
@@ -233,10 +257,10 @@ namespace mge::lua {
 		return v4->viewOptionsSet(kind, address, &value);
 	}
 
-	sol::object CameraConfig::getViewOptions(sol::object key, sol::this_state ts) {
+	sol::object CameraConfig::getViewOptions(sol::object key, sol::object flags, sol::this_state ts) {
 		ViewKeyKind kind;
 		void* address;
-		if (!getViewKey(key, kind, address)) {
+		if (!getViewKey(key, flags, kind, address)) {
 			return sol::nil;
 		}
 
