@@ -183,6 +183,9 @@ namespace se::memory {
 	// WARNING: If passing a function address, always use a non-static function or it will crash.
 	void writePatchCodeUnprotected(DWORD address, const BYTE* patch, DWORD size);
 
+	// Checks that the code at an address is exactly the bytes a patch expects to replace.
+	bool matchesBytes(DWORD address, const BYTE* expected, size_t count);
+
 	// Code to determine what function an address calls.
 	DWORD getCallAddress(DWORD address);
 

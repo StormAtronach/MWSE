@@ -37,6 +37,12 @@ namespace NI {
 		int unknown_0x2C;
 		int unknown_0x30;
 		void* rendererSpecific; // 0x34
+
+		//
+		// Custom functions.
+		//
+
+		static void __cdecl releaseDefaultMaterialRendererData();
 	};
 	static_assert(sizeof(PropertyState) == 0x38, "NI::PropertyState failed size validation");
 
@@ -162,6 +168,7 @@ namespace NI {
 
 	};
 	static_assert(sizeof(MaterialProperty) == 0x58, "NI::MaterialProperty failed size validation");
+	static_assert(offsetof(MaterialProperty, index) == 0x18, "NI::MaterialProperty::index failed offset validation");
 
 	struct StencilProperty : Property {
 		enum TestFunc {

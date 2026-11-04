@@ -16,6 +16,27 @@
 namespace NI {
 
 	//
+	// NiPropertyState
+	//
+
+	void __cdecl PropertyState::releaseDefaultMaterialRendererData() {
+#if defined(SE_NI_PROPERTYSTATE_GLOBAL_DEFAULTMATERIAL) && SE_NI_PROPERTYSTATE_GLOBAL_DEFAULTMATERIAL > 0 && defined(SE_MEMORY_FNADDR_DELETE) && SE_MEMORY_FNADDR_DELETE > 0
+		const auto material = *reinterpret_cast<MaterialProperty**>(SE_NI_PROPERTYSTATE_GLOBAL_DEFAULTMATERIAL);
+		if (material == nullptr) {
+			return;
+		}
+
+		void* const rendererData = reinterpret_cast<void*>(material->index);
+		if (rendererData != nullptr) {
+			se::memory::_delete(rendererData);
+		}
+		material->index = 0;
+#else
+		throw not_implemented_exception();
+#endif
+	}
+
+	//
 	// NiProperty
 	//
 
