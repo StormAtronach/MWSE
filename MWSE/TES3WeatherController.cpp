@@ -26,6 +26,15 @@
 
 namespace TES3 {
 
+	const auto TES3_WeatherController_dtor = reinterpret_cast<void(__thiscall*)(WeatherController*)>(0x43B1C0);
+	void WeatherController::dtor() {
+		if (WorldController::get()->getMobilePlayer() == nullptr) {
+			releaseLoopSoundsWithoutPlayer();
+		}
+
+		TES3_WeatherController_dtor(this);
+	}
+
 	const auto TES3_WeatherController_getCurrentWeatherIndex = reinterpret_cast<int(__thiscall*)(const WeatherController*)>(0x4424E0);
 	int WeatherController::getCurrentWeatherIndex() const {
 		return TES3_WeatherController_getCurrentWeatherIndex(this);
@@ -144,6 +153,24 @@ namespace TES3 {
 		// setFogColour decrements the refCount
 		fogProperty->refCount++;
 		TES3_WeatherController_setFogColour(this, fogProperty);
+	}
+
+	void WeatherController::releaseLoopSoundsWithoutPlayer() {
+		for (const auto weather : arrayWeathers) {
+			if (weather) {
+				weather->releaseLoopSoundsWithoutPlayer();
+			}
+		}
+
+		const auto rain = getWeatherRain();
+		if (rain) {
+			rain->releaseRainLoopSoundWithoutPlayer();
+		}
+
+		const auto thunder = getWeatherThunder();
+		if (thunder) {
+			thunder->releaseRainLoopSoundWithoutPlayer();
+		}
 	}
 
 	static std::atomic<bool> weatherEventGuard = false;

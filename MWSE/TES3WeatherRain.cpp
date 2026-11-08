@@ -23,4 +23,8 @@ namespace TES3 {
 		}
 		return true;
 	}
+
+	void WeatherRain::releaseRainLoopSoundWithoutPlayer() {
+		releaseSoundWithoutPlayer(soundRainLoop);
+	}
 }

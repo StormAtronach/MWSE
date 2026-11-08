@@ -22,6 +22,7 @@ namespace TES3 {
 		//
 
 		bool setRainLoopSoundID(const char* id);
+		void releaseRainLoopSoundWithoutPlayer();
 
 	};
 	static_assert(sizeof(WeatherRain) == 0x43C, "TES3::WeatherRain failed size validation");

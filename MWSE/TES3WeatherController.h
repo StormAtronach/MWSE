@@ -149,6 +149,8 @@ namespace TES3 {
 		WeatherController() = delete;
 		~WeatherController() = delete;
 
+		void dtor();
+
 		//
 		// Other related this-call functions.
 		//
@@ -178,6 +180,7 @@ namespace TES3 {
 		WeatherBlizzard* getWeatherBlizzard() const;
 
 		void updateVisuals();
+		void releaseLoopSoundsWithoutPlayer();
 
 		// A dot product of two unit vectors, which can round past the range of acos, in that range.
 		static float __cdecl clampSunGlareDot(float dotProduct);

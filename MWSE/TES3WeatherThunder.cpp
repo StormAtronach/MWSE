@@ -39,4 +39,8 @@ namespace TES3 {
 	bool WeatherThunder::setThunder4SoundID(const char* id) {
 		return strcpy_s(soundIDThunder4, sizeof(soundIDThunder4), id) == 0;
 	}
+
+	void WeatherThunder::releaseRainLoopSoundWithoutPlayer() {
+		releaseSoundWithoutPlayer(soundRainLoop);
+	}
 }

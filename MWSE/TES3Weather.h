@@ -76,6 +76,9 @@ namespace TES3 {
 		const char* getAmbientLoopSoundID() const;
 		bool setAmbientLoopSoundID(const char* id);
 
+		void releaseLoopSoundsWithoutPlayer();
+		static void releaseSoundWithoutPlayer(Sound*& sound);
+
 		// Storage for cached userdata.
 		sol::object getOrCreateLuaObject(lua_State* L) const;
 		static void clearCachedLuaObject(const Weather* object);
