@@ -148,6 +148,8 @@ namespace TES3 {
 		WeatherController() = delete;
 		~WeatherController() = delete;
 
+		void dtor();
+
 		//
 		// Other related this-call functions.
 		//
@@ -177,6 +179,7 @@ namespace TES3 {
 		WeatherBlizzard* getWeatherBlizzard() const;
 
 		void updateVisuals();
+		void releaseLoopSoundsWithoutPlayer();
 
 		void switchImmediate(int weather);
 		void switchTransition(int weather);

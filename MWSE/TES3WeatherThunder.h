@@ -39,6 +39,8 @@ namespace TES3 {
 		bool setThunder3SoundID(const char* id);
 		bool setThunder4SoundID(const char* id);
 
+		void releaseRainLoopSoundWithoutPlayer();
+
 	};
 	static_assert(sizeof(WeatherThunder) == 0x86C, "TES3::WeatherThunder failed size validation");
 }

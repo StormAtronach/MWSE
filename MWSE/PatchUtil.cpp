@@ -40,6 +40,7 @@
 #include "TES3UIMenuController.h"
 #include "TES3VFXManager.h"
 #include "TES3VoiceStreamer.h"
+#include "TES3WeatherController.h"
 #include "TES3WorldController.h"
 #include "ReferenceTracker.h"
 
@@ -2398,6 +2399,10 @@ namespace mwse::patch {
 		auto killCounter_save = &TES3::KillCounter::save;
 		genCallEnforced(0x4BCB7E, 0x55D950, *reinterpret_cast<DWORD*>(&killCounter_save));
 #endif
+
+		// Patch: Release the weathers' loop sounds when the weather controller is destroyed without a player.
+		auto WeatherController_dtor = &TES3::WeatherController::dtor;
+		genCallEnforced(0x40E0CB, 0x43B1C0, *reinterpret_cast<DWORD*>(&WeatherController_dtor));
 
 		// Patch: Post-simulate event just before tickClock.
 		// Patch: Don't truncate hour when advancing time past midnight.

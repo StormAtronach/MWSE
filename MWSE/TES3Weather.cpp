@@ -76,6 +76,21 @@ namespace TES3 {
 		return true;
 	}
 
+	void Weather::releaseLoopSoundsWithoutPlayer() {
+		releaseSoundWithoutPlayer(soundAmbientLoop);
+	}
+
+	void Weather::releaseSoundWithoutPlayer(Sound*& sound) {
+		if (sound == nullptr) {
+			return;
+		}
+
+		if (sound->isPlaying()) {
+			sound->stop();
+		}
+		sound = nullptr;
+	}
+
 	static std::unordered_map<const Weather*, sol::object> weatherObjectCache;
 	static std::mutex weatherObjectCacheMutex;
 
