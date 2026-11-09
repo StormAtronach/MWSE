@@ -183,19 +183,27 @@ namespace mwse::native {
 		return MWSE_NATIVE_OK;
 	}
 
-	// The three groups of calls, or none: a part would leave some changes of cell without the event.
-	static MwseNativeStatus installPlayerCellChanged() {
+	static bool playerCellSitesRedirected = false;
+
+	// The three groups of calls, or none: a part would leave some changes of cell without the event
+	// and without the test of the thread.
+	void installPlayerCellRedirect() {
 		for (const auto sites : { &playerCellChangeSites, &playerCellGameLoadSites, &playerCellCompanionSites }) {
 			const auto changed = sites->findChangedSite();
 			if (changed) {
 				logChangedSite("the player's change of cell", changed);
-				return MWSE_NATIVE_BYTES_CHANGED;
+				return;
 			}
 		}
 		playerCellChangeSites.redirect(reinterpret_cast<DWORD>(&Dispatch::changePlayerCell));
 		playerCellGameLoadSites.redirect(reinterpret_cast<DWORD>(&Dispatch::changePlayerCellAtGameLoad));
 		playerCellCompanionSites.redirect(reinterpret_cast<DWORD>(&Dispatch::changePlayerCellWithCompanions));
-		return MWSE_NATIVE_OK;
+		playerCellSitesRedirected = true;
+	}
+
+	// The event fires from the members, which the sites call since MWSE's start.
+	static MwseNativeStatus installPlayerCellChanged() {
+		return playerCellSitesRedirected ? MWSE_NATIVE_OK : MWSE_NATIVE_BYTES_CHANGED;
 	}
 
 	// The passes that attach a light to the nodes near it. Both groups of calls, or none: a part
@@ -539,15 +547,15 @@ namespace mwse::native {
 	}
 
 	void __cdecl Dispatch::changePlayerCell(NI::Point3 position, NI::Point3 orientation, void* cell, int updateCollision) {
-		TES3::DataHandler::changePlayerCell(position, orientation, static_cast<TES3::Cell*>(cell), updateCollision != 0);
+		TES3::DataHandler::changePlayerCell(position, orientation, static_cast<TES3::Cell*>(cell), updateCollision != 0, false, _ReturnAddress());
 	}
 
 	void __cdecl Dispatch::changePlayerCellAtGameLoad(NI::Point3 position, NI::Point3 orientation, void* cell, int updateCollision) {
-		TES3::DataHandler::changePlayerCell(position, orientation, static_cast<TES3::Cell*>(cell), updateCollision != 0, true);
+		TES3::DataHandler::changePlayerCell(position, orientation, static_cast<TES3::Cell*>(cell), updateCollision != 0, true, _ReturnAddress());
 	}
 
 	void __cdecl Dispatch::changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, void* cell) {
-		TES3::DataHandler::changePlayerCellWithCompanions(position, orientation, static_cast<TES3::Cell*>(cell));
+		TES3::DataHandler::changePlayerCellWithCompanions(position, orientation, static_cast<TES3::Cell*>(cell), _ReturnAddress());
 	}
 
 	uint32_t __stdcall Dispatch::frameTimer() {

@@ -1,6 +1,6 @@
 return {
 	type = "function",
-	description = [[Positions a reference to another place.]],
+	description = [[Positions a reference to another place. Off the main thread, the change is skipped and logged.]],
 	arguments = {{
 		name = "params",
 		type = "table",

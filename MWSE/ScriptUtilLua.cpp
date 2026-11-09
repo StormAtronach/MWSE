@@ -356,8 +356,7 @@ namespace mwse::lua {
 			auto z = getOptionalParam(params, "z", 0.0f);
 			auto rotation = getOptionalParam(params, "rotation", 0.0f);
 
-			mwscript::Position(script, reference, x, y, z, rotation);
-			return true;
+			return mwscript::Position(script, reference, x, y, z, rotation);
 		};
 		lua_mwscript["positionCell"] = [](sol::optional<sol::table> params) {
 			auto script = getOptionalParamExecutionScript(params);
@@ -371,8 +370,7 @@ namespace mwse::lua {
 				return false;
 			}
 
-			mwscript::PositionCell(script, reference, x, y, z, rotation, cell.c_str());
-			return true;
+			return mwscript::PositionCell(script, reference, x, y, z, rotation, cell.c_str());
 		};
 		lua_mwscript["removeItem"] = [](sol::optional<sol::table> params) {
 			auto script = getOptionalParamExecutionScript(params);

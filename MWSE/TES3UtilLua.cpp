@@ -565,11 +565,16 @@ namespace mwse::lua {
 		}
 	}
 
-	void newGame() {
+	bool newGame() {
+		if (TES3::DataHandler::skipCellChangeOffMainThread("tes3.newGame", nullptr, nullptr)) {
+			return false;
+		}
+
 		auto cachedSuppressState = true;
 		std::swap(TES3::DataHandler::suppressThreadLoad, cachedSuppressState);
 		tes3::startNewGame();
 		std::swap(TES3::DataHandler::suppressThreadLoad, cachedSuppressState);
+		return true;
 	}
 
 	bool isModActive(const char* modName) {
@@ -2277,6 +2282,10 @@ namespace mwse::lua {
 	}
 
 	bool runLegacyScript(sol::table params) {
+		if (TES3::DataHandler::skipCellChangeOffMainThread("tes3.runLegacyScript", nullptr, nullptr)) {
+			return false;
+		}
+
 		TES3::Script* script = getOptionalParamScript(params, "script");
 		if (script == nullptr) {
 			script = TES3::WorldController::get()->scriptCompileAndRun;
@@ -2394,6 +2403,10 @@ namespace mwse::lua {
 	}
 
 	bool positionCell(sol::table params) {
+		if (TES3::DataHandler::skipCellChangeOffMainThread("tes3.positionCell", nullptr, nullptr)) {
+			return false;
+		}
+
 		auto worldController = TES3::WorldController::get();
 		auto macp = worldController->getMobilePlayer();
 		auto playerRef = macp->reference;

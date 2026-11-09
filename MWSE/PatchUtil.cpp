@@ -2,6 +2,7 @@
 
 #include "Log.h"
 #include "MemoryUtil.h"
+#include "NativeApi.h"
 #include "mwOffsets.h"
 
 #include "TES3Actor.h"
@@ -3296,6 +3297,9 @@ namespace mwse::patch {
 		// The handler at 0x6F34B0 deletes the list's buffer (0x7DE9E4) and keeps the pointer. A scene node that is freed
 		// after the handler (a Lua-held node, at the close of the Lua state) returns its index to the freed buffer.
 		genCallEnforced(0x6F34D6, 0x727530, reinterpret_cast<DWORD>(&NI::DynamicEffect::keepIndexListAtExit));
+
+		// Patch: Send every change of the player's cell through the members that test the thread.
+		mwse::native::installPlayerCellRedirect();
 
 		// Patch: Store last read key state.
 		auto InputController_readButtonPressed = &TES3::InputController::readButtonPressed;

@@ -427,8 +427,13 @@ namespace TES3 {
 
 		// The player's change of cell (0x45CEF0, 0x45C9B0), then the native event of it
 		// (MWSE_NATIVE_EVENT_PLAYER_CELL_CHANGED). `gameLoad`: the load of a saved game made it.
-		static void changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad = false);
-		static void changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell);
+		// Off the main thread, they skip the change, write one log line and return false. `caller` is the address
+		// that the log line names: the caller's own when null.
+		static bool changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad = false, const void* caller = nullptr);
+		static bool changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell, const void* caller = nullptr);
+		// A change of the player's cell belongs to the main thread. Off it, writes one log line that names the
+		// route, the thread, the cell and the caller (each may be null), and returns true: the route skips its change.
+		static bool skipCellChangeOffMainThread(const char* route, const Cell* cell, const void* caller);
 		static void firePlayerCellChanged(Cell* previousCell, bool gameLoad);
 
 		void updateCollisionGroupsForActiveCells(bool force = true, bool isResettingData = false, bool resetCollisionGroups = true);

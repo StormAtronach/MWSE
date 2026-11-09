@@ -1077,17 +1077,44 @@ namespace TES3 {
 	}
 
 	const auto TES3_cellChange = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, Cell*, int)>(0x45CEF0);
-	void DataHandler::changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad) {
+	bool DataHandler::skipCellChangeOffMainThread(const char* route, const Cell* cell, const void* caller) {
+		if (mwse::native::Registry::get().isMainThread()) {
+			return false;
+		}
+
+		auto& output = mwse::log::getLog();
+		output << "[MWSE] Skipped " << route << " on thread " << GetCurrentThreadId() << ": a change of the player's cell belongs to the main thread.";
+		if (cell) {
+			output << " Target cell '" << cell->getDisplayName() << "'.";
+		}
+		if (caller) {
+			output << " Called from 0x" << std::hex << reinterpret_cast<uintptr_t>(caller) << std::dec << ".";
+		}
+		output << std::endl;
+		return true;
+	}
+
+	bool DataHandler::changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad, const void* caller) {
+		if (skipCellChangeOffMainThread("the change of the player's cell", cell, caller ? caller : _ReturnAddress())) {
+			return false;
+		}
+
 		const auto previousCell = get()->currentCell;
 		TES3_cellChange(position, orientation, cell, updateCollision);
 		firePlayerCellChanged(previousCell, gameLoad);
+		return true;
 	}
 
 	const auto TES3_cellChangeWithCompanions = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, Cell*)>(0x45C9B0);
-	void DataHandler::changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell) {
+	bool DataHandler::changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell, const void* caller) {
+		if (skipCellChangeOffMainThread("the change of the player's cell with companions", cell, caller ? caller : _ReturnAddress())) {
+			return false;
+		}
+
 		const auto previousCell = get()->currentCell;
 		TES3_cellChangeWithCompanions(position, orientation, cell);
 		firePlayerCellChanged(previousCell, false);
+		return true;
 	}
 
 	void DataHandler::firePlayerCellChanged(Cell* previousCell, bool gameLoad) {
