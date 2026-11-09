@@ -3285,6 +3285,13 @@ namespace mwse::patch {
 		auto Cell_getOrCreateStaticsNode = &TES3::Cell::getOrCreateStaticsNode;
 		genJumpUnprotected(0x4E2330, *reinterpret_cast<DWORD*>(&Cell_getOrCreateStaticsNode), 0x5);
 
+		// Patch: Publish the border slots to the cell loader after their landscape is set.
+		// 0x48F305 stores state 2 before the cell (0x48F30B) and the landscape (0x48F326, 0x48F419).
+		// The new value is a state no reader takes. The call after the fill publishes the slots.
+		writeDoubleWordEnforced(0x48F307, 2, static_cast<DWORD>(TES3::ExteriorDataLoadingState::PendingPublish));
+		auto DataHandler_publishPendingBorderSlotsAndFind = &TES3::DataHandler::publishPendingBorderSlotsAndFind;
+		genCallEnforced(0x48F46A, 0x4901F0, *reinterpret_cast<DWORD*>(&DataHandler_publishPendingBorderSlotsAndFind));
+
 		// Patch: Store last read key state.
 		auto InputController_readButtonPressed = &TES3::InputController::readButtonPressed;
 		genCallEnforced(0x58E8C6, 0x406950, *reinterpret_cast<DWORD*>(&InputController_readButtonPressed));
