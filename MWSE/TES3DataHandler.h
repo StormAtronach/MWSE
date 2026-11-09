@@ -272,6 +272,8 @@ namespace TES3 {
 		BackgroundLoading = 3,
 		BackgroundLoadedPendingCommit = 4,
 		Unloading = 5,
+		// MWSE only. A border slot that is filled and not yet published to the cell loader.
+		PendingPublish = 6,
 	};
 
 	struct DataHandler {
@@ -437,6 +439,9 @@ namespace TES3 {
 
 		bool isCellInMemory(const Cell* cell, bool unknown) const;
 
+		// Finds a slot of the exterior cell data (background: of the border slots) whose state equals `state`.
+		bool findExteriorCellDataByState(int state, int* out_relativeCellY, int* out_relativeCellX, bool background);
+
 		std::tuple<int, int> getCellBufferSize() const;
 
 		void incrementLoadedRecords(int count);
@@ -447,6 +452,9 @@ namespace TES3 {
 		//
 
 		std::reference_wrapper<ExteriorCellData* [9]> getExteriorCellData_lua();
+
+		void publishPendingBorderSlots();
+		bool publishPendingBorderSlotsAndFind(int state, int* out_relativeCellY, int* out_relativeCellX, bool background);
 
 		void rebuildActiveCellManagerBoundsUnderRoot(NI::Node* root);
 		bool rebuildActiveCellManagerBounds();

@@ -1,5 +1,6 @@
 #include "TES3DataHandler.h"
 
+#include "Log.h"
 #include "LuaManager.h"
 #include "LuaUtil.h"
 
@@ -1139,6 +1140,39 @@ namespace TES3 {
 	const auto TES3_DataHandler_getTotalLoadedRecordsFraction = reinterpret_cast<float(__thiscall*)(const DataHandler*)>(0x48ED90);
 	float DataHandler::getTotalLoadedRecordsFraction() const {
 		return TES3_DataHandler_getTotalLoadedRecordsFraction(this);
+	}
+
+	const auto TES3_DataHandler_findExteriorCellDataByState = reinterpret_cast<bool(__thiscall*)(DataHandler*, int, int*, int*, bool)>(0x4901F0);
+	bool DataHandler::findExteriorCellDataByState(int state, int* out_relativeCellY, int* out_relativeCellX, bool background) {
+		return TES3_DataHandler_findExteriorCellDataByState(this, state, out_relativeCellY, out_relativeCellX, background);
+	}
+
+	void DataHandler::publishPendingBorderSlots() {
+		for (size_t i = 0; i < std::size(backgroundLoadExteriorCellData); ++i) {
+			const auto slot = backgroundLoadExteriorCellData[i];
+			if (!slot || slot->state != ExteriorDataLoadingState::PendingPublish) {
+				continue;
+			}
+
+			// The cell loader reads the state as a whole dword. The interlocked store orders the
+			// cell and the landscape before it.
+			const auto stateDword = reinterpret_cast<volatile LONG*>(&slot->state);
+			if (slot->landRenderData) {
+				InterlockedExchange(stateDword, static_cast<LONG>(ExteriorDataLoadingState::CachedOrPending));
+				continue;
+			}
+
+			const auto cell = slot->cell;
+			mwse::log::getLog() << "[MWSE] Border cell slot " << i << " not published: no free landscape buffer entry (cell "
+				<< (cell ? cell->getGridX() : 0) << ", " << (cell ? cell->getGridY() : 0) << ")." << std::endl;
+			slot->cell = nullptr;
+			InterlockedExchange(stateDword, static_cast<LONG>(ExteriorDataLoadingState::Unloaded));
+		}
+	}
+
+	bool DataHandler::publishPendingBorderSlotsAndFind(int state, int* out_relativeCellY, int* out_relativeCellX, bool background) {
+		publishPendingBorderSlots();
+		return findExteriorCellDataByState(state, out_relativeCellY, out_relativeCellX, background);
 	}
 
 	std::reference_wrapper<DataHandler::ExteriorCellData* [9]> DataHandler::getExteriorCellData_lua() {
