@@ -195,21 +195,21 @@ namespace TES3 {
 		NonDynamicData::clearCellNameCache(region);
 	}
 
-	NI::PackedColor* Cell::getAmbientColor() {
+	CellColor* Cell::getAmbientColor() {
 		if (getIsInterior()) {
 			return &variantData.interior.ambientColor;
 		}
 		return nullptr;
 	}
 
-	NI::PackedColor* Cell::getFogColor() {
+	CellColor* Cell::getFogColor() {
 		if (getIsInterior()) {
 			return &variantData.interior.fogColor;
 		}
 		return nullptr;
 	}
 
-	NI::PackedColor* Cell::getSunColor() {
+	CellColor* Cell::getSunColor() {
 		if (getIsInterior()) {
 			return &variantData.interior.sunColor;
 		}

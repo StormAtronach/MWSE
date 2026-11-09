@@ -31,6 +31,26 @@ namespace TES3 {
 	};
 	static_assert(sizeof(MapNote) == 0x10, "TES3::MapNote failed size validation");
 
+	// A colour in the order that the ESM stores it and that the engine reads it from a cell: red at byte 0, then
+	// green, blue and alpha. NI::PackedColor holds blue first and is right for the light manager; the interior
+	// colours of a cell are not in that layout.
+	struct CellColor {
+		unsigned char r; // 0x0
+		unsigned char g; // 0x1
+		unsigned char b; // 0x2
+		unsigned char a; // 0x3
+
+		CellColor() : r(0), g(0), b(0), a(0) {}
+		CellColor(unsigned char _r, unsigned char _g, unsigned char _b, unsigned char _a = 0) : r(_r), g(_g), b(_b), a(_a) {}
+
+		std::string toString() const {
+			std::ostringstream ss;
+			ss << "<" << int(r) << ", " << int(g) << ", " << int(b) << ", " << int(a) << ">";
+			return ss.str();
+		}
+	};
+	static_assert(sizeof(CellColor) == 0x4, "TES3::CellColor failed size validation");
+
 	struct PathGrid : BaseObject {
 		struct Node {
 			int relativeX;
@@ -120,9 +140,9 @@ namespace TES3 {
 				int gridY; // 0xC
 			} exterior;
 			struct {
-				NI::PackedColor ambientColor; // 0x0
-				NI::PackedColor sunColor; // 0x4
-				NI::PackedColor fogColor; // 0x8
+				CellColor ambientColor; // 0x0
+				CellColor sunColor; // 0x4
+				CellColor fogColor; // 0x8
 				float fogDensity; // 0xC
 			} interior;
 		} variantData; // 0x1C
@@ -188,9 +208,9 @@ namespace TES3 {
 		Region* getRegion() const;
 		void setRegion(Region* region);
 
-		NI::PackedColor* getAmbientColor();
-		NI::PackedColor* getFogColor();
-		NI::PackedColor* getSunColor();
+		CellColor* getAmbientColor();
+		CellColor* getFogColor();
+		CellColor* getSunColor();
 
 		bool getBehavesAsExterior() const;
 		void setBehavesAsExterior(bool value);
