@@ -77,6 +77,133 @@ namespace TES3 {
 		return mesh;
 	}
 
+	std::mutex MeshData::NIFsMutex;
+	std::atomic<unsigned int> MeshData::NIFsLockCalls;
+	std::atomic<unsigned int> MeshData::NIFsLockContended;
+
+	std::unique_lock<std::mutex> MeshData::lockNIFs() {
+		std::unique_lock<std::mutex> lock(NIFsMutex, std::try_to_lock);
+		++NIFsLockCalls;
+		if (!lock.owns_lock()) {
+			// One line at the 1st, 10th, 100th, ... call that met another thread.
+			const auto contended = ++NIFsLockContended;
+			for (auto power = 1u; power <= contended; power *= 10) {
+				if (power == contended) {
+					mwse::log::getLog() << "[MWSE] Model cache lock: " << contended << " waits of " << NIFsLockCalls.load() << " calls." << std::endl;
+					break;
+				}
+			}
+			lock.lock();
+		}
+		return lock;
+	}
+
+	MeshData::NIF* MeshData::findNIF(const char* path) const {
+		for (auto node = NIFs->buckets[NIFs->hashKey(path)]; node; node = node->nextNode) {
+			if (NIFs->compareKey(path, node->key)) {
+				return node->value;
+			}
+		}
+		return nullptr;
+	}
+
+	MeshData::NIFMap::Node** MeshData::findNIFLink(const NI::Node* rootNode) const {
+		for (size_t bucket = 0; bucket < NIFs->bucketCount; ++bucket) {
+			for (auto link = &NIFs->buckets[bucket]; *link; link = &(*link)->nextNode) {
+				if ((*link)->value->rootNode == rootNode) {
+					return link;
+				}
+			}
+		}
+		return nullptr;
+	}
+
+	const auto TES3_MeshData_NIF_ctor = reinterpret_cast<MeshData::NIF * (__thiscall*)(MeshData::NIF*, const char*)>(0x4ED6C0);
+	const auto TES3_MeshData_NIF_dtor = reinterpret_cast<void(__thiscall*)(MeshData::NIF*)>(0x4EDB70);
+
+	NI::Node* MeshData::loadNIF(const char* path) {
+		// A hit: the find and the count change are one hold, so that a release cannot free the entry between them.
+		{
+			const auto lock = lockNIFs();
+			if (const auto existing = findNIF(path)) {
+				++existing->useCount;
+				return existing->rootNode;
+			}
+		}
+
+		// A miss: the parse runs outside the lock. The engine does not free an entry with no root, and nor do we.
+		const auto parsed = se::memory::_new<NIF>();
+		if (!parsed || !TES3_MeshData_NIF_ctor(parsed, path)->rootNode) {
+			return nullptr;
+		}
+
+		// The node and its key are made before the lock, so that the hold has no allocation in it.
+		const auto node = se::memory::_new<NIFMap::Node>();
+		const char* key = path;
+		NIF* value = parsed;
+		NIFs->makeKeyValuePair(&node->keyValuePair, key, value);
+
+		// Another thread can have parsed the same model meanwhile. Then its entry stays, and our parse is released.
+		NIF* existing = nullptr;
+		NI::Node* rootNode = nullptr;
+		{
+			const auto lock = lockNIFs();
+			existing = findNIF(path);
+			if (existing) {
+				++existing->useCount;
+				rootNode = existing->rootNode;
+			}
+			else {
+				const auto bucket = NIFs->hashKey(key);
+				node->nextNode = NIFs->buckets[bucket];
+				NIFs->buckets[bucket] = node;
+				++NIFs->count;
+				rootNode = parsed->rootNode;
+			}
+		}
+
+		if (existing) {
+			NIFs->deleteKeyValuePair(&node->keyValuePair);
+			se::memory::_delete(node);
+			TES3_MeshData_NIF_dtor(parsed);
+			se::memory::_delete(parsed);
+		}
+
+		return rootNode;
+	}
+
+	bool MeshData::releaseNIF(NI::Node* rootNode) {
+		if (!rootNode) {
+			return false;
+		}
+
+		NIFMap::Node* unlinked = nullptr;
+		NIF* entry = nullptr;
+		{
+			const auto lock = lockNIFs();
+			const auto link = findNIFLink(rootNode);
+			if (!link) {
+				return false;
+			}
+
+			unlinked = *link;
+			entry = unlinked->value;
+			if (--entry->useCount != 0) {
+				return true;
+			}
+
+			*link = unlinked->nextNode;
+			--NIFs->count;
+		}
+
+		// The key, the node and the model are freed outside the lock. Freeing a model can release another through this function.
+		NIFs->deleteKeyValuePair(&unlinked->keyValuePair);
+		se::memory::_delete(unlinked);
+		TES3_MeshData_NIF_dtor(entry);
+		se::memory::_delete(entry);
+		return true;
+	}
+
 	struct LoadTempMeshNode {
 		const char* path;
 		NI::Pointer<NI::Node> mesh;

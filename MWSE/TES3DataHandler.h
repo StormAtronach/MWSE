@@ -32,7 +32,15 @@ namespace TES3 {
 	};
 
 	struct MeshData {
-		NI::HashMap<const char*, NI::Node*>* NIFs; // 0x0
+		// An entry of the model cache, ModelLoader::NIF in the engine.
+		struct NIF {
+			char* filePath; // 0x0
+			NI::Node* rootNode; // 0x4
+			unsigned short useCount; // 0x8
+		};
+		using NIFMap = NI::HashMap<const char*, NIF*>;
+
+		NIFMap* NIFs; // 0x0
 		NI::HashMap<const char*, KeyframeDefinition*>* KFs; // 0x4
 
 		MeshData() = delete;
@@ -44,7 +52,29 @@ namespace TES3 {
 		KeyframeDefinition* loadKeyframes(const char* path, const char* sequenceName);
 		bool releaseMesh(NI::Node* meshRoot);
 		bool releaseKeyframes(KeyframeDefinition* kfData);
+
+		//
+		// The model cache with a lock over its map operations.
+		//
+		// These two take the place of the engine's LoadNIF (0x4EE0A0) and ReleaseNIF (0x4EE5B0), which take no lock. The lock
+		// covers the find, the count change, the insert and the unlink. The parse and the destruction of a model run outside it.
+		//
+
+		NI::Node* loadNIF(const char* path);
+		bool releaseNIF(NI::Node* rootNode);
+
+		static std::mutex NIFsMutex;
+		static std::atomic<unsigned int> NIFsLockCalls;
+		static std::atomic<unsigned int> NIFsLockContended;
+
+		// Takes the lock. Counts the calls, and the calls that waited for another thread.
+		std::unique_lock<std::mutex> lockNIFs();
+		// Needs the lock.
+		NIF* findNIF(const char* path) const;
+		// Needs the lock. Returns the link that points at the node of the entry with this root, or null.
+		NIFMap::Node** findNIFLink(const NI::Node* rootNode) const;
 	};
+	static_assert(sizeof(MeshData::NIF) == 0xC, "TES3::MeshData::NIF failed size validation");
 
 	template <typename OT>
 	struct ObjectMapContainer {
