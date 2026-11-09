@@ -47,6 +47,9 @@ namespace NI {
 		ClearDynamicEffectNodes(this);
 	}
 
+	void __cdecl DynamicEffect::keepIndexListAtExit(void* list) {
+	}
+
 	void __cdecl ClearDynamicEffectNodes(DynamicEffect* effect) {
 #if defined(SE_NI_FNADDR_CLEARDYNAMICEFFECTNODES) && SE_NI_FNADDR_CLEARDYNAMICEFFECTNODES > 0
 		const auto NI_ClearDynamicEffectNodes = reinterpret_cast<void(__cdecl*)(DynamicEffect*)>(SE_NI_FNADDR_CLEARDYNAMICEFFECTNODES);

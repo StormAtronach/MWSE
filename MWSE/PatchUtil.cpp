@@ -3292,6 +3292,11 @@ namespace mwse::patch {
 		auto DataHandler_publishPendingBorderSlotsAndFind = &TES3::DataHandler::publishPendingBorderSlotsAndFind;
 		genCallEnforced(0x48F46A, 0x4901F0, *reinterpret_cast<DWORD*>(&DataHandler_publishPendingBorderSlotsAndFind));
 
+		// Patch: Keep the effect index list when the engine's exit handler runs.
+		// The handler at 0x6F34B0 deletes the list's buffer (0x7DE9E4) and keeps the pointer. A scene node that is freed
+		// after the handler (a Lua-held node, at the close of the Lua state) returns its index to the freed buffer.
+		genCallEnforced(0x6F34D6, 0x727530, reinterpret_cast<DWORD>(&NI::DynamicEffect::keepIndexListAtExit));
+
 		// Patch: Store last read key state.
 		auto InputController_readButtonPressed = &TES3::InputController::readButtonPressed;
 		genCallEnforced(0x58E8C6, 0x406950, *reinterpret_cast<DWORD*>(&InputController_readButtonPressed));

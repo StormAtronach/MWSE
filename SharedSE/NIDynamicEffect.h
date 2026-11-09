@@ -36,6 +36,14 @@ namespace NI {
 		void attachAffectedNode(Node* node);
 		void detachAffectedNode(Node* node);
 		void detachAllAffectedNodes();
+
+		//
+		// Custom functions.
+		//
+
+		// Takes the place of the delete of the effect index list in the engine's exit handler. The list stays valid
+		// for the effects that are destroyed after that handler.
+		static void __cdecl keepIndexListAtExit(void* list);
 	};
 	static_assert(sizeof(DynamicEffect) == 0xA8, "NI::DynamicEffect failed size validation");
 
