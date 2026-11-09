@@ -36,6 +36,26 @@ namespace NI {
 	};
 	static_assert(sizeof(DX8SystemDesc) == 0x1C, "NI::DX8SystemDesc failed size validation");
 
+	struct DX8GeometryBufferData {
+		int geomDataRevisionID; // 0x0
+		int flags; // 0x4
+		DWORD fvf; // 0x8
+		int verticesCount; // 0xC
+		unsigned int vertexBufferSize; // 0x10
+		IDirect3DVertexBuffer8* d3dVertexBuffer; // 0x14
+		unsigned int vertexStride; // 0x18
+		int indexBufferEntries; // 0x1C
+		unsigned int indexBufferSize; // 0x20
+		IDirect3DIndexBuffer8* indexBuffer; // 0x24
+		int unknown_0x28;
+		D3DPRIMITIVETYPE primitiveType; // 0x2C
+		int trianglesCount; // 0x30
+		int stripCount; // 0x34
+		unsigned short* stripVertexCounts; // 0x38
+		unsigned short* triList; // 0x3C
+	};
+	static_assert(sizeof(DX8GeometryBufferData) == 0x40, "NI::DX8GeometryBufferData failed size validation");
+
 	struct DX8Renderer : Renderer {
 		Pointer<void> propertyStatePtr; // 0x1C
 		Pointer<void> effectStatePtr; // 0x20
@@ -228,7 +248,7 @@ namespace NI {
 		int unknown_0x558;
 		int unknown_0x55C;
 		HashMap<void*, void*> unknown_0x560;
-		HashMap<void*, void*> unknown_0x570;
+		HashMap<void*, DX8GeometryBufferData*> skinPartitionBufferData; // 0x570. Keys are NiSkinPartition::Partition pointers.
 		HashMap<void*, void*> unknown_0x580;
 		HashMap<void*, void*> unknown_0x590;
 		int unknown_0x5A0;
@@ -297,6 +317,13 @@ namespace NI {
 		int unknown_0x69C;
 
 		DX8AdapterDesc* getCurrentAdapter() const;
+
+		//
+		// Custom functions.
+		//
+
+		void destruct();
+		void releaseSkinPartitionBufferData();
 	};
 	static_assert(sizeof(DX8Renderer) == 0x6A0, "NI::DX8Renderer failed size validation");
 }

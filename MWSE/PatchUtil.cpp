@@ -48,6 +48,7 @@
 #include "NIBound.h"
 #include "NICollisionGroup.h"
 #include "NICollisionSwitch.h"
+#include "NIDX8Renderer.h"
 #include "NIDX8TexturePass.h"
 #include "NIPoint3.h"
 #include "NIFlipController.h"
@@ -2999,6 +3000,13 @@ namespace mwse::patch {
 			else {
 				mwse::log::getLog() << "[MWSE] Skipped the default material patch: the code at 0x6C2578 is not the expected code." << std::endl;
 			}
+		}
+
+		// Patch: Release the skin partition buffers of the renderer without reading their keys, which can be freed already.
+		// 0x6A9D83 is the only call of the renderer's destructor body.
+		{
+			auto DX8Renderer_destruct = &NI::DX8Renderer::destruct;
+			se::memory::genCallEnforced(0x6A9D83, SE_NI_DX8RENDERER_FNADDR_DTOR, *reinterpret_cast<DWORD*>(&DX8Renderer_destruct));
 		}
 
 		// Patch: Fix cure spells incorrectly triggering MagicEffectState_Ending for magic that hasn't taken effect yet.
