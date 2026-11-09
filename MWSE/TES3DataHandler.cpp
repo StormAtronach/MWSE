@@ -1160,37 +1160,9 @@ namespace TES3 {
 		return value >= base && value < base + size;
 	}
 
-	bool DataHandler::skipCellChange(const char* route, const Cell* cell, const void* caller, bool engineLoadStep) {
-		const bool onMainThread = mwse::native::Registry::get().isMainThread();
-		const char* reason = nullptr;
-		bool skip = true;
-		if (!onMainThread) {
-			reason = "off the main thread";
-		}
-		else if (cellLoadDepth > 0) {
-			reason = "inside a cell load";
-			const bool fromEngine = isEngineAddress(caller);
-			if (fromEngine && engineLoadStep) {
-				// The change that a load of a saved game makes is a step of that load, whoever started the load
-				// (tes3.loadGame holds the Lua state). It runs, and it is not logged.
-				return false;
-			}
-			if (fromEngine && !mwse::lua::LuaManager::currentThreadHoldsState()) {
-				// The engine started this change itself, with no Lua running: it runs as in the unmodified game.
-				skip = false;
-			}
-		}
-		else {
-			return false;
-		}
-
+	void DataHandler::logCellChange(const std::string& text, const Cell* cell, const void* caller) {
 		auto& output = mwse::log::getLog();
-		if (skip) {
-			output << "[MWSE] Skipped " << route << " on thread " << GetCurrentThreadId() << " (" << reason << "): a change of the player's cell belongs to the main thread, outside a cell load.";
-		}
-		else {
-			output << "[MWSE] An engine change of the player's cell inside a cell load, on thread " << GetCurrentThreadId() << ", route " << route << ": not skipped.";
-		}
+		output << "[MWSE] " << text;
 		if (cell) {
 			output << " Target cell '" << cell->getDisplayName() << "'.";
 		}
@@ -1198,7 +1170,58 @@ namespace TES3 {
 			output << " Called from 0x" << std::hex << reinterpret_cast<uintptr_t>(caller) << std::dec << ".";
 		}
 		output << std::endl;
-		return skip;
+	}
+
+	bool DataHandler::skipOffMainThread(const char* route, const Cell* cell, const void* caller) {
+		if (mwse::native::Registry::get().isMainThread()) {
+			return false;
+		}
+
+		std::ostringstream text;
+		text << "Skipped " << route << " on thread " << GetCurrentThreadId() << " (off the main thread): a change of the player's cell belongs to the main thread.";
+		logCellChange(text.str(), cell, caller);
+		return true;
+	}
+
+	bool DataHandler::skipCellChangeOf(const char* route, const Reference* target, const Cell* cell, const void* caller) {
+		if (skipOffMainThread(route, cell, caller)) {
+			return true;
+		}
+
+		const auto worldController = WorldController::get();
+		const auto mobilePlayer = worldController ? worldController->getMobilePlayer() : nullptr;
+		if (!mobilePlayer || target != mobilePlayer->reference) {
+			return false;
+		}
+		return skipCellChange(route, cell, caller);
+	}
+
+	bool DataHandler::skipCellChange(const char* route, const Cell* cell, const void* caller, bool engineLoadStep) {
+		if (skipOffMainThread(route, cell, caller)) {
+			return true;
+		}
+		if (cellLoadDepth == 0) {
+			return false;
+		}
+
+		const bool fromEngine = isEngineAddress(caller);
+		if (fromEngine && engineLoadStep) {
+			// The change that a load of a saved game makes is a step of that load, whoever started the load
+			// (tes3.loadGame holds the Lua state). It runs, and it is not logged.
+			return false;
+		}
+
+		std::ostringstream text;
+		if (fromEngine && !mwse::lua::LuaManager::currentThreadHoldsState()) {
+			// The engine started this change itself, with no Lua running: it runs as in the unmodified game.
+			text << "An engine change of the player's cell inside a cell load, on thread " << GetCurrentThreadId() << ", route " << route << ": not skipped.";
+			logCellChange(text.str(), cell, caller);
+			return false;
+		}
+
+		text << "Skipped " << route << " on thread " << GetCurrentThreadId() << " (inside a cell load): a change of the player's cell belongs outside a cell load.";
+		logCellChange(text.str(), cell, caller);
+		return true;
 	}
 
 	bool DataHandler::changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad, const void* caller) {

@@ -1,6 +1,6 @@
 return {
 	type = "function",
-	description = [[Positions a reference to another place. Returns false, and changes nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.]],
+	description = [[Positions a reference to another place. Returns false, and changes nothing, when called off the main thread, or when it would change the player's cell inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged. Moving any other reference is not affected by a cell load.]],
 	arguments = {{
 		name = "params",
 		type = "table",

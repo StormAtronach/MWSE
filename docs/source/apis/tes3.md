@@ -3978,7 +3978,7 @@ local played = tes3.playVoiceover({ actor = ..., voiceover = ... })
 ### `tes3.positionCell`
 <div class="search_terms" style="display: none">positioncell</div>
 
-Positions a reference to another place. Returns false, and changes nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
+Positions a reference to another place. Returns false, and changes nothing, when called off the main thread, or when it would change the player's cell inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged. Moving any other reference is not affected by a cell load.
 
 ```lua
 local executed = tes3.positionCell({ reference = ..., cell = ..., position = ..., orientation = ..., forceCellChange = ..., suppressFader = ..., teleportCompanions = ... })
@@ -4355,7 +4355,7 @@ local removedCount = tes3.removeVisualEffect({ vfx = ..., avObject = ..., serial
 ### `tes3.runLegacyScript`
 <div class="search_terms" style="display: none">runlegacyscript</div>
 
-This function will compile and run a mwscript chunk of code. This is not ideal to use, but can be used for features not yet exposed to lua. Returns false, and runs nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
+This function will compile and run a mwscript chunk of code. This is not ideal to use, but can be used for features not yet exposed to lua. Returns false, and runs nothing, when called off the main thread; the call is logged. Inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`), a command that would change the player's cell is skipped and logged, and the call still returns true.
 
 ```lua
 local executed = tes3.runLegacyScript({ script = ..., source = ..., command = ..., variables = ..., reference = ..., dialogue = ..., info = ... })

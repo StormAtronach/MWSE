@@ -462,6 +462,13 @@ namespace TES3 {
 		//     engineLoadStep: the engine's change is a step of the load of a saved game; it runs and is not logged,
 		//     also while Lua holds the state (tes3.loadGame).
 		static bool skipCellChange(const char* route, const Cell* cell, const void* caller, bool engineLoadStep = false);
+		// The thread test alone, for the routes that may move something other than the player's cell: off the main
+		// thread, writes the log line and returns true. On the main thread it returns false, inside a load or not.
+		static bool skipOffMainThread(const char* route, const Cell* cell, const void* caller);
+		// For routes that move a reference of the caller's choice: the thread test for every target, and the test of
+		// skipCellChange only when the target is the player. Any other reference may move at any depth.
+		static bool skipCellChangeOf(const char* route, const Reference* target, const Cell* cell, const void* caller);
+		static void logCellChange(const std::string& text, const Cell* cell, const void* caller);
 		static void firePlayerCellChanged(Cell* previousCell, bool gameLoad);
 
 		void updateCollisionGroupsForActiveCells(bool force = true, bool isResettingData = false, bool resetCollisionGroups = true);
