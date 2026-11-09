@@ -1859,7 +1859,7 @@ function tes3.modStatistic(params) end
 --- @field limit? boolean *Default*: `false`. If set, the attribute won't rise above 100 or fall below 0.
 --- @field limitToBase? boolean *Default*: `false`. If set, the attribute's current value won't rise above its base value. Useful for health, magicka, and fatigue.
 
---- Starts a new game. Off the main thread, the call is skipped and logged.
+--- Starts a new game. Returns false, and changes nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
 --- @return boolean executed No description yet available.
 function tes3.newGame() end
 
@@ -1999,7 +1999,7 @@ function tes3.playVoiceover(params) end
 --- @field actor tes3mobileActor|tes3mobileCreature|tes3mobileNPC|tes3mobilePlayer|tes3reference|string The actor to play a voiceover.
 --- @field voiceover tes3.voiceover|integer|string Maps to [`tes3.voiceover`](https://mwse.github.io/MWSE/references/voiceovers/) constants.
 
---- Positions a reference to another place. Off the main thread, the change is skipped and logged.
+--- Positions a reference to another place. Returns false, and changes nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
 --- @param params tes3.positionCell.params This table accepts the following values:
 --- 
 --- `reference?`: tes3reference|tes3mobileActor|tes3mobileCreature|tes3mobileNPC|tes3mobilePlayer|string — *Default*: `tes3.mobilePlayer`. The reference to reposition.
@@ -2250,7 +2250,7 @@ function tes3.removeVisualEffect(params) end
 --- @field serial? number *Optional*. The magic source instance serial number to remove effects for. This must be paired with a reference as well.
 --- @field reference? tes3reference|string *Optional*. The reference to remove all visual effects from. A serial may also be provided.
 
---- This function will compile and run a mwscript chunk of code. This is not ideal to use, but can be used for features not yet exposed to lua. Off the main thread, the script is not run, and the call returns false.
+--- This function will compile and run a mwscript chunk of code. This is not ideal to use, but can be used for features not yet exposed to lua. Returns false, and runs nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
 --- @param params tes3.runLegacyScript.params This table accepts the following values:
 --- 
 --- `script?`: tes3script|string — *Default*: `tes3.worldController.scriptCompileAndRun`. The base script to base the execution from.

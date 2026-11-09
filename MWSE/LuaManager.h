@@ -88,6 +88,8 @@ namespace mwse::lua {
 		// Lua-bound static functions.
 		static void lua_print(sol::object object);
 
+		// True while Lua code runs on this thread with the state held (an event handler, a timer, a script).
+		static bool currentThreadHoldsState();
 
 	private:
 		LuaManager();

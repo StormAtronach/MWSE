@@ -3,6 +3,7 @@
 #include "Log.h"
 #include "LuaManager.h"
 #include "LuaUtil.h"
+#include "MemoryUtil.h"
 
 #include "LuaAddSoundEvent.h"
 #include "LuaAddTempSoundEvent.h"
@@ -238,7 +239,12 @@ namespace TES3 {
 		float* pLowestZInCurrentCell = reinterpret_cast<float*>(0x7B217C);
 		float previousLowestZInCurrentCell = *pLowestZInCurrentCell;
 
-		bool loaded = TES3_NonDynamicData_loadGameInGame(this, eventFileName.c_str());
+		// A saved game builds the scene nodes of its references before its own change of cell.
+		bool loaded = false;
+		{
+			const DataHandler::CellLoadScope scope;
+			loaded = TES3_NonDynamicData_loadGameInGame(this, eventFileName.c_str());
+		}
 
 		// Bugfix: In interior, restore previous lowestZInCurrentCell if has been reset.
 		if (loaded && TES3::DataHandler::get()->currentInteriorCell != nullptr) {
@@ -289,7 +295,11 @@ namespace TES3 {
 			eventFileName += ".ess";
 		}
 
-		bool loaded = TES3_NonDynamicData_loadGameMainMenu(this, eventFileName.c_str());
+		bool loaded = false;
+		{
+			const DataHandler::CellLoadScope scope;
+			loaded = TES3_NonDynamicData_loadGameMainMenu(this, eventFileName.c_str());
+		}
 
 		// Pass a follow-up event if we successfully loaded and clear timers.
 		if (loaded) {
@@ -1077,13 +1087,108 @@ namespace TES3 {
 	}
 
 	const auto TES3_cellChange = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, Cell*, int)>(0x45CEF0);
-	bool DataHandler::skipCellChangeOffMainThread(const char* route, const Cell* cell, const void* caller) {
-		if (mwse::native::Registry::get().isMainThread()) {
+	unsigned int DataHandler::cellLoadDepth = 0;
+
+	DataHandler::CellLoadScope::CellLoadScope() {
+		cellLoadDepth++;
+	}
+
+	DataHandler::CellLoadScope::~CellLoadScope() {
+		cellLoadDepth--;
+	}
+
+	const auto TES3_DataHandler_cellChangeToInterior = reinterpret_cast<void(__thiscall*)(DataHandler*, Cell*, NI::Point3*)>(0x489050);
+	void DataHandler::cellChangeToInteriorInScope(Cell* cell, NI::Point3* position) {
+		const CellLoadScope scope;
+		TES3_DataHandler_cellChangeToInterior(this, cell, position);
+	}
+
+	const auto TES3_DataHandler_cellChangeToExterior = reinterpret_cast<void(__thiscall*)(DataHandler*, NI::Point3*)>(0x4897E0);
+	void DataHandler::cellChangeToExteriorInScope(NI::Point3* position) {
+		const CellLoadScope scope;
+		TES3_DataHandler_cellChangeToExterior(this, position);
+	}
+
+	const auto TES3_DataHandler_loadStartingExteriorCells = reinterpret_cast<void(__thiscall*)(DataHandler*, NI::Point3*, bool)>(0x485610);
+	void DataHandler::loadStartingExteriorCellsInScope(NI::Point3* position, bool flag) {
+		const CellLoadScope scope;
+		TES3_DataHandler_loadStartingExteriorCells(this, position, flag);
+	}
+
+	int DataHandler::updateCellThreadLoaderInScope(NI::Point3* position) {
+		const CellLoadScope scope;
+		return updateCellThreadLoader(position);
+	}
+
+	void DataHandler::installCellLoadScopes() {
+		struct Wrap {
+			DWORD site;
+			DWORD engineFunction;
+			DWORD wrap;
+		};
+
+		auto cellChangeToInterior = &DataHandler::cellChangeToInteriorInScope;
+		auto cellChangeToExterior = &DataHandler::cellChangeToExteriorInScope;
+		auto loadStartingExteriorCells = &DataHandler::loadStartingExteriorCellsInScope;
+		const DWORD interiorWrap = *reinterpret_cast<DWORD*>(&cellChangeToInterior);
+		const DWORD exteriorWrap = *reinterpret_cast<DWORD*>(&cellChangeToExterior);
+		const DWORD startingWrap = *reinterpret_cast<DWORD*>(&loadStartingExteriorCells);
+
+		// The engine's bulk loaders, at every call site. The three calls of updateCellThreadLoader are wrapped in PatchUtil.cpp.
+		const Wrap wraps[] = {
+			{ 0x41A58F, 0x489050, interiorWrap }, // initStartingCell, an interior start
+			{ 0x45CC04, 0x489050, interiorWrap },
+			{ 0x45CFBC, 0x489050, interiorWrap },
+			{ 0x48D4E0, 0x489050, interiorWrap }, // testCellsCycle
+			{ 0x5FB418, 0x489050, interiorWrap }, // game_startNewGame
+			{ 0x45CC3D, 0x4897E0, exteriorWrap },
+			{ 0x45CFF5, 0x4897E0, exteriorWrap },
+			{ 0x48D507, 0x4897E0, exteriorWrap }, // testCellsCycle
+			{ 0x41A6D6, 0x485610, startingWrap }, // initStartingCell, the exterior start of a new game
+		};
+		for (const auto& wrap : wraps) {
+			if (!se::memory::genCallEnforced(wrap.site, wrap.engineFunction, wrap.wrap)) {
+				mwse::log::getLog() << "[MWSE] The cell load depth is not held at 0x" << std::hex << wrap.site << std::dec << ": the call there is not the expected one." << std::endl;
+			}
+		}
+	}
+
+	bool DataHandler::isEngineAddress(const void* address) {
+		static const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleA(nullptr));
+		static const auto size = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew)->OptionalHeader.SizeOfImage;
+		const auto value = reinterpret_cast<uintptr_t>(address);
+		return value >= base && value < base + size;
+	}
+
+	bool DataHandler::skipCellChange(const char* route, const Cell* cell, const void* caller, bool engineLoadStep) {
+		const bool onMainThread = mwse::native::Registry::get().isMainThread();
+		const char* reason = nullptr;
+		bool skip = true;
+		if (!onMainThread) {
+			reason = "off the main thread";
+		}
+		else if (cellLoadDepth > 0) {
+			reason = "inside a cell load";
+			if (isEngineAddress(caller) && !mwse::lua::LuaManager::currentThreadHoldsState()) {
+				// The engine started this change itself, with no Lua running: it runs as in the unmodified game.
+				// The change that a load of a saved game makes is a step of that load and is not logged.
+				if (engineLoadStep) {
+					return false;
+				}
+				skip = false;
+			}
+		}
+		else {
 			return false;
 		}
 
 		auto& output = mwse::log::getLog();
-		output << "[MWSE] Skipped " << route << " on thread " << GetCurrentThreadId() << ": a change of the player's cell belongs to the main thread.";
+		if (skip) {
+			output << "[MWSE] Skipped " << route << " on thread " << GetCurrentThreadId() << " (" << reason << "): a change of the player's cell belongs to the main thread, outside a cell load.";
+		}
+		else {
+			output << "[MWSE] An engine change of the player's cell inside a cell load, on thread " << GetCurrentThreadId() << ", route " << route << ": not skipped.";
+		}
 		if (cell) {
 			output << " Target cell '" << cell->getDisplayName() << "'.";
 		}
@@ -1091,11 +1196,11 @@ namespace TES3 {
 			output << " Called from 0x" << std::hex << reinterpret_cast<uintptr_t>(caller) << std::dec << ".";
 		}
 		output << std::endl;
-		return true;
+		return skip;
 	}
 
 	bool DataHandler::changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad, const void* caller) {
-		if (skipCellChangeOffMainThread("the change of the player's cell", cell, caller ? caller : _ReturnAddress())) {
+		if (skipCellChange("the change of the player's cell", cell, caller ? caller : _ReturnAddress(), gameLoad)) {
 			return false;
 		}
 
@@ -1107,7 +1212,7 @@ namespace TES3 {
 
 	const auto TES3_cellChangeWithCompanions = reinterpret_cast<void(__cdecl*)(NI::Point3, NI::Point3, Cell*)>(0x45C9B0);
 	bool DataHandler::changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell, const void* caller) {
-		if (skipCellChangeOffMainThread("the change of the player's cell with companions", cell, caller ? caller : _ReturnAddress())) {
+		if (skipCellChange("the change of the player's cell with companions", cell, caller ? caller : _ReturnAddress())) {
 			return false;
 		}
 

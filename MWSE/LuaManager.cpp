@@ -344,6 +344,10 @@ namespace mwse::lua {
 	LuaManager LuaManager::singleton;
 	thread_local unsigned int LuaManager::threadStateLockHolds = 0;
 
+	bool LuaManager::currentThreadHoldsState() {
+		return threadStateLockHolds > 0;
+	}
+
 	// Fast-access mapping from a TES3::Script* to its associated Lua module.
 	static std::unordered_map<unsigned long, sol::object> scriptOverrides;
 

@@ -372,7 +372,7 @@ function mwscript.playSound(params) end
 --- @field reference? tes3reference|tes3mobileActor|tes3mobileCreature|tes3mobileNPC|tes3mobilePlayer|string *Optional*. The target reference for this command to be executed on. Defaults to the normal script execution reference.
 --- @field sound tes3sound|string No description yet available.
 
---- Set [`tes3reference.position`](https://mwse.github.io/MWSE/types/tes3reference/#position) or [`tes3mobileActor.position`](https://mwse.github.io/MWSE/types/tes3mobileActor/#position) to desired new position instead, or use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell). Wrapper for the `Position` mwscript function. Off the main thread, the change is skipped and logged.
+--- Set [`tes3reference.position`](https://mwse.github.io/MWSE/types/tes3reference/#position) or [`tes3mobileActor.position`](https://mwse.github.io/MWSE/types/tes3mobileActor/#position) to desired new position instead, or use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell). Wrapper for the `Position` mwscript function. Returns false, and changes nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
 --- @deprecated
 --- @param params mwscript.position.params This table accepts the following values:
 --- 
@@ -399,7 +399,7 @@ function mwscript.position(params) end
 --- @field z? number *Default*: `0`. No description yet available.
 --- @field rotation? number *Default*: `0`. No description yet available.
 
---- Use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell) instead. Wrapper for the `PositionCell` mwscript function. Off the main thread, the change is skipped and logged.
+--- Use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell) instead. Wrapper for the `PositionCell` mwscript function. Returns false, and changes nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
 --- @deprecated
 --- @param params mwscript.positionCell.params This table accepts the following values:
 --- 

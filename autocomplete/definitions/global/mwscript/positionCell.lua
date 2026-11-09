@@ -1,6 +1,6 @@
 return {
 	type = "function",
-	description = [[Use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell) instead. Wrapper for the `PositionCell` mwscript function. Off the main thread, the change is skipped and logged.]],
+	description = [[Use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell) instead. Wrapper for the `PositionCell` mwscript function. Returns false, and changes nothing, when called off the main thread or inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.]],
 	arguments = {{
 		name = "params",
 		type = "table",

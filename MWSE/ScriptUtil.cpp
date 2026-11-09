@@ -451,7 +451,7 @@ namespace mwse::mwscript {
 	}
 
 	bool Position(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation) {
-		if (TES3::DataHandler::skipCellChangeOffMainThread("mwscript.position", nullptr, nullptr)) {
+		if (TES3::DataHandler::skipCellChange("mwscript.position", nullptr, nullptr)) {
 			return false;
 		}
 
@@ -481,7 +481,7 @@ namespace mwse::mwscript {
 	}
 
 	bool PositionCell(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation, const char* cell) {
-		if (TES3::DataHandler::skipCellChangeOffMainThread("mwscript.positionCell", nullptr, nullptr)) {
+		if (TES3::DataHandler::skipCellChange("mwscript.positionCell", nullptr, nullptr)) {
 			return false;
 		}
 

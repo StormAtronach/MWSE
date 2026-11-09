@@ -566,7 +566,7 @@ namespace mwse::lua {
 	}
 
 	bool newGame() {
-		if (TES3::DataHandler::skipCellChangeOffMainThread("tes3.newGame", nullptr, nullptr)) {
+		if (TES3::DataHandler::skipCellChange("tes3.newGame", nullptr, nullptr)) {
 			return false;
 		}
 
@@ -2282,7 +2282,7 @@ namespace mwse::lua {
 	}
 
 	bool runLegacyScript(sol::table params) {
-		if (TES3::DataHandler::skipCellChangeOffMainThread("tes3.runLegacyScript", nullptr, nullptr)) {
+		if (TES3::DataHandler::skipCellChange("tes3.runLegacyScript", nullptr, nullptr)) {
 			return false;
 		}
 
@@ -2403,7 +2403,7 @@ namespace mwse::lua {
 	}
 
 	bool positionCell(sol::table params) {
-		if (TES3::DataHandler::skipCellChangeOffMainThread("tes3.positionCell", nullptr, nullptr)) {
+		if (TES3::DataHandler::skipCellChange("tes3.positionCell", nullptr, nullptr)) {
 			return false;
 		}
 
