@@ -1169,12 +1169,14 @@ namespace TES3 {
 		}
 		else if (cellLoadDepth > 0) {
 			reason = "inside a cell load";
-			if (isEngineAddress(caller) && !mwse::lua::LuaManager::currentThreadHoldsState()) {
+			const bool fromEngine = isEngineAddress(caller);
+			if (fromEngine && engineLoadStep) {
+				// The change that a load of a saved game makes is a step of that load, whoever started the load
+				// (tes3.loadGame holds the Lua state). It runs, and it is not logged.
+				return false;
+			}
+			if (fromEngine && !mwse::lua::LuaManager::currentThreadHoldsState()) {
 				// The engine started this change itself, with no Lua running: it runs as in the unmodified game.
-				// The change that a load of a saved game makes is a step of that load and is not logged.
-				if (engineLoadStep) {
-					return false;
-				}
 				skip = false;
 			}
 		}

@@ -459,7 +459,8 @@ namespace TES3 {
 		//   - a caller outside Morrowind.exe (a null caller is one) is skipped;
 		//   - an engine caller while a Lua handler holds the state is skipped (Lua reached the engine site);
 		//   - an engine caller with no Lua running is only logged, and its change runs as in the unmodified game.
-		//     engineLoadStep: the change is a step of the load of a saved game; it is not logged.
+		//     engineLoadStep: the engine's change is a step of the load of a saved game; it runs and is not logged,
+		//     also while Lua holds the state (tes3.loadGame).
 		static bool skipCellChange(const char* route, const Cell* cell, const void* caller, bool engineLoadStep = false);
 		static void firePlayerCellChanged(Cell* previousCell, bool gameLoad);
 
