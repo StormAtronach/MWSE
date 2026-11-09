@@ -126,7 +126,7 @@ namespace NI {
 		loadBinary = ConvertThisCall<decltype(loadBinary)>(&CopyTransformController::loadBinary);
 		saveBinary = ConvertThisCall<decltype(saveBinary)>(&CopyTransformController::saveBinary);
 		isEqual = ConvertThisCall<decltype(isEqual)>(&CopyTransformController::isEqual);
-		targetIsRequiredType = ConvertThisCall<decltype(targetIsRequiredType)>(&CopyTransformController::getRunTimeTypeInformation);
+		targetIsRequiredType = ConvertThisCall<decltype(targetIsRequiredType)>(&CopyTransformController::targetIsRequiredType);
 		update = ConvertThisCall<decltype(update)>(&CopyTransformController::update);
 	}
 
