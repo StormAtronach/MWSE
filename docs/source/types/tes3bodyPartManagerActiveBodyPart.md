@@ -46,7 +46,7 @@ The raw item object this active body part pertains to.
 ### `node`
 <div class="search_terms" style="display: none">node</div>
 
-The NiNode-derived object for the object's loaded mesh.
+*Read-only*. The NiNode-derived object for the object's loaded mesh.
 
 **Returns**:
 
