@@ -78,8 +78,10 @@
 --- @field upDirection tes3vector3 *Read-only*. The normalized up or Z direction vector of the reference.
 tes3reference = {}
 
---- Causes this reference to activate another. This will lead them to go through doors, pick up items, etc.
---- @param reference tes3reference The other reference to activate.
+--- Causes this reference to activate another. This reference is the activator: it must be an actor with a mobile (the player, or a loaded NPC or creature). This will lead it to go through doors, pick up items, etc.
+---
+--- [Examples available in online documentation](https://mwse.github.io/MWSE/types/tes3reference/#activate).
+--- @param reference tes3reference The reference to activate.
 function tes3reference:activate(reference) end
 
 --- Unsets a bit in the reference's action data attachment
