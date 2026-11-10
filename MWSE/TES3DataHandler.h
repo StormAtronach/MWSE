@@ -62,6 +62,9 @@ namespace TES3 {
 
 		NI::Node* loadNIF(const char* path);
 		bool releaseNIF(NI::Node* rootNode);
+		// Takes the place of the engine's ReleaseByFilePath (0x4EE350). The model half runs under the lock. A path that is
+		// not in the model cache goes to the keyframe half, which the lock does not cover.
+		bool releaseByFilePath(const char* path);
 
 		static std::mutex NIFsMutex;
 		static std::atomic<unsigned int> NIFsLockCalls;
@@ -73,6 +76,12 @@ namespace TES3 {
 		NIF* findNIF(const char* path) const;
 		// Needs the lock. Returns the link that points at the node of the entry with this root, or null.
 		NIFMap::Node** findNIFLink(const NI::Node* rootNode) const;
+		// Needs the lock. Returns the link that points at the node of the entry with this path, or null.
+		NIFMap::Node** findNIFLink(const char* path) const;
+		// Needs the lock. Lowers the use count of the entry behind the link. At zero it unlinks the node and returns it.
+		NIFMap::Node* releaseNIFLink(NIFMap::Node** link);
+		// Takes no lock. Frees a node that is unlinked, with its key and its model. Freeing a model can release another.
+		void destroyNIFNode(NIFMap::Node* unlinked);
 	};
 	static_assert(sizeof(MeshData::NIF) == 0xC, "TES3::MeshData::NIF failed size validation");
 

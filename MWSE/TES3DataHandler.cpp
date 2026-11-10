@@ -172,13 +172,31 @@ namespace TES3 {
 		return rootNode;
 	}
 
+	MeshData::NIFMap::Node* MeshData::releaseNIFLink(NIFMap::Node** link) {
+		const auto node = *link;
+		if (--node->value->useCount != 0) {
+			return nullptr;
+		}
+
+		*link = node->nextNode;
+		--NIFs->count;
+		return node;
+	}
+
+	void MeshData::destroyNIFNode(NIFMap::Node* unlinked) {
+		const auto entry = unlinked->value;
+		NIFs->deleteKeyValuePair(&unlinked->keyValuePair);
+		se::memory::_delete(unlinked);
+		TES3_MeshData_NIF_dtor(entry);
+		se::memory::_delete(entry);
+	}
+
 	bool MeshData::releaseNIF(NI::Node* rootNode) {
 		if (!rootNode) {
 			return false;
 		}
 
 		NIFMap::Node* unlinked = nullptr;
-		NIF* entry = nullptr;
 		{
 			const auto lock = lockNIFs();
 			const auto link = findNIFLink(rootNode);
@@ -186,22 +204,51 @@ namespace TES3 {
 				return false;
 			}
 
-			unlinked = *link;
-			entry = unlinked->value;
-			if (--entry->useCount != 0) {
-				return true;
-			}
-
-			*link = unlinked->nextNode;
-			--NIFs->count;
+			unlinked = releaseNIFLink(link);
 		}
 
 		// The key, the node and the model are freed outside the lock. Freeing a model can release another through this function.
-		NIFs->deleteKeyValuePair(&unlinked->keyValuePair);
-		se::memory::_delete(unlinked);
-		TES3_MeshData_NIF_dtor(entry);
-		se::memory::_delete(entry);
+		if (unlinked) {
+			destroyNIFNode(unlinked);
+		}
 		return true;
+	}
+
+	MeshData::NIFMap::Node** MeshData::findNIFLink(const char* path) const {
+		for (auto link = &NIFs->buckets[NIFs->hashKey(path)]; *link; link = &(*link)->nextNode) {
+			if (NIFs->compareKey(path, (*link)->key)) {
+				return link;
+			}
+		}
+		return nullptr;
+	}
+
+	bool MeshData::releaseByFilePath(const char* path) {
+		// The model half. A path that names a model never reaches the keyframe half, as in the engine.
+		NIFMap::Node* unlinked = nullptr;
+		{
+			const auto lock = lockNIFs();
+			const auto link = findNIFLink(path);
+			if (link) {
+				unlinked = releaseNIFLink(link);
+				if (!unlinked) {
+					return true;
+				}
+			}
+		}
+
+		if (unlinked) {
+			destroyNIFNode(unlinked);
+			return true;
+		}
+
+		// The keyframe half: find the entry by its path, then release it as ReleaseKF (0x4EE720) does. The keyframe map has no lock.
+		for (auto node = KFs->buckets[KFs->hashKey(path)]; node; node = node->nextNode) {
+			if (KFs->compareKey(path, node->key)) {
+				return node->value && releaseKeyframes(node->value);
+			}
+		}
+		return false;
 	}
 
 	struct LoadTempMeshNode {
