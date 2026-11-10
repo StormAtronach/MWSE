@@ -450,7 +450,11 @@ namespace mwse::mwscript {
 		setScriptSecondObject(cachedSecondObject);
 	}
 
-	void Position(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation) {
+	bool Position(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation) {
+		if (TES3::DataHandler::skipCellChangeOf("mwscript.position", reference, nullptr, nullptr)) {
+			return false;
+		}
+
 		// Cache script variables.
 		float cachedDestinationX = getScriptDestinationX();
 		float cachedDestinationY = getScriptDestinationY();
@@ -473,9 +477,14 @@ namespace mwse::mwscript {
 		setScriptTargetRotationY(cachedRotationY);
 		setScriptTargetRotationZ(cachedRotationZ);
 		TES3::DataHandler::suppressThreadLoad = false;
+		return true;
 	}
 
-	void PositionCell(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation, const char* cell) {
+	bool PositionCell(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation, const char* cell) {
+		if (TES3::DataHandler::skipCellChangeOf("mwscript.positionCell", reference, nullptr, nullptr)) {
+			return false;
+		}
+
 		// Cache script variables.
 		float cachedDestinationX = getScriptDestinationX();
 		float cachedDestinationY = getScriptDestinationY();
@@ -501,6 +510,7 @@ namespace mwse::mwscript {
 		setScriptTargetRotationZ(cachedRotationZ);
 		setScriptSecondObject(cachedSecondObject);
 		TES3::DataHandler::suppressThreadLoad = false;
+		return true;
 	}
 
 	void RemoveItem(TES3::Script* script, TES3::Reference* reference, TES3::BaseObject* itemTemplate, long count) {

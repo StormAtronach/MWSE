@@ -126,9 +126,10 @@ namespace mwse::mwscript {
 
 	void PlaySound(TES3::Script* script, TES3::Reference* reference, TES3::Sound* sound);
 
-	void Position(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation);
+	// Off the main thread, Position and PositionCell skip the change, write one log line and return false.
+	bool Position(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation);
 
-	void PositionCell(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation, const char* cell);
+	bool PositionCell(TES3::Script* script, TES3::Reference* reference, float x, float y, float z, float rotation, const char* cell);
 
 	void RemoveItem(TES3::Script* script, TES3::Reference* reference, TES3::BaseObject* itemTemplate, long count);
 

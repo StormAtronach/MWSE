@@ -565,11 +565,16 @@ namespace mwse::lua {
 		}
 	}
 
-	void newGame() {
+	bool newGame() {
+		if (TES3::DataHandler::skipCellChange("tes3.newGame", nullptr, nullptr)) {
+			return false;
+		}
+
 		auto cachedSuppressState = true;
 		std::swap(TES3::DataHandler::suppressThreadLoad, cachedSuppressState);
 		tes3::startNewGame();
 		std::swap(TES3::DataHandler::suppressThreadLoad, cachedSuppressState);
+		return true;
 	}
 
 	bool isModActive(const char* modName) {
@@ -2277,6 +2282,12 @@ namespace mwse::lua {
 	}
 
 	bool runLegacyScript(sol::table params) {
+		// Only the thread test: a legacy command may move the player's cell or something else, and at an engine site the
+		// change of the player's cell is tested again, so a command that moves it inside a cell load is skipped there.
+		if (TES3::DataHandler::skipOffMainThread("tes3.runLegacyScript", nullptr, nullptr)) {
+			return false;
+		}
+
 		TES3::Script* script = getOptionalParamScript(params, "script");
 		if (script == nullptr) {
 			script = TES3::WorldController::get()->scriptCompileAndRun;
@@ -2394,6 +2405,10 @@ namespace mwse::lua {
 	}
 
 	bool positionCell(sol::table params) {
+		if (TES3::DataHandler::skipOffMainThread("tes3.positionCell", nullptr, nullptr)) {
+			return false;
+		}
+
 		auto worldController = TES3::WorldController::get();
 		auto macp = worldController->getMobilePlayer();
 		auto playerRef = macp->reference;
@@ -2450,19 +2465,25 @@ namespace mwse::lua {
 			bool suppressThreadLoad = true;
 			std::swap(TES3::DataHandler::suppressThreadLoad, suppressThreadLoad);
 
+			// The members skip a change inside a cell load. A call that moves the player's cell is the only one they refuse.
+			bool changed = false;
 			sol::optional<bool> teleportCompanions = params["teleportCompanions"];
 			if (teleportCompanions.value_or(true) && macp->listFriendlyActors.size() > 0) {
-				TES3::DataHandler::changePlayerCellWithCompanions(position.value(), orientation.value(), cell);
+				changed = TES3::DataHandler::changePlayerCellWithCompanions(position.value(), orientation.value(), cell);
 			}
 			else {
 				sol::optional<bool> flag = params["flag"];
-				TES3::DataHandler::changePlayerCell(position.value(), orientation.value(), cell, flag.value_or(true));
+				changed = TES3::DataHandler::changePlayerCell(position.value(), orientation.value(), cell, flag.value_or(true));
 			}
 
 			std::swap(TES3::DataHandler::suppressThreadLoad, suppressThreadLoad);
 
 			if (suppressFader) {
 				TES3::DataHandler::get()->useCellTransitionFader = faderInitialState;
+			}
+
+			if (!changed) {
+				return false;
 			}
 		}
 		else {

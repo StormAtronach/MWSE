@@ -386,6 +386,18 @@ namespace TES3 {
 		static bool dontThreadLoad;
 		static bool suppressThreadLoad;
 
+		// The depth of the engine's bulk cell loads on the main thread (cellChangeToInterior, cellChangeToExterior,
+		// updateCellThreadLoader, the starting exterior load and the load of a saved game). It is raised by CellLoadScope.
+		// A change of the player's cell inside a load is skipped (see skipCellChange). Main thread only: the cell worker
+		// never gets past the thread test, so the count needs no atomic.
+		static unsigned int cellLoadDepth;
+		struct CellLoadScope {
+			CellLoadScope();
+			~CellLoadScope();
+			CellLoadScope(const CellLoadScope&) = delete;
+			CellLoadScope& operator=(const CellLoadScope&) = delete;
+		};
+
 		// Get singleton.
 		_declspec (dllexport) static DataHandler * get();
 
@@ -425,10 +437,38 @@ namespace TES3 {
 		static void updateDynamicLightingForPointLight(NI::PointLight* light, Cell* cell, int radius, int lightFlags, int isTorch);
 		static void updateLightHelper(NI::PointLight* light, Reference* reference, int radius, int lightFlags, int highPriority);
 
+		// The engine's bulk cell loads, each with a CellLoadScope around the engine function. MWSE installs them at
+		// every call site of the engine function, so that cellLoadDepth does not depend on the callers.
+		void cellChangeToInteriorInScope(Cell* cell, NI::Point3* position);
+		void cellChangeToExteriorInScope(NI::Point3* position);
+		void loadStartingExteriorCellsInScope(NI::Point3* position, bool flag);
+		int updateCellThreadLoaderInScope(NI::Point3* position);
+		static void installCellLoadScopes();
+
 		// The player's change of cell (0x45CEF0, 0x45C9B0), then the native event of it
 		// (MWSE_NATIVE_EVENT_PLAYER_CELL_CHANGED). `gameLoad`: the load of a saved game made it.
-		static void changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad = false);
-		static void changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell);
+		// Off the main thread, or inside a cell load (see skipCellChange), they skip the change, write one log line
+		// and return false. `caller` is the address that the log line names: the caller's own when null.
+		static bool changePlayerCell(NI::Point3 position, NI::Point3 orientation, Cell* cell, bool updateCollision, bool gameLoad = false, const void* caller = nullptr);
+		static bool changePlayerCellWithCompanions(NI::Point3 position, NI::Point3 orientation, Cell* cell, const void* caller = nullptr);
+		// True when the address lies in Morrowind.exe: the call came from one of the engine's own call sites.
+		static bool isEngineAddress(const void* address);
+		// A change of the player's cell belongs to the main thread, and not inside a cell load. Writes one log line
+		// that names the reason, the route, the thread, the cell and the caller (each may be null), and returns true:
+		// the route skips its change. Inside a load:
+		//   - a caller outside Morrowind.exe (a null caller is one) is skipped;
+		//   - an engine caller while a Lua handler holds the state is skipped (Lua reached the engine site);
+		//   - an engine caller with no Lua running is only logged, and its change runs as in the unmodified game.
+		//     engineLoadStep: the engine's change is a step of the load of a saved game; it runs and is not logged,
+		//     also while Lua holds the state (tes3.loadGame).
+		static bool skipCellChange(const char* route, const Cell* cell, const void* caller, bool engineLoadStep = false);
+		// The thread test alone, for the routes that may move something other than the player's cell: off the main
+		// thread, writes the log line and returns true. On the main thread it returns false, inside a load or not.
+		static bool skipOffMainThread(const char* route, const Cell* cell, const void* caller);
+		// For routes that move a reference of the caller's choice: the thread test for every target, and the test of
+		// skipCellChange only when the target is the player. Any other reference may move at any depth.
+		static bool skipCellChangeOf(const char* route, const Reference* target, const Cell* cell, const void* caller);
+		static void logCellChange(const std::string& text, const Cell* cell, const void* caller);
 		static void firePlayerCellChanged(Cell* previousCell, bool gameLoad);
 
 		void updateCollisionGroupsForActiveCells(bool force = true, bool isResettingData = false, bool resetCollisionGroups = true);

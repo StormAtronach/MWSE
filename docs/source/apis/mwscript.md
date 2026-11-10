@@ -550,7 +550,7 @@ local result = mwscript.playSound({ reference = ..., sound = ... })
 ### `mwscript.position`
 <div class="search_terms" style="display: none">position</div>
 
-Set [`tes3reference.position`](https://mwse.github.io/MWSE/types/tes3reference/#position) or [`tes3mobileActor.position`](https://mwse.github.io/MWSE/types/tes3mobileActor/#position) to desired new position instead, or use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell). Wrapper for the `Position` mwscript function.
+Set [`tes3reference.position`](https://mwse.github.io/MWSE/types/tes3reference/#position) or [`tes3mobileActor.position`](https://mwse.github.io/MWSE/types/tes3mobileActor/#position) to desired new position instead, or use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell). Wrapper for the `Position` mwscript function. Returns false, and changes nothing, when called off the main thread, or when the reference is the player and the call is inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
 
 ```lua
 local executed = mwscript.position({ reference = ..., cell = ..., x = ..., y = ..., z = ..., rotation = ... })
@@ -575,7 +575,7 @@ local executed = mwscript.position({ reference = ..., cell = ..., x = ..., y = .
 ### `mwscript.positionCell`
 <div class="search_terms" style="display: none">positioncell</div>
 
-Use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell) instead. Wrapper for the `PositionCell` mwscript function.
+Use [`tes3.positionCell()`](https://mwse.github.io/MWSE/apis/tes3/#tes3positioncell) instead. Wrapper for the `PositionCell` mwscript function. Returns false, and changes nothing, when called off the main thread, or when the reference is the player and the call is inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`); the call is logged.
 
 ```lua
 local executed = mwscript.positionCell({ reference = ..., cell = ..., x = ..., y = ..., z = ..., rotation = ... })

@@ -1,6 +1,6 @@
 return {
 	type = "function",
-	description = [[This function will compile and run a mwscript chunk of code. This is not ideal to use, but can be used for features not yet exposed to lua.]],
+	description = [[This function will compile and run a mwscript chunk of code. This is not ideal to use, but can be used for features not yet exposed to lua. Returns false, and runs nothing, when called off the main thread; the call is logged. Inside a cell load (for example from `referenceSceneNodeCreated` or `referenceActivated`), a command that would change the player's cell is skipped and logged, and the call still returns true.]],
 	arguments = {{
 		name = "params",
 		type = "table",

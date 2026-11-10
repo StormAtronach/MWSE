@@ -2,6 +2,7 @@
 
 #include "Log.h"
 #include "MemoryUtil.h"
+#include "NativeApi.h"
 #include "mwOffsets.h"
 
 #include "TES3Actor.h"
@@ -2348,7 +2349,8 @@ namespace mwse::patch {
 		sHoistDoneProps = false;
 		sHoistDoneFx = false;
 		sHoistDoneLand = false;
-		const int result = dataHandler->updateCellThreadLoader(position);
+		// The cell load depth (TES3::DataHandler::cellLoadDepth) rides on this wrap.
+		const int result = dataHandler->updateCellThreadLoaderInScope(position);
 		sHoistBatchActive = false;
 		return result;
 	}
@@ -3297,6 +3299,10 @@ namespace mwse::patch {
 		// after the handler (a Lua-held node, at the close of the Lua state) returns its index to the freed buffer.
 		genCallEnforced(0x6F34D6, 0x727530, reinterpret_cast<DWORD>(&NI::DynamicEffect::keepIndexListAtExit));
 
+		// Patch: Send every change of the player's cell through the members that test the thread.
+		mwse::native::installPlayerCellRedirect();
+		TES3::DataHandler::installCellLoadScopes();
+
 		// Patch: Store last read key state.
 		auto InputController_readButtonPressed = &TES3::InputController::readButtonPressed;
 		genCallEnforced(0x58E8C6, 0x406950, *reinterpret_cast<DWORD*>(&InputController_readButtonPressed));
@@ -3325,9 +3331,12 @@ namespace mwse::patch {
 		auto WorldControllerRenderTarget_getFogOfWarPixelCached = &TES3::WorldControllerRenderTarget::getFogOfWarPixelCached;
 		genCallEnforced(0x5EE104, 0x42FE20, *reinterpret_cast<DWORD*>(&WorldControllerRenderTarget_getFogOfWarPixelCached)); // isPositionUncoveredByFogOfWar
 		genCallEnforced(0x5EE286, 0x42FE20, *reinterpret_cast<DWORD*>(&WorldControllerRenderTarget_getFogOfWarPixelCached));
-		genCallEnforced(0x41B771, 0x486620, reinterpret_cast<DWORD>(&PatchOptimizeMapUpdates_WrapCellThreadLoader)); // mainLoop
-		genCallEnforced(0x485731, 0x486620, reinterpret_cast<DWORD>(&PatchOptimizeMapUpdates_WrapCellThreadLoader)); // sub_485680
-		genCallEnforced(0x48915D, 0x486620, reinterpret_cast<DWORD>(&PatchOptimizeMapUpdates_WrapCellThreadLoader)); // cellChangeToInterior
+		// These three sites also hold the cell load depth (TES3::DataHandler::cellLoadDepth): mainLoop, sub_485680, cellChangeToInterior.
+		for (const DWORD site : { 0x41B771, 0x485731, 0x48915D }) {
+			if (!genCallEnforced(site, 0x486620, reinterpret_cast<DWORD>(&PatchOptimizeMapUpdates_WrapCellThreadLoader))) {
+				mwse::log::getLog() << "[MWSE] The cell load depth is not held at 0x" << std::hex << site << std::dec << ": the call there is not the expected one." << std::endl;
+			}
+		}
 		genCallEnforced(0x420089, 0x6EB0E0, reinterpret_cast<DWORD>(&PatchOptimizeMapUpdates_WrapUpdateProperties));
 		genCallEnforced(0x420090, 0x6EB380, reinterpret_cast<DWORD>(&PatchOptimizeMapUpdates_WrapUpdateEffects));
 		genCallEnforced(0x42009E, 0x6EB000, reinterpret_cast<DWORD>(&PatchOptimizeMapUpdates_WrapUpdate));

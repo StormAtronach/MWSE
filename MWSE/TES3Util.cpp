@@ -260,8 +260,12 @@ namespace mwse::tes3 {
 			luaManager.getThreadSafeStateHandle().triggerEvent(new mwse::lua::event::LoadGameEvent(nullptr, false, true));
 		}
 
-		// Call original function.
-		TES3_newGame();
+		// Call original function. A new game builds the scene nodes of its first references before and during its own
+		// cell load, so the whole call holds the cell load depth.
+		{
+			const TES3::DataHandler::CellLoadScope scope;
+			TES3_newGame();
+		}
 
 		// Clear any timers.
 		TES3::DataHandler::previousVisitedCell = nullptr;

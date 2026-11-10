@@ -23,6 +23,10 @@ namespace mwse::native {
 		DWORD m_engineFunction;
 	};
 
+	// Sends the 15 engine call sites of the player's change of cell to the members of TES3::DataHandler, at
+	// MWSE's start. The members skip a change off the main thread and fire the native event.
+	void installPlayerCellRedirect();
+
 	// An engine point with native listeners. The list of listeners is replaced as a whole at a
 	// change, so a fire on any thread takes no lock.
 	class EventPoint {
