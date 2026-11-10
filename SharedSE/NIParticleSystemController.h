@@ -64,6 +64,23 @@ namespace NI {
 #endif
 	};
 	static_assert(sizeof(ParticleSystemController) == 0xC4, "NI::ParticleSystemController failed size validation");
+
+	struct BSPArrayController : ParticleSystemController {
+		TArray<Pointer<Object>> arrayEmitters; // 0xC4
+
+		Object* createClone();
+
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR) && SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR > 0
+		static constexpr auto _ctor = reinterpret_cast<BSPArrayController*(__thiscall*)(BSPArrayController*)>(SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR);
+#endif
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY) && SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY > 0
+		static constexpr auto _copy = reinterpret_cast<void(__thiscall*)(const BSPArrayController*, BSPArrayController*)>(SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY);
+#endif
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_CREATECLONE) && SE_NI_BSPARRAYCONTROLLER_FNADDR_CREATECLONE > 0
+		static constexpr auto _createClone = reinterpret_cast<Object*(__thiscall*)(BSPArrayController*)>(SE_NI_BSPARRAYCONTROLLER_FNADDR_CREATECLONE);
+#endif
+	};
+	static_assert(sizeof(BSPArrayController) == 0xDC, "NI::BSPArrayController failed size validation");
 }
 
 #if defined(SE_USE_LUA) && SE_USE_LUA == 1

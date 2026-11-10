@@ -3251,6 +3251,8 @@ namespace mwse::patch {
 		// Patch: Give each clone of a particle system its own particle data, for every particle data type.
 		auto NiParticleSystemController_createClone = &NI::ParticleSystemController::createClone;
 		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&NiParticleSystemController_createClone));
+		auto NiBSPArrayController_createClone = &NI::BSPArrayController::createClone;
+		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiBSPArrayController, offsetof(NI::Object_vTable, createClone), DWORD(NI::BSPArrayController::_createClone), *reinterpret_cast<DWORD*>(&NiBSPArrayController_createClone));
 
 		// Patch: Allow global audio.
 		if (Configuration::UseGlobalAudio) {

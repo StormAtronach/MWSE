@@ -37,6 +37,17 @@ namespace NI {
 			particles->setModelData(data->createCopy());
 		}
 	}
+
+	Object* BSPArrayController::createClone() {
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR) && SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR > 0 && defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY) && SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY > 0 && defined(SE_MEMORY_FNADDR_NEW) && SE_MEMORY_FNADDR_NEW > 0
+		const auto clone = _ctor(se::memory::_new<BSPArrayController>());
+		_copy(this, clone);
+		giveTargetCopyOfModelData();
+		return clone;
+#else
+		throw not_implemented_exception();
+#endif
+	}
 }
 
 #if defined(SE_USE_LUA) && SE_USE_LUA == 1
