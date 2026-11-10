@@ -780,7 +780,7 @@ local string = myObject:__tojson()
 ### `activate`
 <div class="search_terms" style="display: none">activate</div>
 
-Causes this reference to activate another. This will lead them to go through doors, pick up items, etc.
+Causes this reference to activate another. This reference is the activator: it must be an actor with a mobile (the player, or a loaded NPC or creature). This will lead it to go through doors, pick up items, etc.
 
 ```lua
 myObject:activate(reference)
@@ -788,7 +788,25 @@ myObject:activate(reference)
 
 **Parameters**:
 
-* `reference` ([tes3reference](../types/tes3reference.md)): The other reference to activate.
+* `reference` ([tes3reference](../types/tes3reference.md)): The reference to activate.
+
+??? example "Example: The player activates a door"
+
+	The player is the activator. The door in the player's cell opens, or takes the player through it.
+
+	```lua
+	-- The first door in the player's cell.
+	local door
+	for reference in tes3.player.cell:iterateReferences(tes3.objectType.door, false) do
+		door = reference
+		break
+	end
+	
+	if door then
+		tes3.player:activate(door)
+	end
+
+	```
 
 ***
 

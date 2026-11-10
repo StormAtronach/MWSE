@@ -1437,6 +1437,16 @@ namespace TES3 {
 	}
 
 	void Reference::activate_lua(Reference* target) {
+		if (target == nullptr) {
+			throw std::invalid_argument("tes3reference:activate: the target reference is nil.");
+		}
+
+		const auto mobile = getAttachedMobileObject();
+		if (mobile == nullptr || !mobile->isActor()) {
+			throw std::invalid_argument(std::string("tes3reference:activate: the activator '") + getObjectID()
+				+ "' is not an actor with a mobile. The activator must be the player, or an NPC or a creature that is loaded.");
+		}
+
 		target->activate(this);
 	}
 
