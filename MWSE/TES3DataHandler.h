@@ -41,7 +41,9 @@ namespace TES3 {
 		using NIFMap = NI::HashMap<const char*, NIF*>;
 
 		NIFMap* NIFs; // 0x0
-		NI::HashMap<const char*, KeyframeDefinition*>* KFs; // 0x4
+		using KeyframeMap = NI::HashMap<const char*, KeyframeDefinition*>;
+
+		KeyframeMap* KFs; // 0x4
 
 		MeshData() = delete;
 		~MeshData() = delete;
@@ -61,6 +63,8 @@ namespace TES3 {
 		//
 
 		NI::Node* loadNIF(const char* path);
+		// Sets inserted when this call linked the model into the cache. The load and the flag are one hold of the lock.
+		NI::Node* loadNIF(const char* path, bool& inserted);
 		bool releaseNIF(NI::Node* rootNode);
 		// Takes the place of the engine's ReleaseByFilePath (0x4EE350). The model half runs under the lock. A path that is
 		// not in the model cache goes to the keyframe half, which the lock does not cover.
@@ -82,6 +86,35 @@ namespace TES3 {
 		NIFMap::Node* releaseNIFLink(NIFMap::Node** link);
 		// Takes no lock. Frees a node that is unlinked, with its key and its model. Freeing a model can release another.
 		void destroyNIFNode(NIFMap::Node* unlinked);
+
+		//
+		// The keyframe map with a lock over its operations.
+		//
+		// These members take the place of the engine's LoadAnimKF (0x4EE200) and ReleaseKF (0x4EE720), and of the copies of the
+		// release that eight engine functions hold inline (see AnimatedObject). The lock covers the find, the count change, the
+		// insert and the unlink. The parse and the destruction of a keyframe file run outside it.
+		//
+		// The hold rule: no Lua event and no engine call inside a hold. The model lock and this lock are never held together.
+		//
+
+		KeyframeDefinition* loadAnimKF(const char* path, const char* sequenceName);
+		// Raises the use count of a keyframe file the caller holds already.
+		void retainKeyframes(KeyframeDefinition* kfData);
+
+		static std::mutex KFsMutex;
+		static std::atomic<unsigned int> KFsLockCalls;
+		static std::atomic<unsigned int> KFsLockContended;
+
+		// Takes the lock. Counts the calls, and the calls that waited for another thread.
+		std::unique_lock<std::mutex> lockKFs();
+		// Needs the lock. Returns the link that points at the node of the entry with this path, or null.
+		KeyframeMap::Node** findKFLink(const char* path) const;
+		// Needs the lock. Lowers the use count of the entry behind the link. At zero it unlinks the node and returns it.
+		KeyframeMap::Node* releaseKFLink(KeyframeMap::Node** link);
+		// Takes no lock. Frees a node that is unlinked, with its key. The keyframe file stays.
+		void destroyKFNode(KeyframeMap::Node* unlinked);
+		// Takes no lock. Frees a keyframe file that is not in the map: its names, sequences and groups.
+		void destroyKeyframes(KeyframeDefinition* kfData);
 	};
 	static_assert(sizeof(MeshData::NIF) == 0xC, "TES3::MeshData::NIF failed size validation");
 
