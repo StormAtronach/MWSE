@@ -4,6 +4,7 @@
 #include "MemoryUtil.h"
 
 #include "NIQuaternion.h"
+#include "NIRTTI.h"
 
 namespace NI {
 	Particles::Particles(ParticlesData* data) : TriBasedGeometry(data) {
@@ -86,6 +87,64 @@ namespace NI {
 		return {};
 	}
 
+	void ParticlesData::replaceSizes(float* _sizes) {
+#if defined(SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES) && SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES > 0
+		_replaceSizes(this, _sizes);
+#else
+		throw not_implemented_exception();
+#endif
+	}
+
+	void ParticlesData::setActiveParticleCount(unsigned short count) {
+#if defined(SE_NI_PARTICLESDATA_FNADDR_SETACTIVEPARTICLECOUNT) && SE_NI_PARTICLESDATA_FNADDR_SETACTIVEPARTICLECOUNT > 0
+		_setActiveParticleCount(this, count);
+#else
+		throw not_implemented_exception();
+#endif
+	}
+
+	Pointer<ParticlesData> ParticlesData::createCopy() const {
+#if defined(SE_MEMORY_FNADDR_NEW) && SE_MEMORY_FNADDR_NEW > 0
+		const auto copyArray = [this]<typename T>(const T* source) -> T* {
+			if (source == nullptr) {
+				return nullptr;
+			}
+			const auto copy = se::memory::_new<T>(vertexCount);
+			std::copy_n(source, vertexCount, copy);
+			return copy;
+		};
+
+		const auto vertices = copyArray(vertex);
+		const auto colors = copyArray(color);
+
+		Pointer<ParticlesData> copy;
+		if (isInstanceOfType(RTTIStaticPtr::NiAutoNormalParticlesData)) {
+			copy = AutoNormalParticlesData::create(vertexCount, vertices, colors);
+		}
+		else if (isInstanceOfType(RTTIStaticPtr::NiRotatingParticlesData)) {
+			const auto rotatingCopy = RotatingParticlesData::create(vertexCount, vertices, copyArray(normal), colors);
+			const auto rotations = static_cast<const RotatingParticlesData*>(this)->rotations;
+			if (rotations) {
+				rotatingCopy->replaceRotations(copyArray(rotations));
+			}
+			copy = rotatingCopy;
+		}
+		else {
+			copy = create(vertexCount, vertices, copyArray(normal), colors);
+		}
+
+		copy->radius = radius;
+		copy->setActiveParticleCount(activeCount);
+		if (sizes) {
+			copy->replaceSizes(copyArray(sizes));
+		}
+
+		return copy;
+#else
+		throw not_implemented_exception();
+#endif
+	}
+
 	Pointer<AutoNormalParticlesData> AutoNormalParticlesData::create(unsigned short _vertexCount, Point3* _vertices, PackedColor* _colors) {
 #if defined(SE_NI_AUTONORMALPARTICLESDATA_FNADDR_CTOR) && SE_NI_AUTONORMALPARTICLESDATA_FNADDR_CTOR > 0 && defined(SE_MEMORY_FNADDR_NEW) && SE_MEMORY_FNADDR_NEW > 0
 		const auto NI_AutoNormalParticlesData_ctor = reinterpret_cast<void(__thiscall*)(AutoNormalParticlesData*, unsigned short, Point3*, PackedColor*)>(SE_NI_AUTONORMALPARTICLESDATA_FNADDR_CTOR);
@@ -114,11 +173,30 @@ namespace NI {
 #endif
 	}
 
+	Pointer<RotatingParticlesData> RotatingParticlesData::create(unsigned short _vertexCount, Point3* _vertices, Point3* _normals, PackedColor* _colors) {
+#if defined(SE_NI_ROTATINGPARTICLESDATA_FNADDR_CTOR) && SE_NI_ROTATINGPARTICLESDATA_FNADDR_CTOR > 0 && defined(SE_MEMORY_FNADDR_NEW) && SE_MEMORY_FNADDR_NEW > 0
+		const auto NI_RotatingParticlesData_ctor = reinterpret_cast<void(__thiscall*)(RotatingParticlesData*, unsigned short, Point3*, Point3*, PackedColor*)>(SE_NI_ROTATINGPARTICLESDATA_FNADDR_CTOR);
+		auto ptr = se::memory::_new<RotatingParticlesData>();
+		NI_RotatingParticlesData_ctor(ptr, _vertexCount, _vertices, _normals, _colors);
+		return ptr;
+#else
+		throw not_implemented_exception();
+#endif
+	}
+
 	std::span<NI::Quaternion> RotatingParticlesData::getRotations() {
 		if (rotations) {
 			return std::span(rotations, vertexCount);
 		}
 		return {};
+	}
+
+	void RotatingParticlesData::replaceRotations(Quaternion* _rotations) {
+#if defined(SE_NI_ROTATINGPARTICLESDATA_FNADDR_REPLACEROTATIONS) && SE_NI_ROTATINGPARTICLESDATA_FNADDR_REPLACEROTATIONS > 0
+		_replaceRotations(this, _rotations);
+#else
+		throw not_implemented_exception();
+#endif
 	}
 
 	Pointer<RotatingParticlesData> RotatingParticles::getModelData() const {

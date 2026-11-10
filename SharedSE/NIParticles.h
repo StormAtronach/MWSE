@@ -13,6 +13,20 @@ namespace NI {
 		static Pointer<ParticlesData> create(unsigned short vertexCount, bool hasNormals, bool hasColors);
 
 		std::span<float> getSizes();
+
+		// Takes ownership of the array.
+		void replaceSizes(float* sizes);
+		void setActiveParticleCount(unsigned short count);
+
+		// A copy of the same type with its own arrays.
+		Pointer<ParticlesData> createCopy() const;
+
+#if defined(SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES) && SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES > 0
+		static constexpr auto _replaceSizes = reinterpret_cast<void(__thiscall*)(ParticlesData*, float*)>(SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES);
+#endif
+#if defined(SE_NI_PARTICLESDATA_FNADDR_SETACTIVEPARTICLECOUNT) && SE_NI_PARTICLESDATA_FNADDR_SETACTIVEPARTICLECOUNT > 0
+		static constexpr auto _setActiveParticleCount = reinterpret_cast<void(__thiscall*)(ParticlesData*, unsigned short)>(SE_NI_PARTICLESDATA_FNADDR_SETACTIVEPARTICLECOUNT);
+#endif
 	};
 	static_assert(sizeof(ParticlesData) == 0x44, "NI::ParticlesData failed size validation");
 
@@ -25,7 +39,16 @@ namespace NI {
 	struct RotatingParticlesData : ParticlesData {
 		Quaternion* rotations; // 0x44
 
+		static Pointer<RotatingParticlesData> create(unsigned short vertexCount, Point3* vertices, Point3* normals, PackedColor* colors);
+
 		std::span<NI::Quaternion> getRotations();
+
+		// Takes ownership of the array.
+		void replaceRotations(Quaternion* rotations);
+
+#if defined(SE_NI_ROTATINGPARTICLESDATA_FNADDR_REPLACEROTATIONS) && SE_NI_ROTATINGPARTICLESDATA_FNADDR_REPLACEROTATIONS > 0
+		static constexpr auto _replaceRotations = reinterpret_cast<void(__thiscall*)(RotatingParticlesData*, Quaternion*)>(SE_NI_ROTATINGPARTICLESDATA_FNADDR_REPLACEROTATIONS);
+#endif
 	};
 	static_assert(sizeof(RotatingParticlesData) == 0x48, "NI::RotatingParticlesData failed size validation");
 

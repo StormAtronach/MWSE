@@ -47,6 +47,21 @@ namespace NI {
 		float lastEmit; // 0xC0
 
 		std::span<PerParticleData> getPerParticleData();
+
+		Object* createClone();
+
+		// The target gets a copy of its particle data. The old data stays with the clone of the target.
+		void giveTargetCopyOfModelData();
+
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR > 0
+		static constexpr auto _ctor = reinterpret_cast<ParticleSystemController*(__thiscall*)(ParticleSystemController*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR);
+#endif
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_COPY) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_COPY > 0
+		static constexpr auto _copy = reinterpret_cast<void(__thiscall*)(const ParticleSystemController*, ParticleSystemController*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_COPY);
+#endif
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE > 0
+		static constexpr auto _createClone = reinterpret_cast<Object*(__thiscall*)(ParticleSystemController*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE);
+#endif
 	};
 	static_assert(sizeof(ParticleSystemController) == 0xC4, "NI::ParticleSystemController failed size validation");
 }

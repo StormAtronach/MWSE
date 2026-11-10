@@ -50,6 +50,7 @@
 #include "NIPoint3.h"
 #include "NIFlipController.h"
 #include "NILinesData.h"
+#include "NIParticleSystemController.h"
 #include "NIPick.h"
 #include "NIPointLight.h"
 #include "NISortAdjustNode.h"
@@ -3246,6 +3247,10 @@ namespace mwse::patch {
 			auto NiFlipController_clone = &NI::FlipController::copy;
 			genCallEnforced(0x715D26, DWORD(NI::FlipController::_copy), *reinterpret_cast<DWORD*>(&NiFlipController_clone));
 		}
+
+		// Patch: Give each clone of a particle system its own particle data, for every particle data type.
+		auto NiParticleSystemController_createClone = &NI::ParticleSystemController::createClone;
+		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&NiParticleSystemController_createClone));
 
 		// Patch: Allow global audio.
 		if (Configuration::UseGlobalAudio) {
