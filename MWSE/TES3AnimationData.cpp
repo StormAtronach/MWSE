@@ -719,7 +719,7 @@ namespace TES3 {
 			customSources.pop_back();
 			return false;
 		}
-		kfData->refCount++;
+		DataHandler::get()->nonDynamicData->meshData->retainKeyframes(kfData);
 
 		// Named anims are indexed separately, using namedGroups as a lookup table.
 		for (auto& namedGroup : kfData->namedGroups) {
@@ -1192,27 +1192,12 @@ namespace TES3 {
 		genCallEnforced(0x4E6E03, 0x46B830, *reinterpret_cast<DWORD*>(&AnimationDataExtended_dtor));
 		genCallEnforced(0x4E893D, 0x46B830, *reinterpret_cast<DWORD*>(&AnimationDataExtended_dtor));
 
-		// Override KeyframeDefinition creation with MWSE extended struct.
-		auto KeyframeDefinitionExtended_ctor = &KeyframeDefinition::ctor;
-		writeByteUnprotected(0x4EE24F + 1, sizeof(KeyframeDefinition));
-		genCallEnforced(0x4EE26D, 0x4EDBF0, *reinterpret_cast<DWORD*>(&KeyframeDefinitionExtended_ctor));
+		// MeshData::loadAnimKF makes the extended KeyframeDefinition: it takes the place of the engine's LoadAnimKF.
 		// Override parser call in KeyframeDefinition ctor.
 		writePatchCodeUnprotected(0x4EDC87, reinterpret_cast<BYTE*>(&patchKeyframeDefinitionCallParser), patchKeyframeDefinitionCallParser_size);
 
-		// Override KeyframeDefinition destruction to clean up extended members.
-		auto KeyframeDefinitionExtended_dtor = &KeyframeDefinition::dtor;
-		genCallEnforced(0x4F021F, 0x4EDCD0, *reinterpret_cast<DWORD*>(&KeyframeDefinitionExtended_dtor)); // AnimatedObject::dtor
-		genCallEnforced(0x4F05AD, 0x4EDCD0, *reinterpret_cast<DWORD*>(&KeyframeDefinitionExtended_dtor)); // AnimatedObject::loadModel
-		// The remaining engine teardown paths inline the vanilla dtor logic instead of calling it.
-		// Redirect their final delete of the keyframe definition to also clean up extended members.
-		const auto KeyframeDefinition_deleteAfterInlinedDtor = reinterpret_cast<DWORD>(&KeyframeDefinition::deleteAfterInlinedDtor);
-		genCallEnforced(0x4EE550, 0x727530, KeyframeDefinition_deleteAfterInlinedDtor); // ModelLoader::releaseByFilePath
-		genCallEnforced(0x4EE800, 0x727530, KeyframeDefinition_deleteAfterInlinedDtor); // ModelLoader::releaseKeyframes
-		genCallEnforced(0x4F03B5, 0x727530, KeyframeDefinition_deleteAfterInlinedDtor); // AnimatedObject::freeAnimData
-		genCallEnforced(0x4F04EB, 0x727530, KeyframeDefinition_deleteAfterInlinedDtor); // AnimatedObject::loadModel
-		genCallEnforced(0x4F073D, 0x727530, KeyframeDefinition_deleteAfterInlinedDtor); // AnimatedObject::reloadBaseModel
-		genCallEnforced(0x4F0A3F, 0x727530, KeyframeDefinition_deleteAfterInlinedDtor); // AnimatedObject::releaseClone
-		genCallEnforced(0x4F0B88, 0x727530, KeyframeDefinition_deleteAfterInlinedDtor); // AnimatedObject::replaceVisualNode
+		// The destruction of a KeyframeDefinition runs through MeshData::destroyKeyframes, which calls KeyframeDefinition::dtor
+		// to clean up the extended members. Every engine path that freed one is a member now (MeshData and AnimatedObject).
 
 		// Extend AnimationGroup dtor to clean up memory.
 		auto AnimationGroup_dtor = &AnimationGroup::dtor;

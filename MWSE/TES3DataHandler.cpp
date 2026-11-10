@@ -52,7 +52,6 @@ namespace TES3 {
 	// MeshData
 	//
 
-	const auto TES3_MeshData_loadMesh = reinterpret_cast<NI::Node * (__thiscall*)(MeshData*, const char*)>(0x4EE0A0);
 	NI::Node* MeshData::loadMesh(const char* rawPath) {
 		// Allow changing the desired mesh path.
 		std::string meshPath = rawPath;
@@ -64,14 +63,12 @@ namespace TES3 {
 			}
 		}
 
-		// Check the loaded NIF count to see if anything new was loaded.
-		auto countBefore = NIFs->count;
+		// Actually load the mesh. The load says whether it linked the model into the cache.
+		bool inserted = false;
+		auto mesh = loadNIF(meshPath.c_str(), inserted);
 
-		// Actually load the mesh.
-		auto mesh = TES3_MeshData_loadMesh(this, meshPath.c_str());
-
-		// If the loaded mesh count increased, send off an event to 
-		if (mesh && NIFs->count > countBefore && mwse::lua::event::MeshLoadedEvent::getEventEnabled()) {
+		// If this load added the model to the cache, send off an event to 
+		if (mesh && inserted && mwse::lua::event::MeshLoadedEvent::getEventEnabled()) {
 			mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle().triggerEvent(new mwse::lua::event::MeshLoadedEvent(meshPath.c_str(), mesh));
 		}
 
@@ -123,6 +120,13 @@ namespace TES3 {
 	const auto TES3_MeshData_NIF_dtor = reinterpret_cast<void(__thiscall*)(MeshData::NIF*)>(0x4EDB70);
 
 	NI::Node* MeshData::loadNIF(const char* path) {
+		bool inserted = false;
+		return loadNIF(path, inserted);
+	}
+
+	NI::Node* MeshData::loadNIF(const char* path, bool& inserted) {
+		inserted = false;
+
 		// A hit: the find and the count change are one hold, so that a release cannot free the entry between them.
 		{
 			const auto lock = lockNIFs();
@@ -160,6 +164,7 @@ namespace TES3 {
 				NIFs->buckets[bucket] = node;
 				++NIFs->count;
 				rootNode = parsed->rootNode;
+				inserted = true;
 			}
 		}
 
@@ -243,13 +248,26 @@ namespace TES3 {
 			return true;
 		}
 
-		// The keyframe half: find the entry by its path, then release it as ReleaseKF (0x4EE720) does. The keyframe map has no lock.
-		for (auto node = KFs->buckets[KFs->hashKey(path)]; node; node = node->nextNode) {
-			if (KFs->compareKey(path, node->key)) {
-				return node->value && releaseKeyframes(node->value);
+		// The keyframe half: the find, the count change and the unlink are one hold, as in ReleaseKF (0x4EE720).
+		KeyframeMap::Node* unlinkedKF = nullptr;
+		KeyframeDefinition* kfData = nullptr;
+		{
+			const auto lock = lockKFs();
+			const auto link = findKFLink(path);
+			if (!link || !(*link)->value) {
+				return false;
+			}
+
+			kfData = (*link)->value;
+			unlinkedKF = releaseKFLink(link);
+			if (!unlinkedKF) {
+				return true;
 			}
 		}
-		return false;
+
+		destroyKFNode(unlinkedKF);
+		destroyKeyframes(kfData);
+		return true;
 	}
 
 	struct LoadTempMeshNode {
@@ -291,7 +309,6 @@ namespace TES3 {
 		return mesh;
 	}
 
-	const auto TES3_MeshData_loadKeyframes = reinterpret_cast<KeyframeDefinition * (__thiscall*)(MeshData*, const char*, const char*)>(0x4EE200);
 	KeyframeDefinition* MeshData::loadKeyframes(const char* path, const char* sequenceName) {
 		// Allow changing the desired mesh path.
 		std::string keyframesPath = path;
@@ -309,7 +326,7 @@ namespace TES3 {
 		path = keyframesPath.c_str();
 		sequenceName = sequenceString.c_str();
 
-		auto keyframeDefinition = TES3_MeshData_loadKeyframes(this, path, sequenceName);
+		auto keyframeDefinition = loadAnimKF(path, sequenceName);
 		if (keyframeDefinition && mwse::lua::event::KeyframesLoadedEvent::getEventEnabled()) {
 			mwse::lua::LuaManager::getInstance().getThreadSafeStateHandle().triggerEvent(
 				new mwse::lua::event::KeyframesLoadedEvent(path, sequenceName, keyframeDefinition)
@@ -324,9 +341,159 @@ namespace TES3 {
 		return TES3_MeshData_releaseMesh(this, rootNode);
 	}
 
-	const auto TES3_MeshData_releaseKeyframes = reinterpret_cast<bool (__thiscall*)(MeshData*, KeyframeDefinition*)>(0x4EE720);
+	std::mutex MeshData::KFsMutex;
+	std::atomic<unsigned int> MeshData::KFsLockCalls;
+	std::atomic<unsigned int> MeshData::KFsLockContended;
+
+	std::unique_lock<std::mutex> MeshData::lockKFs() {
+		std::unique_lock<std::mutex> lock(KFsMutex, std::try_to_lock);
+		++KFsLockCalls;
+		if (!lock.owns_lock()) {
+			// One line at the 1st, 10th, 100th, ... call that met another thread.
+			const auto contended = ++KFsLockContended;
+			for (auto power = 1u; power <= contended; power *= 10) {
+				if (power == contended) {
+					mwse::log::getLog() << "[MWSE] Keyframe map lock: " << contended << " waits of " << KFsLockCalls.load() << " calls." << std::endl;
+					break;
+				}
+			}
+			lock.lock();
+		}
+		return lock;
+	}
+
+	MeshData::KeyframeMap::Node** MeshData::findKFLink(const char* path) const {
+		for (auto link = &KFs->buckets[KFs->hashKey(path)]; *link; link = &(*link)->nextNode) {
+			if (KFs->compareKey(path, (*link)->key)) {
+				return link;
+			}
+		}
+		return nullptr;
+	}
+
+	MeshData::KeyframeMap::Node* MeshData::releaseKFLink(KeyframeMap::Node** link) {
+		const auto node = *link;
+		if (--node->value->refCount != 0) {
+			return nullptr;
+		}
+
+		*link = node->nextNode;
+		--KFs->count;
+		return node;
+	}
+
+	void MeshData::destroyKFNode(KeyframeMap::Node* unlinked) {
+		KFs->deleteKeyValuePair(&unlinked->keyValuePair);
+		se::memory::_delete(unlinked);
+	}
+
+	void MeshData::destroyKeyframes(KeyframeDefinition* kfData) {
+		// The names, the sequences and the groups, then the extended members, then the block.
+		kfData->dtor();
+		se::memory::_delete(kfData);
+	}
+
+	KeyframeDefinition* MeshData::loadAnimKF(const char* path, const char* sequenceName) {
+		// A hit: the find and the count change are one hold, so that a release cannot free the entry between them.
+		{
+			const auto lock = lockKFs();
+			const auto link = findKFLink(path);
+			if (link && (*link)->value) {
+				const auto existing = (*link)->value;
+				++existing->refCount;
+				return existing;
+			}
+		}
+
+		// A miss: the parse runs outside the lock. A parse with no lower sequence is returned and not linked, as in the engine.
+		const auto parsed = se::memory::_new<KeyframeDefinition>();
+		const auto newKF = parsed ? parsed->ctor(path, sequenceName) : nullptr;
+		if (!newKF || !newKF->sequences[0]) {
+			return newKF;
+		}
+
+		// The node and its key are made before the lock, so that the hold has no allocation in it.
+		const auto node = se::memory::_new<KeyframeMap::Node>();
+		const char* key = path;
+		KeyframeDefinition* value = newKF;
+		KFs->makeKeyValuePair(&node->keyValuePair, key, value);
+
+		// Another thread can have parsed the same file meanwhile. Then its entry stays, and our parse is freed.
+		KeyframeDefinition* existing = nullptr;
+		KeyframeMap::Node* replaced = nullptr;
+		{
+			const auto lock = lockKFs();
+			const auto link = findKFLink(path);
+			if (link && (*link)->value) {
+				existing = (*link)->value;
+				++existing->refCount;
+			}
+			else {
+				// An entry with no file is taken out, as the engine replaced its pair.
+				if (link) {
+					replaced = *link;
+					*link = replaced->nextNode;
+					--KFs->count;
+				}
+
+				const auto bucket = KFs->hashKey(key);
+				node->nextNode = KFs->buckets[bucket];
+				KFs->buckets[bucket] = node;
+				++KFs->count;
+			}
+		}
+
+		if (replaced) {
+			destroyKFNode(replaced);
+		}
+
+		if (existing) {
+			destroyKFNode(node);
+			destroyKeyframes(newKF);
+			return existing;
+		}
+
+		return newKF;
+	}
+
+	void MeshData::retainKeyframes(KeyframeDefinition* kfData) {
+		const auto lock = lockKFs();
+		++kfData->refCount;
+	}
+
 	bool MeshData::releaseKeyframes(KeyframeDefinition* kfData) {
-		return TES3_MeshData_releaseKeyframes(this, kfData);
+		if (!kfData) {
+			return false;
+		}
+
+		// The count change and the unlink are one hold. The entry is found by its file name, as in the engine.
+		KeyframeMap::Node* unlinked = nullptr;
+		bool found = false;
+		{
+			const auto lock = lockKFs();
+			if (--kfData->refCount != 0) {
+				return true;
+			}
+
+			const auto link = findKFLink(kfData->filename);
+			if (link) {
+				found = true;
+				unlinked = *link;
+				*link = unlinked->nextNode;
+				--KFs->count;
+			}
+		}
+
+		// The log line, the node and the file are handled outside the lock.
+		if (found) {
+			destroyKFNode(unlinked);
+		}
+		else {
+			mwse::tes3::logAndShowError("File \"%s\" not released from the ModelLoader.\r\n", kfData->filename);
+		}
+
+		destroyKeyframes(kfData);
+		return true;
 	}
 
 	//

@@ -375,6 +375,9 @@
     <ClInclude Include="TES3Activator.h">
       <Filter>Header Files\DataAdapters\TES3\Objects\Other</Filter>
     </ClInclude>
+    <ClInclude Include="TES3AnimatedObject.h">
+      <Filter>Header Files\DataAdapters\TES3\Objects\Other</Filter>
+    </ClInclude>
     <ClInclude Include="TES3Door.h">
       <Filter>Header Files\DataAdapters\TES3\Objects\Other</Filter>
     </ClInclude>
@@ -3096,6 +3099,9 @@
       <Filter>Source Files\Lua</Filter>
     </ClCompile>
     <ClCompile Include="TES3Activator.cpp">
+      <Filter>Source Files\DataAdapters\TES3</Filter>
+    </ClCompile>
+    <ClCompile Include="TES3AnimatedObject.cpp">
       <Filter>Source Files\DataAdapters\TES3</Filter>
     </ClCompile>
     <ClCompile Include="TES3Static.cpp">

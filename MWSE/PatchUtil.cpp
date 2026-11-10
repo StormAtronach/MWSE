@@ -7,6 +7,7 @@
 
 #include "TES3Actor.h"
 #include "TES3ActorAnimationController.h"
+#include "TES3AnimatedObject.h"
 #include "TES3AudioController.h"
 #include "TES3BodyPartManager.h"
 #include "TES3Cell.h"
@@ -3304,12 +3305,31 @@ namespace mwse::patch {
 		TES3::DataHandler::installCellLoadScopes();
 
 		// Patch: Put a lock over the map operations of the model cache.
-		auto MeshData_loadNIF = &TES3::MeshData::loadNIF;
+		auto MeshData_loadNIF = static_cast<NI::Node* (TES3::MeshData::*)(const char*)>(&TES3::MeshData::loadNIF);
 		genJumpUnprotected(0x4EE0A0, *reinterpret_cast<DWORD*>(&MeshData_loadNIF), 0x5);
 		auto MeshData_releaseNIF = &TES3::MeshData::releaseNIF;
 		genJumpUnprotected(0x4EE5B0, *reinterpret_cast<DWORD*>(&MeshData_releaseNIF), 0x5);
 		auto MeshData_releaseByFilePath = &TES3::MeshData::releaseByFilePath;
 		genJumpUnprotected(0x4EE350, *reinterpret_cast<DWORD*>(&MeshData_releaseByFilePath), 0x5);
+
+		// Patch: Put a lock over the map operations of the keyframe map.
+		auto MeshData_loadAnimKF = &TES3::MeshData::loadAnimKF;
+		genJumpUnprotected(0x4EE200, *reinterpret_cast<DWORD*>(&MeshData_loadAnimKF), 0x5);
+		auto MeshData_releaseKeyframes = &TES3::MeshData::releaseKeyframes;
+		genJumpUnprotected(0x4EE720, *reinterpret_cast<DWORD*>(&MeshData_releaseKeyframes), 0x5);
+		// The engine functions that hold an inline copy of the release are written again as members of AnimatedObject.
+		auto AnimatedObject_loadModel = &TES3::AnimatedObject::loadModel;
+		genJumpUnprotected(0x4F0400, *reinterpret_cast<DWORD*>(&AnimatedObject_loadModel), 0x5);
+		auto AnimatedObject_reloadBaseModel = &TES3::AnimatedObject::reloadBaseModel;
+		genJumpUnprotected(0x4F0600, *reinterpret_cast<DWORD*>(&AnimatedObject_reloadBaseModel), 0x5);
+		auto AnimatedObject_releaseClone = &TES3::AnimatedObject::releaseClone;
+		genJumpUnprotected(0x4F0890, *reinterpret_cast<DWORD*>(&AnimatedObject_releaseClone), 0x5);
+		auto AnimatedObject_replaceVisualNode = &TES3::AnimatedObject::replaceVisualNode;
+		genJumpUnprotected(0x4F0A90, *reinterpret_cast<DWORD*>(&AnimatedObject_replaceVisualNode), 0x5);
+		auto AnimatedObject_freeAnimData = &TES3::AnimatedObject::freeAnimData;
+		genJumpUnprotected(0x4F02C0, *reinterpret_cast<DWORD*>(&AnimatedObject_freeAnimData), 0x5);
+		auto AnimatedObject_dtor = &TES3::AnimatedObject::dtor;
+		genJumpUnprotected(0x4F0140, *reinterpret_cast<DWORD*>(&AnimatedObject_dtor), 0x5);
 
 		// Patch: Store last read key state.
 		auto InputController_readButtonPressed = &TES3::InputController::readButtonPressed;

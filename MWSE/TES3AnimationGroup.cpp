@@ -196,13 +196,6 @@ namespace TES3 {
 		namedGroups.~decltype(namedGroups)();
 	}
 
-	void __cdecl KeyframeDefinition::deleteAfterInlinedDtor(KeyframeDefinition* kfData) {
-		// Replaces the final delete on engine teardown paths that inline the vanilla dtor logic
-		// instead of calling it. Only the extended members still need cleaning up here.
-		kfData->destroyNamedGroups();
-		se::memory::_delete(kfData);
-	}
-
 	/// <summary>
 	/// Animation text key parser.
 	/// </summary>
