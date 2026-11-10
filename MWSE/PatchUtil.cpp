@@ -3303,6 +3303,14 @@ namespace mwse::patch {
 		mwse::native::installPlayerCellRedirect();
 		TES3::DataHandler::installCellLoadScopes();
 
+		// Patch: Put a lock over the map operations of the model cache.
+		auto MeshData_loadNIF = &TES3::MeshData::loadNIF;
+		genJumpUnprotected(0x4EE0A0, *reinterpret_cast<DWORD*>(&MeshData_loadNIF), 0x5);
+		auto MeshData_releaseNIF = &TES3::MeshData::releaseNIF;
+		genJumpUnprotected(0x4EE5B0, *reinterpret_cast<DWORD*>(&MeshData_releaseNIF), 0x5);
+		auto MeshData_releaseByFilePath = &TES3::MeshData::releaseByFilePath;
+		genJumpUnprotected(0x4EE350, *reinterpret_cast<DWORD*>(&MeshData_releaseByFilePath), 0x5);
+
 		// Patch: Store last read key state.
 		auto InputController_readButtonPressed = &TES3::InputController::readButtonPressed;
 		genCallEnforced(0x58E8C6, 0x406950, *reinterpret_cast<DWORD*>(&InputController_readButtonPressed));
