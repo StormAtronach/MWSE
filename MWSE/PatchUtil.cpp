@@ -3470,17 +3470,17 @@ namespace mwse::patch {
 
 		// Patch: Give each clone of a particle system its own particle data, for every particle data type.
 		auto NiParticleSystemController_createClone = &NI::ParticleSystemController::createClone;
-		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&NiParticleSystemController_createClone));
+		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&NiParticleSystemController_createClone));
 		auto NiBSPArrayController_createClone = &NI::BSPArrayController::createClone;
-		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiBSPArrayController, offsetof(NI::Object_vTable, createClone), DWORD(NI::BSPArrayController::_createClone), *reinterpret_cast<DWORD*>(&NiBSPArrayController_createClone));
+		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiBSPArrayController, offsetof(NI::Object_vTable, createClone), DWORD(NI::BSPArrayController::_createClone), *reinterpret_cast<DWORD*>(&NiBSPArrayController_createClone));
 
 		// Patch: Add no particle past the vertex count of the particle data.
 		// The callers of AddNewParticle: UpdateParticles (0x709A6F), which updates the new particle at 0x709A79, and
 		// SpawnParticles (0x70A224), which does not use it.
 		auto NiParticleSystemController_addNewParticle = &NI::ParticleSystemController::addNewParticle;
-		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::ParticleSystemController_vTable, addNewParticle), DWORD(NI::ParticleSystemController::_addNewParticle), *reinterpret_cast<DWORD*>(&NiParticleSystemController_addNewParticle));
+		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::ParticleSystemController_vTable, addNewParticle), DWORD(NI::ParticleSystemController::_addNewParticle), *reinterpret_cast<DWORD*>(&NiParticleSystemController_addNewParticle));
 		auto NiBSPArrayController_addNewParticle = &NI::BSPArrayController::addNewParticle;
-		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiBSPArrayController, offsetof(NI::ParticleSystemController_vTable, addNewParticle), DWORD(NI::BSPArrayController::_addNewParticle), *reinterpret_cast<DWORD*>(&NiBSPArrayController_addNewParticle));
+		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiBSPArrayController, offsetof(NI::ParticleSystemController_vTable, addNewParticle), DWORD(NI::BSPArrayController::_addNewParticle), *reinterpret_cast<DWORD*>(&NiBSPArrayController_addNewParticle));
 		auto NiParticleSystemController_updateParticle = &NI::ParticleSystemController::updateParticle;
 		genCallEnforced(0x709A79, DWORD(NI::ParticleSystemController::_particleUpdate), *reinterpret_cast<DWORD*>(&NiParticleSystemController_updateParticle));
 
