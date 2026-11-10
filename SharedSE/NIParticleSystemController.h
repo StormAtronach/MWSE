@@ -7,6 +7,12 @@
 namespace NI {
 	struct PerParticleData;
 
+	struct ParticleSystemController_vTable : TimeController_vTable {
+		void(__thiscall* computeStaticTargetBound)(ParticleSystemController*); // 0x48
+		PerParticleData* (__thiscall* addNewParticle)(ParticleSystemController*, float, float, Matrix33*, Point3*, PerParticleData*); // 0x4C
+	};
+	static_assert(sizeof(ParticleSystemController_vTable) == 0x50, "NI::ParticleSystemController's vtable failed size validation");
+
 	struct ParticleSystemController : TimeController {
 		float scaledLastTime; // 0x34
 		float speed; // 0x38
@@ -48,18 +54,58 @@ namespace NI {
 
 		std::span<PerParticleData> getPerParticleData();
 
+		Object* createClone();
+
+		// The target gets a copy of its particle data. The old data stays with the clone of the target.
+		void giveTargetCopyOfModelData();
+
+		// A new particle only when the target's particle data has a free vertex; else nullptr.
+		PerParticleData* addNewParticle(float time, float lastTime, Matrix33* targetToEmitterRotation, Point3* targetAccumulation, PerParticleData* oldParticle);
+		bool targetHasFreeVertex() const;
+
+		// Updates nothing for a particle that addNewParticle did not add.
+		void updateParticle(float time, float timeModifier, PerParticleData* particle, ParticlesData* data);
+
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_ADDNEWPARTICLE) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_ADDNEWPARTICLE > 0
+		static constexpr auto _addNewParticle = reinterpret_cast<PerParticleData*(__thiscall*)(ParticleSystemController*, float, float, Matrix33*, Point3*, PerParticleData*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_ADDNEWPARTICLE);
+#endif
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_PARTICLEUPDATE) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_PARTICLEUPDATE > 0
+		static constexpr auto _particleUpdate = reinterpret_cast<void(__thiscall*)(ParticleSystemController*, float, float, PerParticleData*, ParticlesData*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_PARTICLEUPDATE);
+#endif
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR > 0
+		static constexpr auto _ctor = reinterpret_cast<ParticleSystemController*(__thiscall*)(ParticleSystemController*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR);
+#endif
 #if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_COPY) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_COPY > 0
-		void copy(ParticleSystemController* to) const;
 		static constexpr auto _copy = reinterpret_cast<void(__thiscall*)(const ParticleSystemController*, ParticleSystemController*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_COPY);
 #endif
-
-#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE > 0 && defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR > 0
-		Object* createCloneNoLeak();
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE > 0
 		static constexpr auto _createClone = reinterpret_cast<Object*(__thiscall*)(ParticleSystemController*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CREATECLONE);
-		static constexpr auto _ctor = reinterpret_cast<ParticleSystemController*(__thiscall*)(ParticleSystemController*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_CTOR);
 #endif
 	};
 	static_assert(sizeof(ParticleSystemController) == 0xC4, "NI::ParticleSystemController failed size validation");
+
+	struct BSPArrayController : ParticleSystemController {
+		TArray<Pointer<Object>> arrayEmitters; // 0xC4
+
+		Object* createClone();
+
+		// A new particle only when the target's particle data has a free vertex; else nullptr.
+		PerParticleData* addNewParticle(float time, float lastTime, Matrix33* targetToEmitterRotation, Point3* targetAccumulation, PerParticleData* oldParticle);
+
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_ADDNEWPARTICLE) && SE_NI_BSPARRAYCONTROLLER_FNADDR_ADDNEWPARTICLE > 0
+		static constexpr auto _addNewParticle = reinterpret_cast<PerParticleData*(__thiscall*)(BSPArrayController*, float, float, Matrix33*, Point3*, PerParticleData*)>(SE_NI_BSPARRAYCONTROLLER_FNADDR_ADDNEWPARTICLE);
+#endif
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR) && SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR > 0
+		static constexpr auto _ctor = reinterpret_cast<BSPArrayController*(__thiscall*)(BSPArrayController*)>(SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR);
+#endif
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY) && SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY > 0
+		static constexpr auto _copy = reinterpret_cast<void(__thiscall*)(const BSPArrayController*, BSPArrayController*)>(SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY);
+#endif
+#if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_CREATECLONE) && SE_NI_BSPARRAYCONTROLLER_FNADDR_CREATECLONE > 0
+		static constexpr auto _createClone = reinterpret_cast<Object*(__thiscall*)(BSPArrayController*)>(SE_NI_BSPARRAYCONTROLLER_FNADDR_CREATECLONE);
+#endif
+	};
+	static_assert(sizeof(BSPArrayController) == 0xDC, "NI::BSPArrayController failed size validation");
 }
 
 #if defined(SE_USE_LUA) && SE_USE_LUA == 1

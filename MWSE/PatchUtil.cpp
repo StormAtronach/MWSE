@@ -3464,12 +3464,25 @@ namespace mwse::patch {
 		genCallEnforced(0x43C249, 0x6EAD20, reinterpret_cast<DWORD>(TES3::WeatherController::getPrecipitationProperty));
 		genCallEnforced(0x43C5EC, 0x6EAD20, reinterpret_cast<DWORD>(TES3::WeatherController::getPrecipitationProperty));
 
-		// Patch: Fix a memory leak when a particle system with plain particle data is cloned.
-		auto ParticleSystemController_createClone = &NI::ParticleSystemController::createCloneNoLeak;
-		se::memory::overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&ParticleSystemController_createClone));
 		// Patch: An off-by-default light or an expired torch blackens a material of its own, not the one its mesh shares.
 		genCallEnforced(0x4D2869, 0x4D26D0, reinterpret_cast<DWORD>(TES3::Light::extinguishNode));
 		genCallEnforced(0x52512B, 0x4D26D0, reinterpret_cast<DWORD>(TES3::Light::extinguishNode));
+
+		// Patch: Give each clone of a particle system its own particle data, for every particle data type.
+		auto NiParticleSystemController_createClone = &NI::ParticleSystemController::createClone;
+		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::Object_vTable, createClone), DWORD(NI::ParticleSystemController::_createClone), *reinterpret_cast<DWORD*>(&NiParticleSystemController_createClone));
+		auto NiBSPArrayController_createClone = &NI::BSPArrayController::createClone;
+		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiBSPArrayController, offsetof(NI::Object_vTable, createClone), DWORD(NI::BSPArrayController::_createClone), *reinterpret_cast<DWORD*>(&NiBSPArrayController_createClone));
+
+		// Patch: Add no particle past the vertex count of the particle data.
+		// The callers of AddNewParticle: UpdateParticles (0x709A6F), which updates the new particle at 0x709A79, and
+		// SpawnParticles (0x70A224), which does not use it.
+		auto NiParticleSystemController_addNewParticle = &NI::ParticleSystemController::addNewParticle;
+		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiParticleSystemController, offsetof(NI::ParticleSystemController_vTable, addNewParticle), DWORD(NI::ParticleSystemController::_addNewParticle), *reinterpret_cast<DWORD*>(&NiParticleSystemController_addNewParticle));
+		auto NiBSPArrayController_addNewParticle = &NI::BSPArrayController::addNewParticle;
+		overrideVirtualTableEnforced(NI::VirtualTableAddress::NiBSPArrayController, offsetof(NI::ParticleSystemController_vTable, addNewParticle), DWORD(NI::BSPArrayController::_addNewParticle), *reinterpret_cast<DWORD*>(&NiBSPArrayController_addNewParticle));
+		auto NiParticleSystemController_updateParticle = &NI::ParticleSystemController::updateParticle;
+		genCallEnforced(0x709A79, DWORD(NI::ParticleSystemController::_particleUpdate), *reinterpret_cast<DWORD*>(&NiParticleSystemController_updateParticle));
 
 		// Patch: Allow global audio.
 		if (Configuration::UseGlobalAudio) {
