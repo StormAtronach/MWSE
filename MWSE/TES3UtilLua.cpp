@@ -3195,8 +3195,7 @@ namespace mwse::lua {
 		return false;
 	}
 
-	static TES3::EquipmentStack tempApplyMagicSourceStack;
-	TES3::MagicSourceInstance* applyMagicSource(sol::table params) {
+	static TES3::MagicSourceInstance* applyMagicSource(sol::table params) {
 		// Get who we're adding the magic effect to.
 		auto reference = getOptionalParamExecutionReference(params);
 		if (reference == nullptr) {
@@ -3207,7 +3206,7 @@ namespace mwse::lua {
 		auto source = getOptionalParamObject<TES3::Object>(params, "source");
 
 		// Are we given custom effects? If so make a potion.
-		bool createCopy = true;
+		auto temporaryPotion = false;
 		sol::optional<sol::table> effects = params["effects"];
 		if (source == nullptr && effects) {
 			const char* name = getOptionalParam<const char*>(params, "name", nullptr);
@@ -3245,7 +3244,7 @@ namespace mwse::lua {
 			}
 
 			source = dynamicPotion;
-			createCopy = false;
+			temporaryPotion = true;
 		}
 
 		// Did we end up figuring out a source?
@@ -3262,10 +3261,9 @@ namespace mwse::lua {
 		// Do we have a piece of equipment this is coming from?
 		auto from = getOptionalParam<TES3::EquipmentStack*>(params, "fromStack");
 
-		// Handle some alchemy patching.
+		TES3::EquipmentStack potionStack;
 		if (sourceCombo.sourceType == TES3::MagicSourceType::Alchemy) {
-			// Do we need to make a copy of this object?
-			if (getOptionalParam<bool>(params, "createCopy", createCopy)) {
+			if (!temporaryPotion && getOptionalParam<bool>(params, "createCopy", true)) {
 				auto copy = new TES3::Alchemy();
 				copy->copy(source);
 				copy->setID("");
@@ -3273,11 +3271,13 @@ namespace mwse::lua {
 
 				source = copy;
 				sourceCombo.source.asAlchemy = copy;
+				temporaryPotion = true;
 			}
 
-			if (!from) {
-				tempApplyMagicSourceStack.object = source;
-				from = &tempApplyMagicSourceStack;
+			// Retirement deletes the temporary potion through the casting stack.
+			if (temporaryPotion || !from) {
+				potionStack.object = source;
+				from = &potionStack;
 			}
 		}
 
