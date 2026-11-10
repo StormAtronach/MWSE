@@ -88,6 +88,32 @@ namespace mwse::lua {
 		const auto stateHandle = LuaManager::getInstance().getThreadSafeStateHandle();
 		auto& state = stateHandle.getState();
 
+		// Binding for TES3::CellColor
+		{
+			// Start our usertype.
+			auto usertypeDefinition = state.new_usertype<TES3::CellColor>("tes3cellColor");
+			usertypeDefinition["new"] = sol::constructors<
+				TES3::CellColor(),
+				TES3::CellColor(unsigned char, unsigned char, unsigned char),
+				TES3::CellColor(unsigned char, unsigned char, unsigned char, unsigned char)
+			>();
+
+			// Operator overloading.
+			usertypeDefinition[sol::meta_function::to_string] = &TES3::CellColor::toString;
+
+			// Basic property binding.
+			usertypeDefinition["r"] = &TES3::CellColor::r;
+			usertypeDefinition["g"] = &TES3::CellColor::g;
+			usertypeDefinition["b"] = &TES3::CellColor::b;
+			usertypeDefinition["a"] = &TES3::CellColor::a;
+
+			// Long aliases for color access.
+			usertypeDefinition["red"] = &TES3::CellColor::r;
+			usertypeDefinition["green"] = &TES3::CellColor::g;
+			usertypeDefinition["blue"] = &TES3::CellColor::b;
+			usertypeDefinition["alpha"] = &TES3::CellColor::a;
+		}
+
 		// Binding for TES3::Cell
 		{
 			// Start our usertype.
