@@ -147,7 +147,7 @@ namespace TES3 {
 
 		void restoreGamma();
 
-		[[noreturn]] void endProcessAtQuit();
+		void endProcessAtQuit();
 
 		// Get singleton.
 		_declspec (dllexport) static Game* get();

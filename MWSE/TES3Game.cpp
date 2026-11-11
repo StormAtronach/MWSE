@@ -106,11 +106,8 @@ namespace TES3 {
 			}
 		}
 
-		if (TerminateProcess(GetCurrentProcess(), 0)) {
-			Sleep(INFINITE);
-		}
-		mwse::log::getLog() << "quit: TerminateProcess failed (" << GetLastError() << "); ExitProcess follows." << std::endl;
-		ExitProcess(0);
+		TerminateProcess(GetCurrentProcess(), 0);
+		mwse::log::getLog() << "quit: TerminateProcess failed (" << GetLastError() << "); the normal exit follows." << std::endl;
 	}
 
 	Game* Game::get() {
