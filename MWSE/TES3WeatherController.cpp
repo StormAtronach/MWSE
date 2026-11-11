@@ -147,11 +147,11 @@ namespace TES3 {
 		TES3_WeatherController_updateSun(this, gameHour);
 
 		// setBackgroundToFog decrements the refCount
-		renderer->refCount++;
+		renderer->incrementRefCount();
 		TES3_WeatherController_setBackgroundToFog(this, renderer);
 
 		// setFogColour decrements the refCount
-		fogProperty->refCount++;
+		fogProperty->incrementRefCount();
 		TES3_WeatherController_setFogColour(this, fogProperty);
 	}
 

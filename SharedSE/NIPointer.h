@@ -76,8 +76,7 @@ namespace NI {
 
 		void release() {
 			if (m_Pointer) {
-				if (--m_Pointer->refCount == 0) {
-					m_Pointer->vTable.asObject->destructor(m_Pointer, 1);
+				if (m_Pointer->decrementRefCount()) {
 					m_Pointer = nullptr;
 				}
 			}
@@ -88,7 +87,7 @@ namespace NI {
 
 			m_Pointer = pointer;
 			if (m_Pointer) {
-				m_Pointer->refCount++;
+				m_Pointer->incrementRefCount();
 			}
 		}
 	};

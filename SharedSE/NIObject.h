@@ -68,6 +68,17 @@ namespace NI {
 
 		void release();
 
+		//
+		// Reference count.
+		//
+
+		// Adds one to the count with an interlocked write.
+		void incrementRefCount();
+
+		// Takes one from the count with an interlocked write, and deletes the object when the count reaches 0.
+		// Returns true when it deleted the object.
+		bool decrementRefCount();
+
 		// Slow, but name-based lookup of nodes.
 		bool isOfType(const RTTI*) const;
 		bool isOfType(uintptr_t rtti) const { return isOfType(reinterpret_cast<RTTI*>(rtti)); }

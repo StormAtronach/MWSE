@@ -116,6 +116,18 @@ namespace NI {
 #endif
 	}
 
+	void Object::incrementRefCount() {
+		InterlockedIncrement(reinterpret_cast<volatile LONG*>(&refCount));
+	}
+
+	bool Object::decrementRefCount() {
+		if (InterlockedDecrement(reinterpret_cast<volatile LONG*>(&refCount)) != 0) {
+			return false;
+		}
+		vTable.asObject->destructor(this, 1);
+		return true;
+	}
+
 	bool Object::isOfType(const RTTI* type) const {
 		return (vTable.asObject->getRTTI(this) == type);
 	}

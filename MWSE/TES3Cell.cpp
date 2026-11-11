@@ -137,7 +137,7 @@ namespace TES3 {
 
 	NI::BSAnimationManager* Cell::createSceneRoot() const {
 		const auto root = NI::BSAnimationManager::create();
-		root->refCount = 1;
+		root->incrementRefCount();
 		return root;
 	}
 
