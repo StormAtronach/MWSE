@@ -21,6 +21,9 @@ namespace NI {
 		// A copy of the same type with its own arrays.
 		Pointer<ParticlesData> createCopy() const;
 
+		// Neither auto-normal nor rotating particle data.
+		bool isPlain() const;
+
 #if defined(SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES) && SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES > 0
 		static constexpr auto _replaceSizes = reinterpret_cast<void(__thiscall*)(ParticlesData*, float*)>(SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES);
 #endif

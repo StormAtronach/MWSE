@@ -26,24 +26,22 @@ namespace NI {
 #endif
 	}
 
-	void ParticleSystemController::giveTargetCopyOfModelData() {
+	Pointer<ParticlesData> ParticleSystemController::getTargetModelData() const {
 		if (target == nullptr || !target->isInstanceOfType(RTTIStaticPtr::NiParticles)) {
-			return;
+			return nullptr;
 		}
+		return static_cast<const Particles*>(target)->getModelData();
+	}
 
-		const auto particles = static_cast<Particles*>(target);
-		const auto data = particles->getModelData();
+	void ParticleSystemController::giveTargetCopyOfModelData() {
+		const auto data = getTargetModelData();
 		if (data) {
-			particles->setModelData(data->createCopy());
+			static_cast<Particles*>(target)->setModelData(data->createCopy());
 		}
 	}
 
 	bool ParticleSystemController::targetHasFreeVertex() const {
-		if (target == nullptr || !target->isInstanceOfType(RTTIStaticPtr::NiParticles)) {
-			return false;
-		}
-
-		const auto data = static_cast<const Particles*>(target)->getModelData();
+		const auto data = getTargetModelData();
 		return data && data->activeCount < data->vertexCount;
 	}
 
@@ -72,7 +70,12 @@ namespace NI {
 #if defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR) && SE_NI_BSPARRAYCONTROLLER_FNADDR_CTOR > 0 && defined(SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY) && SE_NI_BSPARRAYCONTROLLER_FNADDR_COPY > 0 && defined(SE_MEMORY_FNADDR_NEW) && SE_MEMORY_FNADDR_NEW > 0
 		const auto clone = _ctor(se::memory::_new<BSPArrayController>());
 		_copy(this, clone);
-		giveTargetCopyOfModelData();
+
+		const auto data = getTargetModelData();
+		if (data && data->isPlain()) {
+			giveTargetCopyOfModelData();
+		}
+
 		return clone;
 #else
 		throw not_implemented_exception();

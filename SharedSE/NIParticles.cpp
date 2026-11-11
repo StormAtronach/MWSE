@@ -103,6 +103,10 @@ namespace NI {
 #endif
 	}
 
+	bool ParticlesData::isPlain() const {
+		return !isInstanceOfType(RTTIStaticPtr::NiAutoNormalParticlesData) && !isInstanceOfType(RTTIStaticPtr::NiRotatingParticlesData);
+	}
+
 	Pointer<ParticlesData> ParticlesData::createCopy() const {
 #if defined(SE_MEMORY_FNADDR_NEW) && SE_MEMORY_FNADDR_NEW > 0
 		const auto copyArray = [this]<typename T>(const T* source) -> T* {
