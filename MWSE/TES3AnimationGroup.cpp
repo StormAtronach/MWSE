@@ -236,8 +236,6 @@ namespace TES3 {
 		std::vector<AnimationGroup*> expireGroups;
 		Creature* matchedCreature;
 
-		static inline std::unordered_map<string, AnimGroupID> mapAnimationNames;
-
 		TextKeyParser(KeyframeDefinition* _kfData) : kfData(_kfData), firstGroup(nullptr), lastGroup(nullptr), matchedCreature(nullptr) {}
 
 		int parse(NI::Sequence* sequence, const char* meshPath);
@@ -246,7 +244,9 @@ namespace TES3 {
 		void parseNoteLuaEvent(float time, std::string_view noteKey, std::string_view noteValue);
 		float measureRootMovementSpeedOverLoop(NI::TimeController* rootController, AnimationGroup* animGroup);
 		void testResult(NI::Sequence* sequence, const char* meshPath);
-		static void preCacheMappings();
+
+		// The lowercase name of each vanilla animation group, to its id. Built once, on the first call from any thread.
+		static const std::unordered_map<string, AnimGroupID>& getAnimationNameMap();
 	};
 
 	const auto TES3_soundGenGenericNames = reinterpret_cast<const char**>(0x7B064C);
@@ -256,9 +256,6 @@ namespace TES3 {
 	const auto TES3_animActionTextByActionClass = reinterpret_cast<const char**>(0x78ABC8);
 
 	int TextKeyParser::parse(NI::Sequence* sequence, const char* meshPath) {
-		// Pre-convert animation string tables.
-		preCacheMappings();
-
 		// Find creature for soundgens by matching meshPath.
 		auto records = DataHandler::get()->nonDynamicData;
 		matchedCreature = nullptr;
@@ -389,8 +386,9 @@ namespace TES3 {
 		AnimGroupID matchedGroupId = AnimGroupID::Idle9;
 		AnimationGroup* newGroup = nullptr;
 
-		auto iterAnimName = mapAnimationNames.find(lowercaseName);
-		if (iterAnimName != mapAnimationNames.end()) {
+		const auto& animationNames = getAnimationNameMap();
+		auto iterAnimName = animationNames.find(lowercaseName);
+		if (iterAnimName != animationNames.end()) {
 			// Vanilla name.
 			matchedGroupId = iterAnimName->second;
 		}
@@ -409,8 +407,8 @@ namespace TES3 {
 			else if (se::string::istarts_with(noteValue, "AsGroup ")) {
 				// Check for behave-as-group assignment key. Named anims without AsGroup default to Idle9, set above.
 				string asGroup = textAsLowercase(noteValue.substr(8));
-				iterAnimName = mapAnimationNames.find(asGroup);
-				matchedGroupId = (iterAnimName != mapAnimationNames.end()) ? iterAnimName->second : AnimGroupID::Idle9;
+				iterAnimName = animationNames.find(asGroup);
+				matchedGroupId = (iterAnimName != animationNames.end()) ? iterAnimName->second : AnimGroupID::Idle9;
 				if constexpr (DEBUG_ANIM_PARSER) {
 					mwse::log::getLog() << "[AnimParser] '" << lowercaseName << "' AsGroup '" << asGroup << "' = " << int(matchedGroupId) << std::endl;
 				}
@@ -764,15 +762,17 @@ namespace TES3 {
 		mwse::log::getLog() << "[AnimParser] Testing end anim=" << meshPath << std::endl;
 	}
 
-	void TextKeyParser::preCacheMappings() {
-		if (mapAnimationNames.empty()) {
-			// Build animation name to id map.
+	const std::unordered_map<std::string, AnimGroupID>& TextKeyParser::getAnimationNameMap() {
+		static const auto animationNames = [] {
+			std::unordered_map<string, AnimGroupID> names;
 			for (auto i = int(AnimGroupID::First); i <= int(AnimGroupID::Last); ++i) {
 				string lowercaseName{ TES3_animGroupNames[i] };
 				std::transform(lowercaseName.begin(), lowercaseName.end(), lowercaseName.begin(), [](unsigned char c) { return std::tolower(c); });
-				mapAnimationNames.emplace(lowercaseName, AnimGroupID(i));
+				names.emplace(lowercaseName, AnimGroupID(i));
 			}
-		}
+			return names;
+		}();
+		return animationNames;
 	}
 
 	std::string KeyframeDefinition::toCanonicalName(std::string_view name) {
