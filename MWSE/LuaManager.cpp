@@ -4993,7 +4993,7 @@ namespace mwse::lua {
 	void customOSExit(sol::optional<int> code) {
 		auto game = TES3::Game::get();
 		if (game) {
-			game->setGamma(1.0f);
+			game->restoreGamma();
 		}
 
 		TerminateProcess(GetCurrentProcess(), static_cast<UINT>(code.value_or(1)));

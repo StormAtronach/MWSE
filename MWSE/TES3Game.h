@@ -131,6 +131,10 @@ namespace TES3 {
 
 		void savePlayerOptions();
 
+		void saveKeyframeExtractTime();
+
+		static void deleteEmptyWarningsFile();
+
 		void renderNextFrame(int renderType);
 
 		//
@@ -140,6 +144,10 @@ namespace TES3 {
 		void applyApplicationIniOverrides();
 
 		void setPlayerTarget(Reference* reference);
+
+		void restoreGamma();
+
+		[[noreturn]] void endProcessAtQuit();
 
 		// Get singleton.
 		_declspec (dllexport) static Game* get();
