@@ -34,6 +34,8 @@ return {
 	["suppressUselessWarnings.description"] = "If enabled, the initial startup warning about mismatched masters is suppressed. This warning is almost always displayed on any modded install, and often prompts users to click Yes to All, hiding actually helpful warnings.",
 	["bufferExitWarnings.label"] = "Write exit warnings at once?",
 	["bufferExitWarnings.description"] = "If enabled, the warnings that the game writes while it closes, the list of textures and models still loaded, are written to Warnings.txt with one file open instead of one per line. This makes the game close much faster under Mod Organizer. The content of Warnings.txt does not change.",
+	["skipTeardownAtExit.label"] = "Close the game at once on quit?",
+	["skipTeardownAtExit.description"] = "If enabled, the game writes its settings when you quit and then closes at once, without freeing the game world. Use this if the game crashes while it closes. The list of textures and models still loaded at exit is then not written to Warnings.txt. The setting is read when you quit, so a change here applies to this session.",
 	["replaceLightSorting.label"] = "Replace light sorting?",
 	["replaceLightSorting.description"] = "If enabled, the default method of prioritizing lights that affect a mesh is replaced with a new method. This greatly reduces the amount of landscape seams as well as the amount of light popping, but may diminish the impact of carried torches in some environments.",
 	["replaceLightFlicker.label"] = "Replace light flicker?",

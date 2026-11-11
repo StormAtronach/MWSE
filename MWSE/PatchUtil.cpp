@@ -137,6 +137,10 @@ namespace mwse::patch {
 
 	static const auto TES3_Game_Destructor = reinterpret_cast<void(__thiscall*)(TES3::Game*)>(0x4174C0);
 	static void __fastcall PatchCleanupLua(TES3::Game* game) {
+		if (Configuration::SkipTeardownAtExit) {
+			game->endProcessAtQuit();
+		}
+
 		// Try to clean up any obvious references.
 		mwse::lua::LuaManager::getInstance().cleanup();
 
