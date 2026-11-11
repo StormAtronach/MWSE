@@ -58,6 +58,7 @@ namespace NI {
 
 		// The target gets a copy of its particle data. The old data stays with the clone of the target.
 		void giveTargetCopyOfModelData();
+		Pointer<ParticlesData> getTargetModelData() const;
 
 		// A new particle only when the target's particle data has a free vertex; else nullptr.
 		PerParticleData* addNewParticle(float time, float lastTime, Matrix33* targetToEmitterRotation, Point3* targetAccumulation, PerParticleData* oldParticle);
