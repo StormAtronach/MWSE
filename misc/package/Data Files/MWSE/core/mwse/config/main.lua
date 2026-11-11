@@ -190,6 +190,16 @@ local config = {
 				},
 				{
 					class = "OnOffButton",
+					label = i18n("skipTeardownAtExit.label"),
+					description = i18n("skipTeardownAtExit.description"),
+					variable = {
+						id = "SkipTeardownAtExit",
+						class = "TableVariable",
+						table = mwseConfig,
+					},
+				},
+				{
+					class = "OnOffButton",
 					label = i18n("replaceLightSorting.label"),
 					description = i18n("replaceLightSorting.description"),
 					variable = {

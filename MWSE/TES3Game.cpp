@@ -4,6 +4,7 @@
 
 #include "LuaManager.h"
 
+#include "Log.h"
 #include "WindowsUtil.h"
 
 namespace TES3 {
@@ -31,6 +32,16 @@ namespace TES3 {
 	const auto TES3_Game_savePlayerOptions = reinterpret_cast<void(__thiscall*)(Game*)>(0x4293A0);
 	void Game::savePlayerOptions() {
 		TES3_Game_savePlayerOptions(this);
+	}
+
+	const auto TES3_Game_saveKeyframeExtractTime = reinterpret_cast<void(__cdecl*)()>(0x47CDC0);
+	void Game::saveKeyframeExtractTime() {
+		TES3_Game_saveKeyframeExtractTime();
+	}
+
+	const auto TES3_Game_deleteEmptyWarningsFile = reinterpret_cast<void(__cdecl*)()>(0x476DD0);
+	void Game::deleteEmptyWarningsFile() {
+		TES3_Game_deleteEmptyWarningsFile();
 	}
 
 	const auto TES3_Game_renderNextFrame = reinterpret_cast<void(__thiscall*)(Game*, int)>(0x41BE90);
@@ -72,6 +83,31 @@ namespace TES3 {
 				stateHandle.triggerEvent(new mwse::lua::event::ActivationTargetChangedEvent(reference));
 			}
 		}
+	}
+
+	void Game::restoreGamma() {
+		setGamma(1.0f);
+	}
+
+	void Game::endProcessAtQuit() {
+		savePlayerOptions();
+		saveKeyframeExtractTime();
+		deleteEmptyWarningsFile();
+		restoreGamma();
+
+		// Flush every C runtime's open files.
+		mwse::log::getLog() << "quit: process ended before teardown" << std::endl;
+		_flushall();
+		for (const auto runtime : { L"msvcrt.dll", L"ucrtbase.dll" }) {
+			const auto module = GetModuleHandleW(runtime);
+			const auto flushAll = module ? reinterpret_cast<int(__cdecl*)()>(GetProcAddress(module, "_flushall")) : nullptr;
+			if (flushAll) {
+				flushAll();
+			}
+		}
+
+		TerminateProcess(GetCurrentProcess(), 0);
+		mwse::log::getLog() << "quit: TerminateProcess failed (" << GetLastError() << "); the normal exit follows." << std::endl;
 	}
 
 	Game* Game::get() {
