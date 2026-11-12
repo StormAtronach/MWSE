@@ -66,7 +66,7 @@ namespace mwse::lua {
 
 			// Basic property binding.
 			usertypeDefinition["flags"] = &TES3::BodyPartManager::AttachNode::flags;
-			usertypeDefinition["node"] = &TES3::BodyPartManager::AttachNode::node;
+			usertypeDefinition["node"] = sol::readonly_property(&TES3::BodyPartManager::AttachNode::node);
 			usertypeDefinition["rotation"] = &TES3::BodyPartManager::AttachNode::rotation;
 			usertypeDefinition["translation"] = &TES3::BodyPartManager::AttachNode::translation;
 		}
@@ -81,7 +81,7 @@ namespace mwse::lua {
 			usertypeDefinition["bodyPart"] = sol::property(&TES3::BodyPartManager::ActiveBodyPart::getBodyPart, &TES3::BodyPartManager::ActiveBodyPart::setBodyPart);
 			usertypeDefinition["flags"] = &TES3::BodyPartManager::ActiveBodyPart::flags;
 			usertypeDefinition["item"] = &TES3::BodyPartManager::ActiveBodyPart::item;
-			usertypeDefinition["node"] = &TES3::BodyPartManager::ActiveBodyPart::node;
+			usertypeDefinition["node"] = sol::readonly_property(&TES3::BodyPartManager::ActiveBodyPart::node);
 		}
 
 		// Binding for TES3::BodyPartManager

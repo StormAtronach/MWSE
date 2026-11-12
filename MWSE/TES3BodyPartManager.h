@@ -35,7 +35,7 @@ namespace TES3 {
 				Shield,
 				COUNT,
 			};
-			NI::Pointer<NI::Node> node; // 0x0
+			NI::Node* node; // 0x0
 			unsigned int flags; // 0x4
 			NI::Point3 translation; // 0x8
 			NI::Matrix33 rotation; // 0x14
@@ -82,7 +82,7 @@ namespace TES3 {
 			};
 			Item* item; // 0x0
 			BodyPart* bodyPart; // 0x4
-			NI::Pointer<NI::Node> node; // 0x8
+			NI::Node* node; // 0x8
 			unsigned int flags; // 0xC
 
 			ActiveBodyPart() = delete;
