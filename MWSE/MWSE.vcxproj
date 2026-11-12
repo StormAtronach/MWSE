@@ -71,6 +71,7 @@
     <ClInclude Include="MGEUtilLua.h" />
     <ClInclude Include="NICollisionGroupLua.h" />
     <ClInclude Include="NIQuaternionLua.h" />
+    <ClInclude Include="NIRefCountLocks.h" />
     <ClInclude Include="NIRenderedTextureLua.h" />
     <ClInclude Include="NIRendererLua.h" />
     <ClInclude Include="TES3AnimationDataLua.h" />
@@ -691,6 +692,7 @@
     <ClCompile Include="NIGeometryDataLua.cpp" />
     <ClCompile Include="NIParticlesLua.cpp" />
     <ClCompile Include="NIQuaternionLua.cpp" />
+    <ClCompile Include="NIRefCountLocks.cpp" />
     <ClCompile Include="NIRenderedTextureLua.cpp" />
     <ClCompile Include="NIRendererLua.cpp" />
     <ClCompile Include="NISkinInstanceLua.cpp" />

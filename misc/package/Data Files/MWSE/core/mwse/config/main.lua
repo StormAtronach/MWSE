@@ -200,6 +200,16 @@ local config = {
 				},
 				{
 					class = "OnOffButton",
+					label = i18n("lockReferenceCounts.label"),
+					description = i18n("lockReferenceCounts.description"),
+					variable = {
+						id = "LockReferenceCounts",
+						class = "TableVariable",
+						table = mwseConfig,
+					},
+				},
+				{
+					class = "OnOffButton",
 					label = i18n("replaceLightSorting.label"),
 					description = i18n("replaceLightSorting.description"),
 					variable = {
