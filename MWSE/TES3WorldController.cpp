@@ -859,6 +859,14 @@ namespace TES3 {
 		}
 	}
 
+	const auto TES3_sleep = reinterpret_cast<void(__cdecl**)(unsigned long)>(0x7462CC);
+	// The clock that updateDeltaTime reads at 0x453636, through that call's operand.
+	const auto TES3_WorldController_frameClock = reinterpret_cast<DWORD(__stdcall***)()>(0x453638);
+	void __cdecl WorldController::sleepForFrameLimit(unsigned long milliseconds) {
+		(*TES3_sleep)(milliseconds);
+		get()->systemTimeMillis = (**TES3_WorldController_frameClock)();
+	}
+
 	bool WorldController::isChargenStarted() const {
 		// Chargenstate is 0 on the main menu.
 		return gvarCharGenState->value != 0.0;

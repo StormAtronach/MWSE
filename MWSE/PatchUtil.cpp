@@ -2501,6 +2501,14 @@ namespace mwse::patch {
 		auto UVController_clone = &NI::UVController::copy;
 		genCallEnforced(0x722317, 0x722330, *reinterpret_cast<DWORD*>(&UVController_clone));
 
+		// Patch: Fix the frame limiter waiting on every second frame only. The frame time is read again after the sleep.
+		{
+			constexpr BYTE callSleep[] = { 0xFF, 0x15, 0xCC, 0x62, 0x74, 0x00 }; // call [_sleep]
+			if (memcmp(reinterpret_cast<const void*>(0x4536E6), callSleep, sizeof(callSleep)) == 0) {
+				genCallUnprotected(0x4536E6, reinterpret_cast<DWORD>(&TES3::WorldController::sleepForFrameLimit), sizeof(callSleep));
+			}
+		}
+
 		// Patch: Make globals less slow to access.
 #if MWSE_CUSTOM_GLOBALS
 		genCallEnforced(0x4B7D74, 0x47E1E0, reinterpret_cast<DWORD>(DataHandlerCreateGlobalsContainer));
