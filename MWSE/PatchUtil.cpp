@@ -2606,6 +2606,9 @@ namespace mwse::patch {
 			if (memcmp(reinterpret_cast<const void*>(0x4536E6), callSleep, sizeof(callSleep)) == 0) {
 				genCallUnprotected(0x4536E6, reinterpret_cast<DWORD>(&TES3::WorldController::sleepForFrameLimit), sizeof(callSleep));
 			}
+			else {
+				log::getLog() << "[MWSE] The frame limiter fix is not installed: the code at 0x4536E6 is not the expected call to _sleep. Another module changed it." << std::endl;
+			}
 		}
 
 		// Patch: Make globals less slow to access.
