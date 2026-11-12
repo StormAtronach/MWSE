@@ -934,7 +934,7 @@ namespace mwse::lua {
 		lua_mge["setScreenRotation"] = [](sol::optional<sol::table> params) {
 			auto rotation = getOptionalParam(params, "rotation", 0.0f);
 			Stack::getInstance().pushFloat(rotation);
-			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGERotateScreen);
+			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGESetScreenRotation);
 		};
 		lua_mge["startScreenRotation"] = []() {
 			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGEScreenSpin);
