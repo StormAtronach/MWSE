@@ -87,6 +87,18 @@ namespace NI {
 		return {};
 	}
 
+	float ParticlesData::getLargestActiveSize() const {
+		if (sizes == nullptr) {
+			return 1.0f;
+		}
+
+		auto largest = 0.0f;
+		for (auto i = 0u; i < activeCount; ++i) {
+			largest = std::max(largest, sizes[i]);
+		}
+		return largest;
+	}
+
 	void ParticlesData::replaceSizes(float* _sizes) {
 #if defined(SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES) && SE_NI_PARTICLESDATA_FNADDR_REPLACESIZES > 0
 		_replaceSizes(this, _sizes);

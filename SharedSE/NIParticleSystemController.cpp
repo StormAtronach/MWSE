@@ -3,6 +3,7 @@
 #include "ExceptionUtil.h"
 #include "MemoryUtil.h"
 
+#include "NINode.h"
 #include "NIParticles.h"
 #include "NIPerParticleData.h"
 #include "NIRTTI.h"
@@ -21,6 +22,15 @@ namespace NI {
 		_copy(this, clone);
 		giveTargetCopyOfModelData();
 		return clone;
+#else
+		throw not_implemented_exception();
+#endif
+	}
+
+	void ParticleSystemController::updateParticles(float time) {
+#if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_UPDATEPARTICLES) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_UPDATEPARTICLES > 0
+		const auto NI_ParticleSystemController_updateParticles = reinterpret_cast<void(__thiscall*)(ParticleSystemController*, float)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_UPDATEPARTICLES);
+		NI_ParticleSystemController_updateParticles(this, time);
 #else
 		throw not_implemented_exception();
 #endif
@@ -64,6 +74,35 @@ namespace NI {
 #else
 		throw not_implemented_exception();
 #endif
+	}
+
+	void ParticleSystemController::updateParticlesWithQuadBound(float time) {
+		updateParticles(time);
+		fitBoundToQuads();
+	}
+
+	void ParticleSystemController::fitBoundToQuads() {
+		if (target == nullptr || !target->isInstanceOfType(RTTIStaticPtr::NiParticles)) {
+			return;
+		}
+
+		const auto particles = static_cast<Particles*>(target);
+		if (particles->staticBoundPositionSource != nullptr) {
+			return;
+		}
+
+		const auto data = static_cast<ParticlesData*>(particles->modelData.get());
+		if (data == nullptr) {
+			return;
+		}
+
+		auto scale = particles->localScale;
+		if (particles->parentNode) {
+			scale *= particles->parentNode->worldTransform.scale;
+		}
+
+		constexpr auto SQRT_2 = 1.41421356f;
+		data->bounds.radius += data->radius * data->getLargestActiveSize() * SQRT_2 * scale;
 	}
 
 	Object* BSPArrayController::createClone() {

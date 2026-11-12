@@ -13,6 +13,7 @@ namespace NI {
 		static Pointer<ParticlesData> create(unsigned short vertexCount, bool hasNormals, bool hasColors);
 
 		std::span<float> getSizes();
+		float getLargestActiveSize() const;
 
 		// Takes ownership of the array.
 		void replaceSizes(float* sizes);
