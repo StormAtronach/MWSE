@@ -86,6 +86,18 @@ namespace NI {
 		return {};
 	}
 
+	float ParticlesData::getLargestActiveSize() const {
+		if (sizes == nullptr) {
+			return 1.0f;
+		}
+
+		auto largest = 0.0f;
+		for (auto i = 0u; i < activeCount; ++i) {
+			largest = std::max(largest, sizes[i]);
+		}
+		return largest;
+	}
+
 	Pointer<AutoNormalParticlesData> AutoNormalParticlesData::create(unsigned short _vertexCount, Point3* _vertices, PackedColor* _colors) {
 #if defined(SE_NI_AUTONORMALPARTICLESDATA_FNADDR_CTOR) && SE_NI_AUTONORMALPARTICLESDATA_FNADDR_CTOR > 0 && defined(SE_MEMORY_FNADDR_NEW) && SE_MEMORY_FNADDR_NEW > 0
 		const auto NI_AutoNormalParticlesData_ctor = reinterpret_cast<void(__thiscall*)(AutoNormalParticlesData*, unsigned short, Point3*, PackedColor*)>(SE_NI_AUTONORMALPARTICLESDATA_FNADDR_CTOR);

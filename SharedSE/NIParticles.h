@@ -13,6 +13,7 @@ namespace NI {
 		static Pointer<ParticlesData> create(unsigned short vertexCount, bool hasNormals, bool hasColors);
 
 		std::span<float> getSizes();
+		float getLargestActiveSize() const;
 	};
 	static_assert(sizeof(ParticlesData) == 0x44, "NI::ParticlesData failed size validation");
 

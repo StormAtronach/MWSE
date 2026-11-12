@@ -47,6 +47,10 @@ namespace NI {
 		float lastEmit; // 0xC0
 
 		std::span<PerParticleData> getPerParticleData();
+
+		void updateParticles(float time);
+		void updateParticlesWithQuadBound(float time);
+		void fitBoundToQuads();
 	};
 	static_assert(sizeof(ParticleSystemController) == 0xC4, "NI::ParticleSystemController failed size validation");
 }

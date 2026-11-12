@@ -50,6 +50,7 @@
 #include "NIPoint3.h"
 #include "NIFlipController.h"
 #include "NILinesData.h"
+#include "NIParticleSystemController.h"
 #include "NIPick.h"
 #include "NIPointLight.h"
 #include "NISortAdjustNode.h"
@@ -2500,6 +2501,11 @@ namespace mwse::patch {
 		// Patch: Fix NiUVController losing its texture set on clone.
 		auto UVController_clone = &NI::UVController::copy;
 		genCallEnforced(0x722317, 0x722330, *reinterpret_cast<DWORD*>(&UVController_clone));
+
+		// Patch: Make the bound of a particle system hold the quads of its particles.
+		auto ParticleSystemController_updateParticles = &NI::ParticleSystemController::updateParticlesWithQuadBound;
+		genCallEnforced(0x7096CD, 0x709710, *reinterpret_cast<DWORD*>(&ParticleSystemController_updateParticles));
+		genCallEnforced(0x7096FA, 0x709710, *reinterpret_cast<DWORD*>(&ParticleSystemController_updateParticles));
 
 		// Patch: Make globals less slow to access.
 #if MWSE_CUSTOM_GLOBALS
