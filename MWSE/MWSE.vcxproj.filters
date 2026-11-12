@@ -1407,6 +1407,9 @@
     <ClInclude Include="TES3VoiceStreamer.h">
       <Filter>Header Files\DataAdapters\TES3</Filter>
     </ClInclude>
+    <ClInclude Include="NIRefCountLocks.h">
+      <Filter>Header Files\DataAdapters</Filter>
+    </ClInclude>
     <ClInclude Include="LuaSpellResistedEvent.h">
       <Filter>Header Files\Lua\Events</Filter>
     </ClInclude>
@@ -3373,6 +3376,9 @@
     </ClCompile>
     <ClCompile Include="TES3VoiceStreamer.cpp">
       <Filter>Source Files\DataAdapters\TES3</Filter>
+    </ClCompile>
+    <ClCompile Include="NIRefCountLocks.cpp">
+      <Filter>Source Files\DataAdapters</Filter>
     </ClCompile>
     <ClCompile Include="LuaSpellResistedEvent.cpp">
       <Filter>Source Files\Lua\Events</Filter>

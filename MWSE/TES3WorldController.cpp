@@ -55,7 +55,7 @@ namespace TES3 {
 		// The lock lets go of one reference to its texture, as the engine function does.
 		NI::Texture* raw = texture;
 		if (raw) {
-			raw->refCount++;
+			raw->incrementRefCount();
 		}
 		return mwse::native::Dispatch::lockRenderTarget(this, 0, raw);
 	}

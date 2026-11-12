@@ -18,6 +18,7 @@ namespace mwse {
 		static bool SuppressUselessWarnings;
 		static bool BufferExitWarnings;
 		static bool SkipTeardownAtExit;
+		static bool LockReferenceCounts;
 		static bool UseGlobalAudio;
 		static bool NonExclusiveKeyboard;
 		static bool ReplaceLightSorting;

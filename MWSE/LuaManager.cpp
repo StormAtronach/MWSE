@@ -188,6 +188,7 @@
 #include "NIPixelDataLua.h"
 #include "NIPropertyLua.h"
 #include "NIQuaternionLua.h"
+#include "NIRefCountLocks.h"
 #include "NIRenderedTextureLua.h"
 #include "NIRendererLua.h"
 #include "NISkinInstanceLua.h"
@@ -5051,6 +5052,14 @@ namespace mwse::lua {
 		catch (sol::error& e) {
 			log::getLog() << "[LuaManager] ERROR: Failed to initialize MWSE Lua interface." << std::endl << e.what() << std::endl;
 			return;
+		}
+
+		// Lock the engine's shared reference count writes, after MWSE.json is read and before any mod runs.
+		if (Configuration::LockReferenceCounts) {
+			NI::RefCountLocks::install();
+		}
+		else {
+			log::getLog() << "reference counts: the locks are off (LockReferenceCounts)." << std::endl;
 		}
 
 		// Bind libraries.
