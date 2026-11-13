@@ -55,6 +55,7 @@
 #include "NIPoint3.h"
 #include "NIFlipController.h"
 #include "NILinesData.h"
+#include "NIParticles.h"
 #include "NIParticleSystemController.h"
 #include "NIPick.h"
 #include "NIPointLight.h"
@@ -2611,10 +2612,17 @@ namespace mwse::patch {
 			}
 		}
 
-		// Patch: Make the bound of a particle system hold the quads of its particles.
-		auto ParticleSystemController_updateParticles = &NI::ParticleSystemController::updateParticlesWithQuadBound;
-		genCallEnforced(0x7096CD, 0x709710, *reinterpret_cast<DWORD*>(&ParticleSystemController_updateParticles));
-		genCallEnforced(0x7096FA, 0x709710, *reinterpret_cast<DWORD*>(&ParticleSystemController_updateParticles));
+		// Patch: Make the world bound of a particle shape hold the quads of its particles.
+		auto NiParticles_updateWorldBound = &NI::Particles::updateWorldBound;
+		for (const auto vTable : { NI::VirtualTableAddress::NiParticles, NI::VirtualTableAddress::NiAutoNormalParticles, NI::VirtualTableAddress::NiRotatingParticles }) {
+			overrideVirtualTableEnforced(vTable, offsetof(NI::AVObject_vTable, updateWorldBound), DWORD(NI::Particles::_updateWorldBound), *reinterpret_cast<DWORD*>(&NiParticles_updateWorldBound));
+		}
+
+		// Patch: Make the bound of a particle shape with no particle system controller hold its positions after load.
+		auto NiParticles_createRendererData = &NI::Particles::createRendererData;
+		for (const auto vTable : { NI::VirtualTableAddress::NiParticles, NI::VirtualTableAddress::NiAutoNormalParticles, NI::VirtualTableAddress::NiRotatingParticles }) {
+			overrideVirtualTableEnforced(vTable, offsetof(NI::Object_vTable, createRendererData), 0x6E9A00, *reinterpret_cast<DWORD*>(&NiParticles_createRendererData));
+		}
 
 		// Patch: Make globals less slow to access.
 #if MWSE_CUSTOM_GLOBALS

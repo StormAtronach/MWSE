@@ -67,10 +67,6 @@ namespace NI {
 		// Updates nothing for a particle that addNewParticle did not add.
 		void updateParticle(float time, float timeModifier, PerParticleData* particle, ParticlesData* data);
 
-		void updateParticles(float time);
-		void updateParticlesWithQuadBound(float time);
-		void fitBoundToQuads();
-
 #if defined(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_ADDNEWPARTICLE) && SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_ADDNEWPARTICLE > 0
 		static constexpr auto _addNewParticle = reinterpret_cast<PerParticleData*(__thiscall*)(ParticleSystemController*, float, float, Matrix33*, Point3*, PerParticleData*)>(SE_NI_PARTICLESYSTEMCONTROLLER_FNADDR_ADDNEWPARTICLE);
 #endif

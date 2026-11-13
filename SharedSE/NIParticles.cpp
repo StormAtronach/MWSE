@@ -27,6 +27,48 @@ namespace NI {
 		return static_cast<ParticlesData*>(modelData.get());
 	}
 
+	void Particles::updateWorldBound() {
+#if defined(SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND) && SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND > 0
+		_updateWorldBound(this);
+#else
+		throw not_implemented_exception();
+#endif
+
+		// No Pointer here: it would change the reference count of data that clones can share.
+		const auto data = static_cast<const ParticlesData*>(modelData.get());
+		if (data == nullptr) {
+			return;
+		}
+
+		const auto scale = worldTransform.scale;
+		constexpr auto SQRT_2 = 1.41421356f;
+		worldBoundRadius += data->radius * data->getLargestActiveSize() * SQRT_2 * scale * scale;
+	}
+
+	void Particles::createRendererData() {
+		if (hasParticleSystemController()) {
+			return;
+		}
+
+		const auto data = static_cast<ParticlesData*>(modelData.get());
+		if (data == nullptr || data->vertex == nullptr || data->activeCount == 0) {
+			return;
+		}
+
+		Bound positions;
+		positions.computeFromData(data->activeCount, data->vertex, sizeof(Point3));
+		data->bounds.merge(positions);
+	}
+
+	bool Particles::hasParticleSystemController() const {
+		for (auto controller = controllers.get(); controller; controller = controller->nextController.get()) {
+			if (controller->isInstanceOfType(RTTIStaticPtr::NiParticleSystemController)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	AutoNormalParticles::AutoNormalParticles(AutoNormalParticlesData* data) : Particles(data) {
 #if defined(SE_NI_AUTONORMALPARTICLES_VTBL) && SE_NI_AUTONORMALPARTICLES_VTBL > 0
 		vTable.asObject = reinterpret_cast<Object_vTable*>(SE_NI_AUTONORMALPARTICLES_VTBL);
