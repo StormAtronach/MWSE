@@ -37,6 +37,13 @@ namespace NI {
 		static Pointer<Particles> create(unsigned short vertexCount, bool hasNormals, bool hasColors);
 
 		Pointer<ParticlesData> getModelData() const;
+
+		// The engine's world bound, with the reach of the quads of the particles added to its radius.
+		void updateWorldBound();
+
+#if defined(SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND) && SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND > 0
+		static constexpr auto _updateWorldBound = reinterpret_cast<void(__thiscall*)(Particles*)>(SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND);
+#endif
 	};
 	static_assert(sizeof(Particles) == 0xB0, "NI::Particles failed size validation");
 
