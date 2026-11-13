@@ -44,6 +44,30 @@ namespace NI {
 		worldBoundRadius += data->radius * data->getLargestActiveSize() * SQRT_2 * scale * scale;
 	}
 
+	void Particles::createRendererData() {
+		if (hasParticleSystemController()) {
+			return;
+		}
+
+		const auto data = static_cast<ParticlesData*>(modelData.get());
+		if (data == nullptr || data->vertex == nullptr || data->activeCount == 0) {
+			return;
+		}
+
+		Bound positions;
+		positions.computeFromData(data->activeCount, data->vertex, sizeof(Point3));
+		data->bounds.merge(positions);
+	}
+
+	bool Particles::hasParticleSystemController() const {
+		for (auto controller = controllers.get(); controller; controller = controller->nextController.get()) {
+			if (controller->isInstanceOfType(RTTIStaticPtr::NiParticleSystemController)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	AutoNormalParticles::AutoNormalParticles(AutoNormalParticlesData* data) : Particles(data) {
 #if defined(SE_NI_AUTONORMALPARTICLES_VTBL) && SE_NI_AUTONORMALPARTICLES_VTBL > 0
 		vTable.asObject = reinterpret_cast<Object_vTable*>(SE_NI_AUTONORMALPARTICLES_VTBL);

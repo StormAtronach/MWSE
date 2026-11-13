@@ -41,6 +41,10 @@ namespace NI {
 		// The engine's world bound, with the reach of the quads of the particles added to its radius.
 		void updateWorldBound();
 
+		// After the link: with no particle system controller, the data's bound grows to hold the active positions.
+		void createRendererData();
+		bool hasParticleSystemController() const;
+
 #if defined(SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND) && SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND > 0
 		static constexpr auto _updateWorldBound = reinterpret_cast<void(__thiscall*)(Particles*)>(SE_NI_PARTICLES_FNADDR_UPDATEWORLDBOUND);
 #endif

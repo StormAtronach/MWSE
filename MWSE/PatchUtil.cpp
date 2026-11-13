@@ -2508,6 +2508,12 @@ namespace mwse::patch {
 			overrideVirtualTableEnforced(vTable, offsetof(NI::AVObject_vTable, updateWorldBound), DWORD(NI::Particles::_updateWorldBound), *reinterpret_cast<DWORD*>(&NiParticles_updateWorldBound));
 		}
 
+		// Patch: Make the bound of a particle shape with no particle system controller hold its positions after load.
+		auto NiParticles_createRendererData = &NI::Particles::createRendererData;
+		for (const auto vTable : { NI::VirtualTableAddress::NiParticles, NI::VirtualTableAddress::NiAutoNormalParticles, NI::VirtualTableAddress::NiRotatingParticles }) {
+			overrideVirtualTableEnforced(vTable, offsetof(NI::Object_vTable, createRendererData), 0x6E9A00, *reinterpret_cast<DWORD*>(&NiParticles_createRendererData));
+		}
+
 		// Patch: Make globals less slow to access.
 #if MWSE_CUSTOM_GLOBALS
 		genCallEnforced(0x4B7D74, 0x47E1E0, reinterpret_cast<DWORD>(DataHandlerCreateGlobalsContainer));
