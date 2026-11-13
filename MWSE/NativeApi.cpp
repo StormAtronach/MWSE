@@ -186,8 +186,12 @@ namespace mwse::native {
 	static bool playerCellSitesRedirected = false;
 
 	// The three groups of calls, or none: a part would leave some changes of cell without the event
-	// and without the test of the thread.
+	// and without the test of the thread. The first call writes them: MWSE's start, or a subscription
+	// of the event before it (a module that subscribes in its DllMain).
 	void installPlayerCellRedirect() {
+		if (playerCellSitesRedirected) {
+			return;
+		}
 		for (const auto sites : { &playerCellChangeSites, &playerCellGameLoadSites, &playerCellCompanionSites }) {
 			const auto changed = sites->findChangedSite();
 			if (changed) {
@@ -201,8 +205,9 @@ namespace mwse::native {
 		playerCellSitesRedirected = true;
 	}
 
-	// The event fires from the members, which the sites call since MWSE's start.
+	// The event fires from the members, which the sites call once they are redirected.
 	static MwseNativeStatus installPlayerCellChanged() {
+		installPlayerCellRedirect();
 		return playerCellSitesRedirected ? MWSE_NATIVE_OK : MWSE_NATIVE_BYTES_CHANGED;
 	}
 
