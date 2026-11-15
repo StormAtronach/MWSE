@@ -1951,6 +1951,8 @@ namespace mwse::patch {
 	// A click on the frame of the window activated it. The click can start a move or a size, whose
 	// loop needs the mouse messages that an acquired exclusive device takes away.
 	static bool activatedByFrameClick = false;
+	// The window is in the loop of a move or a size (WM_ENTERSIZEMOVE to WM_EXITSIZEMOVE).
+	static bool inMoveSizeLoop = false;
 
 	static void SetShowCursorState(bool shown, bool force = false) {
 		if (!force && showCursorFlag == shown) {
@@ -2009,7 +2011,9 @@ namespace mwse::patch {
 
 		// The pointer moved again: its place decides from here on.
 		activatedByFrameClick = false;
-		SetCursorShown(hWnd, shouldShow || GetForegroundWindow() != hWnd);
+		// A move by the keys puts the pointer over the client area. The loop still reads the keys
+		// as messages, so the devices stay free until it ends.
+		SetCursorShown(hWnd, shouldShow || inMoveSizeLoop || GetForegroundWindow() != hWnd);
 	}
 
 	static LRESULT __stdcall PatchWindProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -2036,9 +2040,16 @@ namespace mwse::patch {
 			SetCursorShown(hWnd, true, true);
 			break;
 		case WM_ENTERSIZEMOVE:
-			// The loop of a move or a size reads the mouse and the keys as messages. The next hit
-			// test after the loop takes the devices again.
+			// The loop of a move or a size reads the mouse and the keys as messages.
+			inMoveSizeLoop = true;
 			SetCursorShown(hWnd, true);
+			break;
+		case WM_EXITSIZEMOVE:
+			// No hit test comes after the loop until the pointer moves. The game takes its devices
+			// again as at an activation, if it is in front.
+			inMoveSizeLoop = false;
+			activatedByFrameClick = false;
+			SetCursorShown(hWnd, GetForegroundWindow() != hWnd);
 			break;
 		case WM_NCHITTEST:
 			PatchWindProc_CursorHitTest(context);
