@@ -7,8 +7,6 @@ namespace NI {
 		Point3 direction; // 0xDC
 		float spotAngle; // 0xE8
 		float spotExponent; // 0xEC
-
-		~SpotLight() = delete;
 	};
 	static_assert(sizeof(SpotLight) == 0xF0, "NI::SpotLight failed size validation");
 }

@@ -27,8 +27,6 @@ namespace NI {
 
 		unsigned char animationFlags; // 0xB0
 
-		~BSAnimationNode() = delete;
-
 		void ctor();
 		static Pointer<BSAnimationNode> create();
 
@@ -43,8 +41,6 @@ namespace NI {
 		enum AVObjectFlagBit : unsigned char {
 			FollowBit = 7,
 		};
-
-		~BSParticleNode() = delete;
 
 		void ctor();
 		static Pointer<BSParticleNode> create();

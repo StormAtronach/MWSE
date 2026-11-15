@@ -11,7 +11,7 @@ namespace NI {
 
 		Node() = delete;
 		Node(const Node&) = delete;
-		~Node() = delete;
+		static void operator delete(void*) = delete;
 
 		void ctor();
 

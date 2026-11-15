@@ -4,7 +4,6 @@
 
 namespace NI {
 	struct AmbientLight : Light {
-		~AmbientLight() = delete;
 	};
 	static_assert(sizeof(AmbientLight) == 0xD0, "NI::AmbientLight failed size validation");
 }

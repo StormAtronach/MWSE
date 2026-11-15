@@ -20,7 +20,7 @@ namespace NI {
 
 		DynamicEffect() = delete;
 		DynamicEffect(const DynamicEffect&) = delete;
-		~DynamicEffect() = delete;
+		static void operator delete(void*) = delete;
 
 		//
 		// vTable wrappers.

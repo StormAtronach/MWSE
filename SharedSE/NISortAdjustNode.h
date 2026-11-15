@@ -17,8 +17,6 @@ namespace NI {
 		SortAdjustMode sortingMode; // 0xB0
 		Pointer<Accumulator> accumulator; // 0xB4
 
-		~SortAdjustNode() = delete;
-
 		void ctor();
 		static Pointer<SortAdjustNode> create();
 	};

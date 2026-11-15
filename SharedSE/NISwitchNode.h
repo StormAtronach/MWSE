@@ -10,8 +10,6 @@ namespace NI {
 		TArray<unsigned int*> childRevisionIDs;
 		bool bUpdateControllers;
 
-		~SwitchNode() = delete;
-
 		//
 		// Custom functions.
 		//

@@ -19,8 +19,6 @@ namespace NI {
 		float savedTime;
 		bool updateControllers;
 
-		~BillboardNode() = delete;
-
 		void ctor();
 		static Pointer<BillboardNode> create();
 
