@@ -8,6 +8,8 @@ namespace NI {
 		float linearAttenuation; // 0xD4
 		float quadraticAttenuation; // 0xD8
 
+		~PointLight() = delete;
+
 		//
 		// Custom functions.
 		//

@@ -9,11 +9,11 @@ namespace NI {
 		TArray<Pointer<AVObject>> children; // 0x90
 		DynamicEffectLinkedList effectList; // 0xA8
 
-		Node();
-		~Node();
+		Node() = delete;
+		Node(const Node&) = delete;
+		~Node() = delete;
 
-		// For a subclass whose constructor of the game builds the node too.
-		explicit Node(se::memory::BuiltByGame);
+		void ctor();
 
 		//
 		// vTable wrappers.

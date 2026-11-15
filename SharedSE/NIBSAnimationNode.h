@@ -27,7 +27,9 @@ namespace NI {
 
 		unsigned char animationFlags; // 0xB0
 
-		BSAnimationNode();
+		~BSAnimationNode() = delete;
+
+		void ctor();
 		static Pointer<BSAnimationNode> create();
 
 		static constexpr auto getPhaseInit() { return *reinterpret_cast<float*>(0x7DE9B4); }
@@ -42,7 +44,9 @@ namespace NI {
 			FollowBit = 7,
 		};
 
-		BSParticleNode();
+		~BSParticleNode() = delete;
+
+		void ctor();
 		static Pointer<BSParticleNode> create();
 
 		bool getFollowMode() const;

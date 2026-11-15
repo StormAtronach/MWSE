@@ -3,20 +3,21 @@
 #include "ExceptionUtil.h"
 
 namespace NI {
+	void BSAnimationNode::ctor() {
 #if defined(SE_NI_BSANIMATIONNODE_FNADDR_CTOR) && SE_NI_BSANIMATIONNODE_FNADDR_CTOR > 0
-	BSAnimationNode::BSAnimationNode() : Node(se::memory::builtByGame) {
 		reinterpret_cast<void(__thiscall*)(BSAnimationNode*)>(SE_NI_BSANIMATIONNODE_FNADDR_CTOR)(this);
-	}
 #else
-	BSAnimationNode::BSAnimationNode() { throw not_implemented_exception(); }
+		throw not_implemented_exception();
 #endif
+	}
 
 	Pointer<BSAnimationNode> BSAnimationNode::create() {
-		return new BSAnimationNode();
+		return construct<BSAnimationNode>();
 	}
 
-	BSParticleNode::BSParticleNode() {
+	void BSParticleNode::ctor() {
 #if defined(SE_NI_BSPARTICLENODE_VTBL) && SE_NI_BSPARTICLENODE_VTBL > 0
+		BSAnimationNode::ctor();
 		flags |= BSParticleNode::AVObjectFlag::Follow;
 		vTable.asObject = reinterpret_cast<Object_vTable*>(SE_NI_BSPARTICLENODE_VTBL);
 #else
@@ -25,7 +26,7 @@ namespace NI {
 	}
 
 	Pointer<BSParticleNode> BSParticleNode::create() {
-		return new BSParticleNode();
+		return construct<BSParticleNode>();
 	}
 
 	bool BSParticleNode::getFollowMode() const {

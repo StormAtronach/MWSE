@@ -10,6 +10,8 @@ namespace NI {
 		Color diffuse; // 0xB8
 		Color specular; // 0xC4
 
+		~Light() = delete;
+
 		// MWSE-pattern relocatable construction; impl in MWSE-private NILight.cpp.
 		// CSSE doesn't currently call this.
 		Light* ctor();

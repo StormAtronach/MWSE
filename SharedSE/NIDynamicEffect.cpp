@@ -3,23 +3,6 @@
 #include "ExceptionUtil.h"
 
 namespace NI {
-	DynamicEffect::DynamicEffect() {
-#if defined(SE_NI_DYNAMICEFFECT_FNADDR_CTOR) && SE_NI_DYNAMICEFFECT_FNADDR_CTOR > 0
-		const auto NI_DynamicEffect_ctor = reinterpret_cast<void(__thiscall*)(DynamicEffect*)>(SE_NI_DYNAMICEFFECT_FNADDR_CTOR);
-		NI_DynamicEffect_ctor(this);
-#else
-		throw not_implemented_exception();
-#endif
-	}
-
-	DynamicEffect::DynamicEffect(se::memory::BuiltByGame) {
-	}
-
-	DynamicEffect::~DynamicEffect() {
-		// Call dtor without deletion.
-		vTable.asObject->destructor(this, 0);
-	}
-
 	int DynamicEffect::getType() const {
 		return vTable.asDynamicEffect->getType(this);
 	}

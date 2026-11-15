@@ -51,6 +51,20 @@ namespace NI {
 		static void* operator new(size_t size);
 		static void operator delete(void* block);
 
+		// Makes a T in new memory of the game and runs T::ctor() on it.
+		template <typename T>
+		static T* construct() {
+			const auto object = static_cast<T*>(operator new(sizeof(T)));
+			try {
+				object->ctor();
+			}
+			catch (...) {
+				operator delete(object);
+				throw;
+			}
+			return object;
+		}
+
 		//
 		// vTable Wrappers
 		//

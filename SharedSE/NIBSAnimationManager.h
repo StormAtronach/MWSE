@@ -8,6 +8,8 @@ namespace NI {
 	struct BSAnimationManager : Node {
 		TArray<Pointer<BSAnimationNode>> managedNodes; // 0xB0
 
+		~BSAnimationManager() = delete;
+
 		// The new object has a reference count of 0. The caller sets the first reference.
 		static BSAnimationManager* create();
 

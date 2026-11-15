@@ -17,7 +17,9 @@ namespace NI {
 		SortAdjustMode sortingMode; // 0xB0
 		Pointer<Accumulator> accumulator; // 0xB4
 
-		SortAdjustNode();
+		~SortAdjustNode() = delete;
+
+		void ctor();
 		static Pointer<SortAdjustNode> create();
 	};
 	static_assert(sizeof(SortAdjustNode) == 0xB8, "NI::SortAdjustNode failed size validation");

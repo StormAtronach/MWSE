@@ -28,8 +28,9 @@ namespace NI {
 		int unknown_0x140;
 		int unknown_0x144;
 
-		TextureEffect();
-		~TextureEffect();
+		~TextureEffect() = delete;
+
+		void ctor();
 
 		static Pointer<TextureEffect> create();
 	};

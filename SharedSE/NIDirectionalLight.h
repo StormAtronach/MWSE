@@ -5,6 +5,8 @@
 namespace NI {
 	struct DirectionalLight : Light {
 		Point3 direction; // 0xD0
+
+		~DirectionalLight() = delete;
 	};
 	static_assert(sizeof(DirectionalLight) == 0xDC, "NI::DirectionalLight failed size validation");
 }
