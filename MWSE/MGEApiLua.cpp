@@ -563,6 +563,48 @@ namespace mge::lua {
 		CameraConfig::setCameraShakeAcceleration(mwse::lua::getOptionalParam<float>(params, "acceleration", 0.0f));
 	}
 
+	// The screen rotation runs MGE XE's own mwscript instructions, as mge.log does. Without those opcodes (no
+	// MGE XE), the engine's report of an unknown opcode faults, so each call does nothing.
+	float LegacyInterface::getScreenRotation() {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGEGetScreenRotation)) {
+			return 0.0f;
+		}
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGEGetScreenRotation);
+		return mwse::Stack::getInstance().popFloat();
+	}
+
+	void LegacyInterface::setScreenRotation(sol::optional<sol::table> params) {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGESetScreenRotation)) {
+			return;
+		}
+		mwse::Stack::getInstance().pushFloat(mwse::lua::getOptionalParam<float>(params, "rotation", 0.0f));
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGESetScreenRotation);
+	}
+
+	void LegacyInterface::modScreenRotation(sol::optional<sol::table> params) {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGERotateScreenBy)) {
+			return;
+		}
+		mwse::Stack::getInstance().pushFloat(mwse::lua::getOptionalParam<float>(params, "rotation", 0.0f));
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGERotateScreenBy);
+	}
+
+	// Without a rate the rate is 0, which stops the rotation: the old call put no rate on the stack.
+	void LegacyInterface::startScreenRotation(sol::optional<sol::table> params) {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGEScreenSpin)) {
+			return;
+		}
+		mwse::Stack::getInstance().pushFloat(mwse::lua::getOptionalParam<float>(params, "rate", 0.0f));
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGEScreenSpin);
+	}
+
+	void LegacyInterface::stopScreenRotation() {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGEStopSpinSpin)) {
+			return;
+		}
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGEStopSpinSpin);
+	}
+
 	ShaderHandle LegacyInterface::findShader(sol::optional<sol::table> params) {
 		auto shaderName = mwse::lua::getOptionalParam<const char*>(params, "shader", nullptr);
 		if (shaderName == nullptr) {

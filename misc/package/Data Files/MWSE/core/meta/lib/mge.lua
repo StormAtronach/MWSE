@@ -73,6 +73,11 @@ function mge.getLightingMode() end
 --- @return number result No description yet available.
 function mge.getScreenHeight() end
 
+--- Gets the rotation of the picture about the view's axis, in radians. Without MGE XE, or when MGE XE does not draw the game, it gives 0.
+--- @deprecated
+--- @return number rotation The rotation, in radians.
+function mge.getScreenRotation() end
+
 --- Gets the window's horizontal resolution. Use `tes3.getViewportSize()` instead.
 --- @deprecated
 --- @return number result No description yet available.
@@ -116,6 +121,17 @@ function mge.loadConfig() end
 --- Writes a line to MGE XE's log file, mgeXE.log. The message is written as it is: it takes no format arguments. Without MGE XE, or when MGE XE does not draw the game, the call does nothing. Each different message stays in memory for the session; do not write a new text in each frame.
 --- @param message string The line to write.
 function mge.log(message) end
+
+--- Adds an angle to the rotation of the picture about the view's axis. Without MGE XE, or when MGE XE does not draw the game, the call does nothing.
+--- @deprecated
+--- @param params mge.modScreenRotation.params This table accepts the following values:
+--- 
+--- `rotation`: number — The angle to add, in radians.
+function mge.modScreenRotation(params) end
+
+---Table parameter definitions for `mge.modScreenRotation`.
+--- @class mge.modScreenRotation.params
+--- @field rotation number The angle to add, in radians.
 
 --- Reloads the MGE distant land. This is a blocking call that can take some seconds.
 function mge.reloadDistantLand() end
@@ -161,6 +177,17 @@ function mge.setCameraShakeMagnitude(params) end
 --- Sets the lighting mode used by MGE XE. The values passed can be used from the [`mge.lightingMode`](https://mwse.github.io/MWSE/references/mge/lighting-modes/) constants.
 --- @param mode mge.lightingMode No description yet available.
 function mge.setLightingMode(mode) end
+
+--- Sets the rotation of the picture about the view's axis. Without MGE XE, or when MGE XE does not draw the game, the call does nothing.
+--- @deprecated
+--- @param params mge.setScreenRotation.params This table accepts the following values:
+--- 
+--- `rotation`: number — The rotation, in radians.
+function mge.setScreenRotation(params) end
+
+---Table parameter definitions for `mge.setScreenRotation`.
+--- @class mge.setScreenRotation.params
+--- @field rotation number The rotation, in radians.
 
 --- Sets a shader float value. Use the named variable interface on the shader handle instead.
 --- @deprecated
@@ -247,6 +274,21 @@ function mge.setZoom(params) end
 ---Table parameter definitions for `mge.setZoom`.
 --- @class mge.setZoom.params
 --- @field amount number No description yet available.
+
+--- Turns the picture about the view's axis at a rate. Without a rate the rate is 0, which stops the rotation, as the old call without arguments did. Without MGE XE, or when MGE XE does not draw the game, the call does nothing.
+--- @deprecated
+--- @param params? mge.startScreenRotation.params This table accepts the following values:
+--- 
+--- `rate?`: number — *Default*: `0`. The rate of the rotation, in radians in a second.
+function mge.startScreenRotation(params) end
+
+---Table parameter definitions for `mge.startScreenRotation`.
+--- @class mge.startScreenRotation.params
+--- @field rate? number *Default*: `0`. The rate of the rotation, in radians in a second.
+
+--- Stops the rotation that startScreenRotation started. The current angle stays. Without MGE XE, or when MGE XE does not draw the game, the call does nothing.
+--- @deprecated
+function mge.stopScreenRotation() end
 
 --- Stops a zoom that changes over time. Use `mge.camera.stopZoom()` instead.
 --- @deprecated

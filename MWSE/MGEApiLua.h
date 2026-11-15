@@ -117,6 +117,12 @@ namespace mge::lua {
 		static void setCameraShakeMagnitude(sol::optional<sol::table> params);
 		static void setCameraShakeAcceleration(sol::optional<sol::table> params);
 
+		static float getScreenRotation();
+		static void setScreenRotation(sol::optional<sol::table> params);
+		static void modScreenRotation(sol::optional<sol::table> params);
+		static void startScreenRotation(sol::optional<sol::table> params);
+		static void stopScreenRotation();
+
 		static ShaderHandle findShader(sol::optional<sol::table> params);
 		static void enableShader(sol::optional<sol::table> params);
 		static void disableShader(sol::optional<sol::table> params);
