@@ -24,13 +24,15 @@ namespace mge::lua {
 		return IdleAPI::isRealAPIInUse();
 	}
 
+	// The idle API gives the version of the installed MGE XE too, or 0 when there is none.
 	sol::object CoreInterface::getVersion(sol::this_state ts) {
-		if (!IdleAPI::isRealAPIInUse()) {
+		const int packedVersion = api ? api->getMGEVersion() : 0;
+		if (packedVersion == 0) {
 			return sol::nil;
 		}
 
 		// Convert packed version to semver table. MGE XE major version is offset for legacy reasons.
-		int ver = api->getMGEVersion() - 0x40000;
+		int ver = packedVersion - 0x40000;
 		int major = (ver >> 16) & 0xFF, minor = (ver >> 8) & 0xFF, patch = ver & 0xFF;
 
 		sol::state_view state = ts;

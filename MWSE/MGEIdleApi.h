@@ -14,7 +14,7 @@ namespace mge {
 
 		// Puts the idle API in the place of MGE XE's API, or in the place of no API. The Lua
 		// values that were copied from MGE XE's API before (the macros, the distant land
-		// configuration) stay as they are.
+		// configuration) stay as they are. The version of MGE XE's API is kept for getMGEVersion.
 		static void takeOver();
 
 		// True when an API of MGE XE is in use: not null and not the idle API.
@@ -146,5 +146,9 @@ namespace mge {
 		std::unordered_map<std::string, std::unique_ptr<Shader>> shaders;
 		MacroFunctions idleMacros = {};
 		DistantLandRenderConfig distantLandConfig = {};
+
+		// The version that MGE XE's API gave before the idle API took its place, or 0 when no API
+		// of MGE XE was in use.
+		int withdrawnMGEVersion = 0;
 	};
 }

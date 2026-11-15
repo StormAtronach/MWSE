@@ -12,6 +12,9 @@ namespace mge {
 
 	void IdleAPI::takeOver() {
 		const auto idle = get();
+		if (isRealAPIInUse()) {
+			idle->withdrawnMGEVersion = api->getMGEVersion();
+		}
 		api = idle;
 		apiVersion = idle->getAPIVersion();
 		macros = idle->macroFunctions();
@@ -48,7 +51,16 @@ namespace mge {
 		return 4;
 	}
 
+	// The version of the MGE XE that is installed, so that a mod's check for MGE XE passes as with
+	// MGE XE's API: the version that MGE XE's API gave before its withdrawal, else the version of
+	// MGEXEgui.exe, else 0 (no MGE XE). The number is packed as MGE XE packs it.
 	int IdleAPI::getMGEVersion() const {
+		if (withdrawnMGEVersion != 0) {
+			return withdrawnMGEVersion;
+		}
+		if (guiVersion.valid()) {
+			return 0x40000 + (guiVersion.major << 16 | guiVersion.minor << 8 | guiVersion.patch);
+		}
 		return 0;
 	}
 
