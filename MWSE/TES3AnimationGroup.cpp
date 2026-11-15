@@ -658,8 +658,8 @@ namespace TES3 {
 
 		if (loopEndTime > loopStartTime) {
 			// Invoke controller on temp node instead of activating the sequence.
-			NI::Node root;
-			NI::ObjectNET* target = &root;
+			auto root = NI::Node::create();
+			NI::ObjectNET* target = root;
 
 			std::swap(rootController->target, target);
 			rootController->setActive(true);
@@ -675,9 +675,9 @@ namespace TES3 {
 				}
 			};
 			advanceTo(loopStartTime);
-			NI::Point3 startPoint = root.localTranslate;
+			NI::Point3 startPoint = root->localTranslate;
 			advanceTo(loopEndTime);
-			NI::Point3 movement = root.localTranslate - startPoint;
+			NI::Point3 movement = root->localTranslate - startPoint;
 			rootController->setActive(false);
 
 			// Note that movement is measured in the XY plane.
