@@ -15,6 +15,8 @@ namespace mge::lua {
 
 		static bool reloadDistantLand();
 
+		static void log(const std::string& message);
+
 		static float getGUIScale();
 		static void setGUIScale(float value);
 

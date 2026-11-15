@@ -32,6 +32,7 @@ namespace mwse::lua {
 
 		lua_mge["loadConfig"] = &mge::lua::CoreInterface::loadConfig;
 		lua_mge["saveConfig"] = &mge::lua::CoreInterface::saveConfig;
+		lua_mge["log"] = &mge::lua::CoreInterface::log;
 
 		// Distant land functions.
 		{
