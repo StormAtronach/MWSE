@@ -1876,6 +1876,9 @@ namespace mwse::patch {
 	static WNDPROC originalWindowProc = nullptr;
 	using gCursorShown = se::memory::ExternalGlobal<bool, 0x776D0C>;
 	static bool showCursorFlag = true;
+	// A click on the frame of the window activated it. The click can start a move or a size, whose
+	// loop needs the mouse messages that an acquired exclusive device takes away.
+	static bool activatedByFrameClick = false;
 
 	static void SetShowCursorState(bool shown, bool force = false) {
 		if (!force && showCursorFlag == shown) {
@@ -1932,6 +1935,8 @@ namespace mwse::patch {
 		const auto result = context.getResult();
 		auto shouldShow = result != HTCLIENT;
 
+		// The pointer moved again: its place decides from here on.
+		activatedByFrameClick = false;
 		SetCursorShown(hWnd, shouldShow || GetForegroundWindow() != hWnd);
 	}
 
@@ -1939,17 +1944,29 @@ namespace mwse::patch {
 		se::windows::DialogProcContext context(hWnd, msg, wParam, lParam, (DWORD)originalWindowProc);
 
 		switch (msg) {
+		case WM_MOUSEACTIVATE:
+			// The low word is the hit test of the click that activates the window.
+			activatedByFrameClick = LOWORD(lParam) != HTCLIENT;
+			break;
 		case WM_ACTIVATE:
-			SetCursorShown(hWnd, context.getLOWParam() == WA_INACTIVE, true);
+			if (context.getLOWParam() == WA_INACTIVE) {
+				activatedByFrameClick = false;
+			}
+			SetCursorShown(hWnd, context.getLOWParam() == WA_INACTIVE || activatedByFrameClick, true);
 			break;
 		case WM_ACTIVATEAPP:
-			SetCursorShown(hWnd, !wParam, true);
+			SetCursorShown(hWnd, !wParam || activatedByFrameClick, true);
 			break;
 		case WM_SETFOCUS:
-			SetCursorShown(hWnd, false);
+			SetCursorShown(hWnd, activatedByFrameClick);
 			break;
 		case WM_KILLFOCUS:
 			SetCursorShown(hWnd, true, true);
+			break;
+		case WM_ENTERSIZEMOVE:
+			// The loop of a move or a size reads the mouse and the keys as messages. The next hit
+			// test after the loop takes the devices again.
+			SetCursorShown(hWnd, true);
 			break;
 		case WM_NCHITTEST:
 			PatchWindProc_CursorHitTest(context);
