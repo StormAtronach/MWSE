@@ -14,6 +14,8 @@ namespace mge {
 		const auto idle = get();
 		if (isRealAPIInUse()) {
 			idle->withdrawnMGEVersion = api->getMGEVersion();
+			const int version = idle->withdrawnMGEVersion - 0x40000;
+			mwse::log::getLog() << "The idle mge API keeps the version of MGE XE's API: " << ((version >> 16) & 0xFF) << "." << ((version >> 8) & 0xFF) << "." << (version & 0xFF) << std::endl;
 		}
 		api = idle;
 		apiVersion = idle->getAPIVersion();
