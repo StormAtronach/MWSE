@@ -1969,6 +1969,12 @@ namespace mwse::patch {
 	}
 
 	static void SetCursorShown(HWND hWnd, bool shown, bool forceShow = false) {
+		// The loop of a move or a size reads the mouse and the keys as messages: until it ends the
+		// cursor stays shown and the devices free, whatever message asks.
+		if (inMoveSizeLoop) {
+			shown = true;
+		}
+
 		gCursorShown::set(shown);
 		SetShowCursorState(shown, forceShow && shown);
 
@@ -2011,9 +2017,7 @@ namespace mwse::patch {
 
 		// The pointer moved again: its place decides from here on.
 		activatedByFrameClick = false;
-		// A move by the keys puts the pointer over the client area. The loop still reads the keys
-		// as messages, so the devices stay free until it ends.
-		SetCursorShown(hWnd, shouldShow || inMoveSizeLoop || GetForegroundWindow() != hWnd);
+		SetCursorShown(hWnd, shouldShow || GetForegroundWindow() != hWnd);
 	}
 
 	static LRESULT __stdcall PatchWindProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -2026,7 +2030,9 @@ namespace mwse::patch {
 			break;
 		case WM_ACTIVATE:
 			if (context.getLOWParam() == WA_INACTIVE) {
+				// A loss of the activation ends a loop too.
 				activatedByFrameClick = false;
+				inMoveSizeLoop = false;
 			}
 			SetCursorShown(hWnd, context.getLOWParam() == WA_INACTIVE || activatedByFrameClick, true);
 			break;
@@ -2040,7 +2046,6 @@ namespace mwse::patch {
 			SetCursorShown(hWnd, true, true);
 			break;
 		case WM_ENTERSIZEMOVE:
-			// The loop of a move or a size reads the mouse and the keys as messages.
 			inMoveSizeLoop = true;
 			SetCursorShown(hWnd, true);
 			break;
