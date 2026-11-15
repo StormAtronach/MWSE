@@ -678,9 +678,11 @@ function tes3.createObject(params) end
 --- @field getIfExists? boolean *Default*: `true`. If `true`, an existing object of the same `objectType` and `id` will be returned instead of creating a new one.
 
 --- Similar to mwscript's PlaceAtPC or PlaceAtMe, this creates a new reference in the game world.
+--- 
+--- A leveled creature list is resolved to one creature, as the game does when it places a creature from a list: the [`leveledCreaturePicked`](https://mwse.github.io/MWSE/events/leveledCreaturePicked) event fires with the source `"script"`, and the function creates a reference of the picked creature and returns it. When the list picks nothing (its chance for nothing, no entry at the player's level, or the event blocks the pick), no reference is created and the function returns `nil`.
 --- @param params tes3.createReference.params This table accepts the following values:
 --- 
---- `object`: tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3bodyPart|tes3book|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3door|tes3ingredient|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3misc|tes3npc|tes3npcInstance|tes3physicalObject|tes3probe|tes3repairTool|tes3static|tes3weapon|string — The object to create a reference of.
+--- `object`: tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3bodyPart|tes3book|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3door|tes3ingredient|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3misc|tes3npc|tes3npcInstance|tes3physicalObject|tes3probe|tes3repairTool|tes3static|tes3weapon|string — The object to create a reference of. A leveled creature list creates a reference of the creature that it picks.
 --- 
 --- `position`: tes3vector3|number[] — The location to create the reference at.
 --- 
@@ -691,12 +693,12 @@ function tes3.createObject(params) end
 --- `scale?`: number — *Default*: `1`. A scale for the reference.
 --- 
 --- `updateCollisionGroups?`: boolean — *Default*: `true`. Only applies to activators, statics, containers, and lights that can't be carried. If false, collision will not be updated. Collision will need to be manually updated by calling `tes3.dataHandler:updateCollisionGroupsForActiveCells()`.
---- @return tes3reference newReference No description yet available.
+--- @return tes3reference|nil newReference The new reference. `nil` when a leveled creature list picks nothing.
 function tes3.createReference(params) end
 
 ---Table parameter definitions for `tes3.createReference`.
 --- @class tes3.createReference.params
---- @field object tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3bodyPart|tes3book|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3door|tes3ingredient|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3misc|tes3npc|tes3npcInstance|tes3physicalObject|tes3probe|tes3repairTool|tes3static|tes3weapon|string The object to create a reference of.
+--- @field object tes3activator|tes3alchemy|tes3apparatus|tes3armor|tes3bodyPart|tes3book|tes3clothing|tes3container|tes3containerInstance|tes3creature|tes3creatureInstance|tes3door|tes3ingredient|tes3leveledCreature|tes3leveledItem|tes3light|tes3lockpick|tes3misc|tes3npc|tes3npcInstance|tes3physicalObject|tes3probe|tes3repairTool|tes3static|tes3weapon|string The object to create a reference of. A leveled creature list creates a reference of the creature that it picks.
 --- @field position tes3vector3|number[] The location to create the reference at.
 --- @field orientation tes3vector3|number[] The new orientation for the created reference.
 --- @field cell? tes3cell|string|table *Optional*. The cell to create the reference in. This is only needed for interior cells.
