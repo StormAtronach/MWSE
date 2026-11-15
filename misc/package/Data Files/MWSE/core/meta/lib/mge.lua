@@ -61,7 +61,7 @@ function mge.enableCameraShake(params) end
 --- @field magnitude? number *Optional*. The magnitude of the shake. When it is missing or 0, the current magnitude stays.
 --- @field acceleration? number *Optional*. The acceleration of the shake. When it is missing or 0, the current acceleration stays.
 
---- Determines if the MGE XE interface is enabled.
+--- Determines if the MGE XE interface is enabled. It is false when MGE XE is not installed, or when its renderer is not in use. Then every other function of the mge library still exists and does nothing, and a shader that is loaded does nothing.
 --- @return boolean enabled No description yet available.
 function mge.enabled() end
 
@@ -139,7 +139,7 @@ function mge.getScreenWidth() end
 --- @return number scale No description yet available.
 function mge.getUIScale() end
 
---- Gets the MGE version. Returns a table with keys `major`, `minor`, and `patch`.
+--- Gets the MGE version. Returns a table with keys `major`, `minor`, and `patch`, or nil when `mge.enabled()` is false.
 --- @return mgeVersionTable result No description yet available.
 function mge.getVersion() end
 

@@ -70,7 +70,7 @@ Allows control of MGE weather features.
 ### `mge.enabled`
 <div class="search_terms" style="display: none">enabled</div>
 
-Determines if the MGE XE interface is enabled.
+Determines if the MGE XE interface is enabled. It is false when MGE XE is not installed, or when its renderer is not in use. Then every other function of the mge library still exists and does nothing, and a shader that is loaded does nothing.
 
 ```lua
 local enabled = mge.enabled()
@@ -115,7 +115,7 @@ local scale = mge.getUIScale()
 ### `mge.getVersion`
 <div class="search_terms" style="display: none">getversion, version</div>
 
-Gets the MGE version. Returns a table with keys `major`, `minor`, and `patch`.
+Gets the MGE version. Returns a table with keys `major`, `minor`, and `patch`, or nil when `mge.enabled()` is false.
 
 ```lua
 local result = mge.getVersion()
