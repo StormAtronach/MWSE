@@ -1168,6 +1168,8 @@ local createdObject = tes3.createObject({ id = ..., objectType = ..., getIfExist
 
 Similar to mwscript's PlaceAtPC or PlaceAtMe, this creates a new reference in the game world.
 
+A leveled creature list is resolved to one creature, as the game does when it places a creature from a list: the [`leveledCreaturePicked`](https://mwse.github.io/MWSE/events/leveledCreaturePicked) event fires with the source `"script"`, and the function creates a reference of the picked creature and returns it. When the list picks nothing (its chance for nothing, no entry at the player's level, or the event blocks the pick), no reference is created and the function returns `nil`.
+
 ```lua
 local newReference = tes3.createReference({ object = ..., position = ..., orientation = ..., cell = ..., scale = ..., updateCollisionGroups = ... })
 ```
@@ -1175,7 +1177,7 @@ local newReference = tes3.createReference({ object = ..., position = ..., orient
 **Parameters**:
 
 * `params` (table)
-	* `object` ([tes3physicalObject](../types/tes3physicalObject.md), string): The object to create a reference of.
+	* `object` ([tes3physicalObject](../types/tes3physicalObject.md), string): The object to create a reference of. A leveled creature list creates a reference of the creature that it picks.
 	* `position` ([tes3vector3](../types/tes3vector3.md), number[]): The location to create the reference at.
 	* `orientation` ([tes3vector3](../types/tes3vector3.md), number[]): The new orientation for the created reference.
 	* `cell` ([tes3cell](../types/tes3cell.md), string, table): *Optional*. The cell to create the reference in. This is only needed for interior cells.
@@ -1184,7 +1186,7 @@ local newReference = tes3.createReference({ object = ..., position = ..., orient
 
 **Returns**:
 
-* `newReference` ([tes3reference](../types/tes3reference.md))
+* `newReference` ([tes3reference](../types/tes3reference.md), nil): The new reference. `nil` when a leveled creature list picks nothing.
 
 ***
 
