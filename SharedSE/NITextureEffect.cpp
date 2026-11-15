@@ -4,7 +4,7 @@
 
 namespace NI {
 #if defined(SE_NI_TEXTUREEFFECT_FNADDR_CTOR) && SE_NI_TEXTUREEFFECT_FNADDR_CTOR > 0
-	TextureEffect::TextureEffect() {
+	TextureEffect::TextureEffect() : DynamicEffect(se::memory::builtByGame) {
 		reinterpret_cast<void(__thiscall*)(const DynamicEffect*)>(SE_NI_TEXTUREEFFECT_FNADDR_CTOR)(this);
 	}
 #else

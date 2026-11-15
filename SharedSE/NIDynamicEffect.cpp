@@ -12,6 +12,9 @@ namespace NI {
 #endif
 	}
 
+	DynamicEffect::DynamicEffect(se::memory::BuiltByGame) {
+	}
+
 	DynamicEffect::~DynamicEffect() {
 		// Call dtor without deletion.
 		vTable.asObject->destructor(this, 0);

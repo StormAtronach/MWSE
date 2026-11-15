@@ -12,6 +12,9 @@ namespace NI {
 		Node();
 		~Node();
 
+		// For a subclass whose constructor of the game builds the node too.
+		explicit Node(se::memory::BuiltByGame);
+
 		//
 		// vTable wrappers.
 		//

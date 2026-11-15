@@ -47,6 +47,11 @@ namespace se::memory {
 	void free(void* address);
 #endif
 
+	// Selects a constructor that makes no storage and runs no constructor of the game. For an
+	// object, or a field of one, in memory that a constructor of the game builds afterwards.
+	struct BuiltByGame {};
+	inline constexpr BuiltByGame builtByGame{};
+
 	// Container for registers, flags, and other information to help with the
 	// native to MWSE code bridge.
 	struct HookContext {
