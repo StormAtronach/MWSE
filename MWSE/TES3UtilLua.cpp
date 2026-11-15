@@ -3001,14 +3001,6 @@ namespace mwse::lua {
 		// Make sure we have a base object.
 		object = static_cast<TES3::PhysicalObject*>(object->getBaseObject());
 
-		// A leveled creature list places the creature that it picks, or nothing.
-		if (object->objectType == TES3::ObjectType::LeveledCreature) {
-			object = static_cast<TES3::PhysicalObject*>(static_cast<TES3::LeveledCreature*>(object)->resolve());
-			if (object == nullptr) {
-				return nullptr;
-			}
-		}
-
 		// Get the position.
 		auto maybePosition = getOptionalParamPoint3(params, "position");
 		if (!maybePosition) {
@@ -3033,6 +3025,14 @@ namespace mwse::lua {
 		// Make sure we actually got a cell.
 		if (cell == nullptr) {
 			throw std::invalid_argument("Invalid 'cell' parameter provided. Please provide a cell, or give a valid exterior position.");
+		}
+
+		// A leveled creature list places the creature that it picks, or nothing.
+		if (object->objectType == TES3::ObjectType::LeveledCreature) {
+			object = static_cast<TES3::PhysicalObject*>(static_cast<TES3::LeveledCreature*>(object)->resolve());
+			if (object == nullptr) {
+				return nullptr;
+			}
 		}
 
 		// Create reference.
