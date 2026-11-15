@@ -1032,41 +1032,11 @@ namespace mwse::lua {
 		};
 
 		// Camera rotation functions.
-		lua_mge["getScreenRotation"] = []() {
-			if (!hasMGEOpcodes({ OpCode::MGEGetScreenRotation })) {
-				return 0.0f;
-			}
-			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGEGetScreenRotation);
-			return Stack::getInstance().popFloat();
-		};
-		lua_mge["modScreenRotation"] = [](sol::optional<sol::table> params) {
-			if (!hasMGEOpcodes({ OpCode::MGERotateScreenBy })) {
-				return;
-			}
-			auto rotation = getOptionalParam(params, "rotation", 0.0f);
-			Stack::getInstance().pushFloat(rotation);
-			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGERotateScreenBy);
-		};
-		lua_mge["setScreenRotation"] = [](sol::optional<sol::table> params) {
-			if (!hasMGEOpcodes({ OpCode::MGESetScreenRotation })) {
-				return;
-			}
-			auto rotation = getOptionalParam(params, "rotation", 0.0f);
-			Stack::getInstance().pushFloat(rotation);
-			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGESetScreenRotation);
-		};
-		lua_mge["startScreenRotation"] = []() {
-			if (!hasMGEOpcodes({ OpCode::MGEScreenSpin })) {
-				return;
-			}
-			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGEScreenSpin);
-		};
-		lua_mge["stopScreenRotation"] = []() {
-			if (!hasMGEOpcodes({ OpCode::MGEStopSpinSpin })) {
-				return;
-			}
-			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGEStopSpinSpin);
-		};
+		lua_mge["getScreenRotation"] = &mge::lua::LegacyInterface::getScreenRotation;
+		lua_mge["modScreenRotation"] = &mge::lua::LegacyInterface::modScreenRotation;
+		lua_mge["setScreenRotation"] = &mge::lua::LegacyInterface::setScreenRotation;
+		lua_mge["startScreenRotation"] = &mge::lua::LegacyInterface::startScreenRotation;
+		lua_mge["stopScreenRotation"] = &mge::lua::LegacyInterface::stopScreenRotation;
 
 		// MGE XE rendering functions.
 		lua_mge["setWeatherScattering"] = [](sol::optional<sol::table> params) {

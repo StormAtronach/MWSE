@@ -233,24 +233,52 @@ namespace mwse::lua {
 		lua_macros["toggleZoom"] = mge::macros->ToggleZoom;
 
 		// Legacy functions.
+		lua_mge["disableCameraShake"] = &mge::lua::LegacyInterface::disableCameraShake;
 		lua_mge["disableShader"] = &mge::lua::LegacyInterface::disableShader;
 		lua_mge["disableZoom"] = &mge::lua::LegacyInterface::disableZoom;
+		lua_mge["enableCameraShake"] = &mge::lua::LegacyInterface::enableCameraShake;
 		lua_mge["enableShader"] = &mge::lua::LegacyInterface::enableShader;
 		lua_mge["enableZoom"] = &mge::lua::LegacyInterface::enableZoom;
 		lua_mge["getScreenHeight"] = &mge::lua::LegacyInterface::getScreenHeight;
+		lua_mge["getScreenRotation"] = &mge::lua::LegacyInterface::getScreenRotation;
 		lua_mge["getScreenWidth"] = &mge::lua::LegacyInterface::getScreenWidth;
 		lua_mge["getWeatherDLFog"] = &mge::lua::LegacyInterface::getWeatherDLFog;
 		lua_mge["getWeatherPPLLight"] = &mge::lua::LegacyInterface::getWeatherPPLLight;
 		lua_mge["getWeatherScattering"] = &mge::lua::WeatherConfig::getScattering;
 		lua_mge["getZoom"] = &mge::lua::CameraConfig::getZoom;
+		lua_mge["modScreenRotation"] = &mge::lua::LegacyInterface::modScreenRotation;
+		lua_mge["setCameraShakeAcceleration"] = &mge::lua::LegacyInterface::setCameraShakeAcceleration;
+		lua_mge["setCameraShakeMagnitude"] = &mge::lua::LegacyInterface::setCameraShakeMagnitude;
 		lua_mge["setShaderFloat"] = &mge::lua::LegacyInterface::setShaderFloat;
 		lua_mge["setShaderLong"] = &mge::lua::LegacyInterface::setShaderLong;
+		lua_mge["setScreenRotation"] = &mge::lua::LegacyInterface::setScreenRotation;
+		lua_mge["setShaderVector4"] = &mge::lua::LegacyInterface::setShaderVector4;
 		lua_mge["setWeatherDLFog"] = &mge::lua::LegacyInterface::setWeatherDLFog;
 		lua_mge["setWeatherPPLLight"] = &mge::lua::LegacyInterface::setWeatherPPLLight;
 		lua_mge["setWeatherScattering"] = &mge::lua::WeatherConfig::setScattering;
 		lua_mge["setZoom"] = &mge::lua::LegacyInterface::setZoom;
+		lua_mge["startScreenRotation"] = &mge::lua::LegacyInterface::startScreenRotation;
+		lua_mge["stopScreenRotation"] = &mge::lua::LegacyInterface::stopScreenRotation;
+		lua_mge["stopZoom"] = &mge::lua::CameraConfig::stopZoom;
 		lua_mge["toggleZoom"] = &mge::lua::LegacyInterface::toggleZoom;
 		lua_mge["zoomIn"] = &mge::lua::LegacyInterface::zoomIn;
 		lua_mge["zoomOut"] = &mge::lua::LegacyInterface::zoomOut;
+
+		// Legacy HUD functions. They do nothing.
+		lua_mge["clearHUD"] = &mge::lua::LegacyInterface::clearHUD;
+		lua_mge["disableHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["enableHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["freeHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["fullscreenHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["loadHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["positionHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["scaleHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["selectHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffect"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffectFloat"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffectLong"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffectVector4"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDTexture"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["unselectHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
 	}
 }

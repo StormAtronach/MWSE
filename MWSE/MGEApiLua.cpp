@@ -536,6 +536,75 @@ namespace mge::lua {
 		}
 	}
 
+	// A value that is missing or 0 keeps the current one, as the old call did.
+	void LegacyInterface::enableCameraShake(sol::optional<sol::table> params) {
+		const auto magnitude = mwse::lua::getOptionalParam<float>(params, "magnitude", 0.0f);
+		if (magnitude != 0.0f) {
+			CameraConfig::setCameraShakeMagnitude(magnitude);
+		}
+
+		const auto acceleration = mwse::lua::getOptionalParam<float>(params, "acceleration", 0.0f);
+		if (acceleration != 0.0f) {
+			CameraConfig::setCameraShakeAcceleration(acceleration);
+		}
+
+		CameraConfig::setCameraShakeEnabled(true);
+	}
+
+	void LegacyInterface::disableCameraShake() {
+		CameraConfig::setCameraShakeEnabled(false);
+	}
+
+	void LegacyInterface::setCameraShakeMagnitude(sol::optional<sol::table> params) {
+		CameraConfig::setCameraShakeMagnitude(mwse::lua::getOptionalParam<float>(params, "magnitude", 0.0f));
+	}
+
+	void LegacyInterface::setCameraShakeAcceleration(sol::optional<sol::table> params) {
+		CameraConfig::setCameraShakeAcceleration(mwse::lua::getOptionalParam<float>(params, "acceleration", 0.0f));
+	}
+
+	// The screen rotation runs MGE XE's own mwscript instructions, as mge.log does. Without those opcodes (no
+	// MGE XE), the engine's report of an unknown opcode faults, so each call does nothing.
+	float LegacyInterface::getScreenRotation() {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGEGetScreenRotation)) {
+			return 0.0f;
+		}
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGEGetScreenRotation);
+		return mwse::Stack::getInstance().popFloat();
+	}
+
+	void LegacyInterface::setScreenRotation(sol::optional<sol::table> params) {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGESetScreenRotation)) {
+			return;
+		}
+		mwse::Stack::getInstance().pushFloat(mwse::lua::getOptionalParam<float>(params, "rotation", 0.0f));
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGESetScreenRotation);
+	}
+
+	void LegacyInterface::modScreenRotation(sol::optional<sol::table> params) {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGERotateScreenBy)) {
+			return;
+		}
+		mwse::Stack::getInstance().pushFloat(mwse::lua::getOptionalParam<float>(params, "rotation", 0.0f));
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGERotateScreenBy);
+	}
+
+	// Without a rate the rate is 0, which stops the rotation: the old call put no rate on the stack.
+	void LegacyInterface::startScreenRotation(sol::optional<sol::table> params) {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGEScreenSpin)) {
+			return;
+		}
+		mwse::Stack::getInstance().pushFloat(mwse::lua::getOptionalParam<float>(params, "rate", 0.0f));
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGEScreenSpin);
+	}
+
+	void LegacyInterface::stopScreenRotation() {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGEStopSpinSpin)) {
+			return;
+		}
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGEStopSpinSpin);
+	}
+
 	ShaderHandle LegacyInterface::findShader(sol::optional<sol::table> params) {
 		auto shaderName = mwse::lua::getOptionalParam<const char*>(params, "shader", nullptr);
 		if (shaderName == nullptr) {
@@ -579,6 +648,21 @@ namespace mge::lua {
 		}
 	}
 
+	bool LegacyInterface::setShaderVector4(sol::optional<sol::table> params) {
+		auto shader = findShader(params);
+		auto variable = mwse::lua::getOptionalParam<const char*>(params, "variable", nullptr);
+		auto values = mwse::lua::getOptionalParam<sol::table>(params, "value", sol::nil);
+		if (!shader || !variable || values == sol::nil || values.size() != 4) {
+			return false;
+		}
+
+		float vector[4];
+		for (size_t i = 0; i < 4; ++i) {
+			vector[i] = values[i + 1];
+		}
+		return api->shaderSetVector(shader, variable, vector, 4);
+	}
+
 	std::tuple<float, float> LegacyInterface::getWeatherDLFog(int weatherID) {
 		float fogDistMult, fogOffset;
 		api->weatherDistantFogGet(weatherID, &fogDistMult, &fogOffset);
@@ -597,5 +681,26 @@ namespace mge::lua {
 
 	void LegacyInterface::setWeatherPPLLight(int weatherID, float sunMult, float ambMult) {
 		api->weatherPerPixelLightSet(weatherID, sunMult, ambMult);
+	}
+
+	// MWSE does not call MGE XE's HUD, so the 15 HUD names do nothing. Each returns what the old table's name
+	// returns when it does nothing. The first call in a session writes one warning to MWSE.log.
+	void LegacyInterface::clearHUD() {
+		warnHUDOnce();
+	}
+
+	bool LegacyInterface::ignoreHUD(sol::optional<sol::table> params) {
+		warnHUDOnce();
+		return false;
+	}
+
+	void LegacyInterface::warnHUDOnce() {
+		static bool warned = false;
+		if (warned) {
+			return;
+		}
+		warned = true;
+
+		mwse::lua::logStackTrace("WARNING: The mge HUD functions (mge.loadHUD and the 14 other HUD names) do nothing. MWSE does not call MGE XE's HUD.");
 	}
 }
