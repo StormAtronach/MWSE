@@ -16,7 +16,6 @@ namespace NI {
 	}
 
 	BSParticleNode::BSParticleNode() {
-		// The base constructor ran the game's BSAnimationNode constructor.
 #if defined(SE_NI_BSPARTICLENODE_VTBL) && SE_NI_BSPARTICLENODE_VTBL > 0
 		flags |= BSParticleNode::AVObjectFlag::Follow;
 		vTable.asObject = reinterpret_cast<Object_vTable*>(SE_NI_BSPARTICLENODE_VTBL);

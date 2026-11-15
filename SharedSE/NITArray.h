@@ -136,8 +136,7 @@ namespace NI {
 			memset(storage, 0, size * 4);
 		}
 
-		// Makes an array without storage. For an array in an object that a constructor of the game
-		// builds afterwards: that constructor sets every field and makes the storage.
+		// Makes an empty array without storage.
 		explicit TArray(se::memory::BuiltByGame) {
 			storage = nullptr;
 			storageCount = 0;
@@ -158,8 +157,7 @@ namespace NI {
 #endif
 		}
 
-		// Gives up the storage without a free. For an array in an object that a destructor of the
-		// game destroyed: that destructor freed the storage.
+		// Gives up the storage without a free.
 		void releaseStorage() {
 			storage = nullptr;
 			storageCount = 0;
