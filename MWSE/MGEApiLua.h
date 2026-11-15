@@ -112,11 +112,17 @@ namespace mge::lua {
 		static void zoomOut(sol::optional<sol::table> params);
 		static void setZoom(sol::optional<sol::table> params);
 
+		static void enableCameraShake(sol::optional<sol::table> params);
+		static void disableCameraShake();
+		static void setCameraShakeMagnitude(sol::optional<sol::table> params);
+		static void setCameraShakeAcceleration(sol::optional<sol::table> params);
+
 		static ShaderHandle findShader(sol::optional<sol::table> params);
 		static void enableShader(sol::optional<sol::table> params);
 		static void disableShader(sol::optional<sol::table> params);
 		static void setShaderFloat(sol::optional<sol::table> params);
 		static void setShaderLong(sol::optional<sol::table> params);
+		static bool setShaderVector4(sol::optional<sol::table> params);
 
 		static std::tuple<float, float> getWeatherDLFog(int weatherID);
 		static void setWeatherDLFog(int weatherID, float fogDistMult, float fogOffset);

@@ -12,6 +12,10 @@
 --- @field weather mgeWeatherConfig Allows control of MGE weather features.
 mge = {}
 
+--- Disables the camera shake. Use `mge.camera.shakeEnable = false` instead.
+--- @deprecated
+function mge.disableCameraShake() end
+
 --- Disables a loaded shader.
 --- @deprecated
 --- @param params mge.disableShader.params This table accepts the following values:
@@ -26,6 +30,20 @@ function mge.disableShader(params) end
 --- Disables camera zoom. Use `mge.camera.zoomEnabled = false` instead.
 --- @deprecated
 function mge.disableZoom() end
+
+--- Enables the camera shake. A magnitude or an acceleration that is given and not 0 is set first. Use `mge.camera.shakeEnable`, `mge.camera.shakeMagnitude` and `mge.camera.shakeAcceleration` instead.
+--- @deprecated
+--- @param params? mge.enableCameraShake.params This table accepts the following values:
+--- 
+--- `magnitude?`: number — *Optional*. The magnitude of the shake. When it is missing or 0, the current magnitude stays.
+--- 
+--- `acceleration?`: number — *Optional*. The acceleration of the shake. When it is missing or 0, the current acceleration stays.
+function mge.enableCameraShake(params) end
+
+---Table parameter definitions for `mge.enableCameraShake`.
+--- @class mge.enableCameraShake.params
+--- @field magnitude? number *Optional*. The magnitude of the shake. When it is missing or 0, the current magnitude stays.
+--- @field acceleration? number *Optional*. The acceleration of the shake. When it is missing or 0, the current acceleration stays.
 
 --- Determines if the MGE XE interface is enabled.
 --- @return boolean enabled No description yet available.
@@ -118,6 +136,28 @@ function mge.saveScreenshot(params) end
 --- @field path string The location of the folder to save the screenshot to. Relative to the Morrowind directory. *Needs* to include the file format extension. The supported file formats are `bmp`, `jpeg`, `dds`, `png`, and `tga`.
 --- @field captureWithUI? boolean *Default*: `false`. If set to `true`, the screenshot will include the user interface.
 
+--- Sets the acceleration of the camera shake. Use `mge.camera.shakeAcceleration` instead.
+--- @deprecated
+--- @param params mge.setCameraShakeAcceleration.params This table accepts the following values:
+--- 
+--- `acceleration`: number — The acceleration of the shake.
+function mge.setCameraShakeAcceleration(params) end
+
+---Table parameter definitions for `mge.setCameraShakeAcceleration`.
+--- @class mge.setCameraShakeAcceleration.params
+--- @field acceleration number The acceleration of the shake.
+
+--- Sets the magnitude of the camera shake. Use `mge.camera.shakeMagnitude` instead.
+--- @deprecated
+--- @param params mge.setCameraShakeMagnitude.params This table accepts the following values:
+--- 
+--- `magnitude`: number — The magnitude of the shake.
+function mge.setCameraShakeMagnitude(params) end
+
+---Table parameter definitions for `mge.setCameraShakeMagnitude`.
+--- @class mge.setCameraShakeMagnitude.params
+--- @field magnitude number The magnitude of the shake.
+
 --- Sets the lighting mode used by MGE XE. The values passed can be used from the [`mge.lightingMode`](https://mwse.github.io/MWSE/references/mge/lighting-modes/) constants.
 --- @param mode mge.lightingMode No description yet available.
 function mge.setLightingMode(mode) end
@@ -156,6 +196,24 @@ function mge.setShaderLong(params) end
 --- @field variable string No description yet available.
 --- @field value number No description yet available.
 
+--- Sets a shader's vector variable to 4 values. Use the shader handle from `mge.shaders.find()` instead.
+--- @deprecated
+--- @param params mge.setShaderVector4.params This table accepts the following values:
+--- 
+--- `shader`: string — The name of the shader.
+--- 
+--- `variable`: string — The name of the variable.
+--- 
+--- `value`: number[] — A table of 4 numbers.
+--- @return boolean success False when the shader, the variable or the 4 numbers are missing, or when the variable could not be set.
+function mge.setShaderVector4(params) end
+
+---Table parameter definitions for `mge.setShaderVector4`.
+--- @class mge.setShaderVector4.params
+--- @field shader string The name of the shader.
+--- @field variable string The name of the variable.
+--- @field value number[] A table of 4 numbers.
+
 --- Sets the GUI scaling used by MGE XE.
 --- @param scale number No description yet available.
 function mge.setUIScale(scale) end
@@ -189,6 +247,10 @@ function mge.setZoom(params) end
 ---Table parameter definitions for `mge.setZoom`.
 --- @class mge.setZoom.params
 --- @field amount number No description yet available.
+
+--- Stops a zoom that changes over time. Use `mge.camera.stopZoom()` instead.
+--- @deprecated
+function mge.stopZoom() end
 
 --- Toggles the camera zoom. Use `mge.camera.zoomEnable = not mge.camera.zoomEnable` instead.
 --- @deprecated
