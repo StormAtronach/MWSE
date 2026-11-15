@@ -136,6 +136,15 @@ namespace NI {
 			memset(storage, 0, size * 4);
 		}
 
+		// Makes an empty array without storage.
+		explicit TArray(se::memory::BuiltByGame) {
+			storage = nullptr;
+			storageCount = 0;
+			growByCount = 0;
+			endIndex = 0;
+			filledCount = 0;
+		}
+
 		TArray(const TArray& other) {
 			*this = other;
 		}
@@ -146,6 +155,14 @@ namespace NI {
 #else
 			delete[] storage;
 #endif
+		}
+
+		// Gives up the storage without a free.
+		void releaseStorage() {
+			storage = nullptr;
+			storageCount = 0;
+			endIndex = 0;
+			filledCount = 0;
 		}
 
 		TArray<T>& operator= (const TArray<T>& other) {

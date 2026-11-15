@@ -21,6 +21,9 @@ namespace NI {
 		DynamicEffect();
 		~DynamicEffect();
 
+		// For a subclass whose constructor of the game builds the effect too.
+		explicit DynamicEffect(se::memory::BuiltByGame);
+
 		//
 		// vTable wrappers.
 		//

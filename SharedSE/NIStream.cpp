@@ -41,7 +41,11 @@ namespace NI {
 	// NiStream
 	//
 
-	Stream::Stream() {
+	Stream::Stream() :
+		unknown_0x30(se::memory::builtByGame),
+		loadedObjects(se::memory::builtByGame),
+		loadingObjects(se::memory::builtByGame)
+	{
 #if defined(SE_NI_STREAM_FNADDR_CTOR) && SE_NI_STREAM_FNADDR_CTOR > 0
 		const auto NI_Stream_ctor = reinterpret_cast<Stream * (__thiscall*)(Stream*)>(SE_NI_STREAM_FNADDR_CTOR);
 		NI_Stream_ctor(this);
@@ -54,6 +58,10 @@ namespace NI {
 #if defined(SE_NI_STREAM_FNADDR_DTOR) && SE_NI_STREAM_FNADDR_DTOR > 0
 		const auto NI_Stream_dtor = reinterpret_cast<void(__thiscall*)(Stream*)>(SE_NI_STREAM_FNADDR_DTOR);
 		NI_Stream_dtor(this);
+
+		unknown_0x30.releaseStorage();
+		loadedObjects.releaseStorage();
+		loadingObjects.releaseStorage();
 #else
 		throw not_implemented_exception();
 #endif

@@ -8,13 +8,16 @@
 
 namespace NI {
 
-	Node::Node() {
+	Node::Node() : Node(se::memory::builtByGame) {
 #if defined(SE_NI_NODE_FNADDR_CTOR) && SE_NI_NODE_FNADDR_CTOR > 0
 		const auto NI_Node_ctor = reinterpret_cast<void(__thiscall*)(const Node*)>(SE_NI_NODE_FNADDR_CTOR);
 		NI_Node_ctor(this);
 #else
 		throw not_implemented_exception();
 #endif
+	}
+
+	Node::Node(se::memory::BuiltByGame) : children(se::memory::builtByGame) {
 	}
 
 	Node::~Node() {
