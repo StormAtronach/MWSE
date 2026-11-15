@@ -82,6 +82,7 @@
 
 // Lua binding files. These are split out rather than kept here to help with compile times.
 #include "MemoryUtilLua.h"
+#include "MGEIdleApi.h"
 #include "MGEPostShadersLua.h"
 #include "MGEUtilLua.h"
 #include "ScriptUtilLua.h"
@@ -5069,15 +5070,18 @@ namespace mwse::lua {
 		bindStringUtil();
 		bindTES3Util();
 
-		// Bind MGE.
-		if (isMGEAPIAvailable()) {
-			// MGE API available from 0.14+.
-			bindMGEPostShaders();
-			bindMGEUtil();
+		// Bind MGE. The old table is for an MGE XE that gives MWSE its script functions and no API.
+		// Without MGE XE's API in any other case (no MGE XE, or its renderer is not in use), the new
+		// table is bound with the idle API: every mge call exists and does nothing.
+		if (!isMGEAPIAvailable() && InstructionStore::getInstance().isOpcode(OpCode::xGetGS)) {
+			bindLegacyMGEScriptUtil();
 		}
 		else {
-			// Keep legacy MWScript based commands available.
-			bindLegacyMGEScriptUtil();
+			if (!isMGEAPIAvailable()) {
+				mge::IdleAPI::takeOver();
+			}
+			bindMGEPostShaders();
+			bindMGEUtil();
 		}
 
 		// Alter existing libraries.

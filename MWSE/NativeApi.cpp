@@ -1,5 +1,7 @@
 #include "NativeApi.h"
 
+#include "MGEIdleApi.h"
+
 #include "Log.h"
 #include "MemoryUtil.h"
 #include "MWSEDefs.h"
@@ -639,6 +641,27 @@ namespace mwse::native {
 	}
 
 	//
+	// MgeApiLink
+	//
+
+	MwseNativeStatus MgeApiLink::request(const char* module, bool inUse) {
+		if (inUse) {
+			if (m_withdrawn) {
+				return MWSE_NATIVE_TOO_LATE;
+			}
+			log::getLog() << "[NativeApi] " << module << " keeps MGE XE's API in use." << std::endl;
+			return MWSE_NATIVE_OK;
+		}
+
+		if (!m_withdrawn) {
+			m_withdrawn = true;
+			mge::IdleAPI::takeOver();
+			log::getLog() << "[NativeApi] " << module << " withdraws MGE XE's API: the mge calls do nothing from now on." << std::endl;
+		}
+		return MWSE_NATIVE_OK;
+	}
+
+	//
 	// Registry
 	//
 
@@ -835,6 +858,14 @@ namespace mwse::native {
 				return MWSE_NATIVE_BAD_ARGUMENT;
 			}
 			return registry.engineSettings.requestSunGlare(module, sunGlare->enabled != 0);
+		}
+		case MWSE_NATIVE_REQUEST_MGE_API:
+		{
+			const auto mgeApi = static_cast<const MwseNativeMgeApiRequestV1*>(packet);
+			if (mgeApi->structSize < sizeof(MwseNativeMgeApiRequestV1)) {
+				return MWSE_NATIVE_BAD_ARGUMENT;
+			}
+			return registry.mgeApiLink.request(module, mgeApi->inUse != 0);
 		}
 		}
 

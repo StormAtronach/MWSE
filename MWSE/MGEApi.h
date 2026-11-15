@@ -3,7 +3,10 @@
 namespace mge {
 	static const int supported_api_version = 3;
 
-	struct MGEAPI {
+	// The API types are interfaces: MWSE has no bodies for their methods. MGE XE gives MWSE an object
+	// of them, and MWSE's idle API (MGEIdleApi.h) implements every method. `novtable` keeps the
+	// constructors of these bases from naming a table of methods that have no bodies.
+	struct __declspec(novtable) MGEAPI {
 		virtual int getAPIVersion() const = 0;
 		virtual int getMGEVersion() const = 0;
 	};
@@ -122,7 +125,7 @@ namespace mge {
 		LightDebug = 22,
 	};
 
-	struct MGEAPIv1 : public MGEAPI {
+	struct __declspec(novtable) MGEAPIv1 : public MGEAPI {
 		virtual int getAPIVersion() const override;
 		virtual int getMGEVersion() const override;
 
@@ -211,14 +214,14 @@ namespace mge {
 		virtual void weatherPerPixelLightSet(int weatherID, float sunMult, float ambMult);
 	};
 
-	struct MGEAPIv2 : public MGEAPIv1 {
+	struct __declspec(novtable) MGEAPIv2 : public MGEAPIv1 {
 		virtual void saveScreenshot(const char* path, bool captureWithUI);
 
 		virtual void weatherScatteringSkylightGet(float* skylight);
 		virtual void weatherScatteringSkylightSet(float skylight[3]);
 	};
 
-	struct MGEAPIv3 : public MGEAPIv2 {
+	struct __declspec(novtable) MGEAPIv3 : public MGEAPIv2 {
 		virtual float nearRenderDistanceGet();
 		virtual void nearRenderDistanceSet(float distance);
 
@@ -254,7 +257,7 @@ namespace mge {
 		uint32_t parts; // bit set of ViewPart
 	};
 
-	struct MGEAPIv4 : public MGEAPIv3 {
+	struct __declspec(novtable) MGEAPIv4 : public MGEAPIv3 {
 		// Sets the options of a view; options == nullptr clears them. False when MGE XE refuses the key
 		// (a null key, the world camera). The options last until changed, cleared, or until the key's
 		// object is freed (with the Direct3D 9 renderer an address that the engine reuses keeps the

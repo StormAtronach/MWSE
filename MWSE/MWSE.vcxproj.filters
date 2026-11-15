@@ -1452,6 +1452,9 @@
     <ClInclude Include="MGEApiLua.h">
       <Filter>Header Files\MGE Interface</Filter>
     </ClInclude>
+    <ClInclude Include="MGEIdleApi.h">
+      <Filter>Header Files\MGE Interface</Filter>
+    </ClInclude>
     <ClInclude Include="LuaDispositionEvent.h">
       <Filter>Header Files\Lua\Events</Filter>
     </ClInclude>
@@ -3420,6 +3423,9 @@
       <Filter>Source Files\DataAdapters\TES3\UI</Filter>
     </ClCompile>
     <ClCompile Include="MGEApiLua.cpp">
+      <Filter>Source Files\MGE Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="MGEIdleApi.cpp">
       <Filter>Source Files\MGE Interface</Filter>
     </ClCompile>
     <ClCompile Include="LuaDispositionEvent.cpp">
