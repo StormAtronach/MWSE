@@ -550,13 +550,7 @@ namespace mwse::lua {
 
 			return sol::nil;
 		};
-		lua_mge["log"] = [](std::string string) {
-			if (!hasMGEOpcodes({ OpCode::MGEOutputDebugString })) {
-				return;
-			}
-			Stack::getInstance().pushString(string);
-			mwscript::RunOriginalOpCode(nullptr, nullptr, OpCode::MGEOutputDebugString);
-		};
+		lua_mge["log"] = &mge::lua::CoreInterface::log;
 
 		// HUD-related functions.
 		lua_mge["clearHUD"] = []() {

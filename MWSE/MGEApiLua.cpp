@@ -8,6 +8,10 @@
 
 #include "LuaUtil.h"
 
+#include "InstructionStore.h"
+#include "ScriptUtil.h"
+#include "Stack.h"
+
 namespace mge::lua {
 
 	//
@@ -45,6 +49,16 @@ namespace mge::lua {
 	
 	bool CoreInterface::reloadDistantLand() {
 		return api->reloadDistantLand();
+	}
+
+	// Runs MGE XE's own mwscript log instruction. Without that opcode (no MGE XE), the engine's report of an
+	// unknown opcode faults, so the call does nothing.
+	void CoreInterface::log(const std::string& message) {
+		if (!mwse::InstructionStore::getInstance().isOpcode(mwse::OpCode::MGEOutputDebugString)) {
+			return;
+		}
+		mwse::Stack::getInstance().pushString(message);
+		mwse::mwscript::RunOriginalOpCode(nullptr, nullptr, mwse::OpCode::MGEOutputDebugString);
 	}
 
 	float CoreInterface::getGUIScale() {

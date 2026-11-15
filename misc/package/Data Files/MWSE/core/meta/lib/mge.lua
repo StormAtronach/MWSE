@@ -95,6 +95,10 @@ function mge.getZoom() end
 --- Reloads the MGE config file. This is primarily an internal function and shouldn't be called casually.
 function mge.loadConfig() end
 
+--- Writes a line to MGE XE's log file, mgeXE.log. The message is written as it is: it takes no format arguments. Without MGE XE, or when MGE XE does not draw the game, the call does nothing.
+--- @param message string The line to write.
+function mge.log(message) end
+
 --- Reloads the MGE distant land. This is a blocking call that can take some seconds.
 function mge.reloadDistantLand() end
 
