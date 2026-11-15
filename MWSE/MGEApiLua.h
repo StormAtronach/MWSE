@@ -134,5 +134,11 @@ namespace mge::lua {
 		static void setWeatherDLFog(int weatherID, float fogDistMult, float fogOffset);
 		static std::tuple<float, float> getWeatherPPLLight(int weatherID);
 		static void setWeatherPPLLight(int weatherID, float sunMult, float ambMult);
+
+		static void clearHUD();
+		static bool ignoreHUD(sol::optional<sol::table> params);
+
+	private:
+		static void warnHUDOnce();
 	};
 }

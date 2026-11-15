@@ -12,9 +12,25 @@
 --- @field weather mgeWeatherConfig Allows control of MGE weather features.
 mge = {}
 
+--- With the old MGE XE, this cleared the HUD elements. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+function mge.clearHUD() end
+
 --- Disables the camera shake. Use `mge.camera.shakeEnable = false` instead.
 --- @deprecated
 function mge.disableCameraShake() end
+
+--- With the old MGE XE, this disabled a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.disableHUD.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- @return boolean result Always false.
+function mge.disableHUD(params) end
+
+---Table parameter definitions for `mge.disableHUD`.
+--- @class mge.disableHUD.params
+--- @field hud? string *Optional*. The HUD element's name.
 
 --- Disables a loaded shader.
 --- @deprecated
@@ -49,6 +65,18 @@ function mge.enableCameraShake(params) end
 --- @return boolean enabled No description yet available.
 function mge.enabled() end
 
+--- With the old MGE XE, this enabled a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.enableHUD.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- @return boolean result Always false.
+function mge.enableHUD(params) end
+
+---Table parameter definitions for `mge.enableHUD`.
+--- @class mge.enableHUD.params
+--- @field hud? string *Optional*. The HUD element's name.
+
 --- Enables a loaded shader.
 --- @deprecated
 --- @param params mge.enableShader.params This table accepts the following values:
@@ -63,6 +91,30 @@ function mge.enableShader(params) end
 --- Enables camera zoom. Use `mge.camera.zoomEnabled = true` instead.
 --- @deprecated
 function mge.enableZoom() end
+
+--- With the old MGE XE, this freed a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.freeHUD.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- @return boolean result Always false.
+function mge.freeHUD(params) end
+
+---Table parameter definitions for `mge.freeHUD`.
+--- @class mge.freeHUD.params
+--- @field hud? string *Optional*. The HUD element's name.
+
+--- With the old MGE XE, this made a HUD element fill the screen. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.fullscreenHUD.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- @return boolean result Always false.
+function mge.fullscreenHUD(params) end
+
+---Table parameter definitions for `mge.fullscreenHUD`.
+--- @class mge.fullscreenHUD.params
+--- @field hud? string *Optional*. The HUD element's name.
 
 --- Returns the lighting mode used by MGE XE. These values map to [`mge.lightingMode`](https://mwse.github.io/MWSE/references/mge/lighting-modes/) constants.
 --- @return mge.lightingMode mode No description yet available.
@@ -118,6 +170,24 @@ function mge.getZoom() end
 --- Reloads the MGE config file. This is primarily an internal function and shouldn't be called casually.
 function mge.loadConfig() end
 
+--- With the old MGE XE, this loaded a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.loadHUD.params This table accepts the following values:
+--- 
+--- `hud`: string — The HUD element's name.
+--- 
+--- `texture`: string — The texture's path.
+--- 
+--- `enable?`: boolean — *Optional*. If true, the element was enabled too.
+--- @return boolean result Always false.
+function mge.loadHUD(params) end
+
+---Table parameter definitions for `mge.loadHUD`.
+--- @class mge.loadHUD.params
+--- @field hud string The HUD element's name.
+--- @field texture string The texture's path.
+--- @field enable? boolean *Optional*. If true, the element was enabled too.
+
 --- Writes a line to MGE XE's log file, mgeXE.log. The message is written as it is: it takes no format arguments. Without MGE XE, or when MGE XE does not draw the game, the call does nothing. Each different message stays in memory for the session; do not write a new text in each frame.
 --- @param message string The line to write.
 function mge.log(message) end
@@ -132,6 +202,24 @@ function mge.modScreenRotation(params) end
 ---Table parameter definitions for `mge.modScreenRotation`.
 --- @class mge.modScreenRotation.params
 --- @field rotation number The angle to add, in radians.
+
+--- With the old MGE XE, this positioned a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.positionHUD.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- 
+--- `x`: number — The horizontal position.
+--- 
+--- `y`: number — The vertical position.
+--- @return boolean result Always false.
+function mge.positionHUD(params) end
+
+---Table parameter definitions for `mge.positionHUD`.
+--- @class mge.positionHUD.params
+--- @field hud? string *Optional*. The HUD element's name.
+--- @field x number The horizontal position.
+--- @field y number The vertical position.
 
 --- Reloads the MGE distant land. This is a blocking call that can take some seconds.
 function mge.reloadDistantLand() end
@@ -151,6 +239,36 @@ function mge.saveScreenshot(params) end
 --- @class mge.saveScreenshot.params
 --- @field path string The location of the folder to save the screenshot to. Relative to the Morrowind directory. *Needs* to include the file format extension. The supported file formats are `bmp`, `jpeg`, `dds`, `png`, and `tga`.
 --- @field captureWithUI? boolean *Default*: `false`. If set to `true`, the screenshot will include the user interface.
+
+--- With the old MGE XE, this scaled a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.scaleHUD.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- 
+--- `x`: number — The horizontal scale.
+--- 
+--- `y`: number — The vertical scale.
+--- @return boolean result Always false.
+function mge.scaleHUD(params) end
+
+---Table parameter definitions for `mge.scaleHUD`.
+--- @class mge.scaleHUD.params
+--- @field hud? string *Optional*. The HUD element's name.
+--- @field x number The horizontal scale.
+--- @field y number The vertical scale.
+
+--- With the old MGE XE, this selected a HUD element for the next HUD calls. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.selectHUD.params This table accepts the following values:
+--- 
+--- `hud`: string — The HUD element's name.
+--- @return boolean result Always false.
+function mge.selectHUD(params) end
+
+---Table parameter definitions for `mge.selectHUD`.
+--- @class mge.selectHUD.params
+--- @field hud string The HUD element's name.
 
 --- Sets the acceleration of the camera shake. Use `mge.camera.shakeAcceleration` instead.
 --- @deprecated
@@ -173,6 +291,90 @@ function mge.setCameraShakeMagnitude(params) end
 ---Table parameter definitions for `mge.setCameraShakeMagnitude`.
 --- @class mge.setCameraShakeMagnitude.params
 --- @field magnitude number The magnitude of the shake.
+
+--- With the old MGE XE, this set the effect of a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.setHUDEffect.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- 
+--- `effect`: string — The effect's path.
+--- @return boolean result Always false.
+function mge.setHUDEffect(params) end
+
+---Table parameter definitions for `mge.setHUDEffect`.
+--- @class mge.setHUDEffect.params
+--- @field hud? string *Optional*. The HUD element's name.
+--- @field effect string The effect's path.
+
+--- With the old MGE XE, this set a float variable of a HUD element's effect. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.setHUDEffectFloat.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- 
+--- `variable`: string — The name of the effect's variable.
+--- 
+--- `value`: number — The value.
+--- @return boolean result Always false.
+function mge.setHUDEffectFloat(params) end
+
+---Table parameter definitions for `mge.setHUDEffectFloat`.
+--- @class mge.setHUDEffectFloat.params
+--- @field hud? string *Optional*. The HUD element's name.
+--- @field variable string The name of the effect's variable.
+--- @field value number The value.
+
+--- With the old MGE XE, this set a long variable of a HUD element's effect. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.setHUDEffectLong.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- 
+--- `variable`: string — The name of the effect's variable.
+--- 
+--- `value`: number — The value.
+--- @return boolean result Always false.
+function mge.setHUDEffectLong(params) end
+
+---Table parameter definitions for `mge.setHUDEffectLong`.
+--- @class mge.setHUDEffectLong.params
+--- @field hud? string *Optional*. The HUD element's name.
+--- @field variable string The name of the effect's variable.
+--- @field value number The value.
+
+--- With the old MGE XE, this set a vector variable of a HUD element's effect. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.setHUDEffectVector4.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- 
+--- `variable`: string — The name of the effect's variable.
+--- 
+--- `value`: number[] — A table of 4 numbers.
+--- @return boolean result Always false.
+function mge.setHUDEffectVector4(params) end
+
+---Table parameter definitions for `mge.setHUDEffectVector4`.
+--- @class mge.setHUDEffectVector4.params
+--- @field hud? string *Optional*. The HUD element's name.
+--- @field variable string The name of the effect's variable.
+--- @field value number[] A table of 4 numbers.
+
+--- With the old MGE XE, this set the texture of a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.setHUDTexture.params This table accepts the following values:
+--- 
+--- `hud?`: string — *Optional*. The HUD element's name.
+--- 
+--- `texture`: string — The texture's path.
+--- @return boolean result Always false.
+function mge.setHUDTexture(params) end
+
+---Table parameter definitions for `mge.setHUDTexture`.
+--- @class mge.setHUDTexture.params
+--- @field hud? string *Optional*. The HUD element's name.
+--- @field texture string The texture's path.
 
 --- Sets the lighting mode used by MGE XE. The values passed can be used from the [`mge.lightingMode`](https://mwse.github.io/MWSE/references/mge/lighting-modes/) constants.
 --- @param mode mge.lightingMode No description yet available.
@@ -297,6 +499,18 @@ function mge.stopZoom() end
 --- Toggles the camera zoom. Use `mge.camera.zoomEnable = not mge.camera.zoomEnable` instead.
 --- @deprecated
 function mge.toggleZoom() end
+
+--- With the old MGE XE, this cancelled the selection of a HUD element. Now it does nothing: MWSE does not call MGE XE's HUD. The first call of one of the 15 HUD functions in a session writes a warning to MWSE.log.
+--- @deprecated
+--- @param params? mge.unselectHUD.params This table accepts the following values:
+--- 
+--- `hud`: string — The HUD element's name.
+--- @return boolean result Always false.
+function mge.unselectHUD(params) end
+
+---Table parameter definitions for `mge.unselectHUD`.
+--- @class mge.unselectHUD.params
+--- @field hud string The HUD element's name.
 
 --- Zooms in by the specified amount. Use `mge.camera.zoomIn()` instead.
 --- @deprecated

@@ -263,5 +263,22 @@ namespace mwse::lua {
 		lua_mge["toggleZoom"] = &mge::lua::LegacyInterface::toggleZoom;
 		lua_mge["zoomIn"] = &mge::lua::LegacyInterface::zoomIn;
 		lua_mge["zoomOut"] = &mge::lua::LegacyInterface::zoomOut;
+
+		// Legacy HUD functions. They do nothing.
+		lua_mge["clearHUD"] = &mge::lua::LegacyInterface::clearHUD;
+		lua_mge["disableHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["enableHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["freeHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["fullscreenHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["loadHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["positionHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["scaleHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["selectHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffect"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffectFloat"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffectLong"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDEffectVector4"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["setHUDTexture"] = &mge::lua::LegacyInterface::ignoreHUD;
+		lua_mge["unselectHUD"] = &mge::lua::LegacyInterface::ignoreHUD;
 	}
 }

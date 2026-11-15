@@ -682,4 +682,25 @@ namespace mge::lua {
 	void LegacyInterface::setWeatherPPLLight(int weatherID, float sunMult, float ambMult) {
 		api->weatherPerPixelLightSet(weatherID, sunMult, ambMult);
 	}
+
+	// MWSE does not call MGE XE's HUD, so the 15 HUD names do nothing. Each returns what the old table's name
+	// returns when it does nothing. The first call in a session writes one warning to MWSE.log.
+	void LegacyInterface::clearHUD() {
+		warnHUDOnce();
+	}
+
+	bool LegacyInterface::ignoreHUD(sol::optional<sol::table> params) {
+		warnHUDOnce();
+		return false;
+	}
+
+	void LegacyInterface::warnHUDOnce() {
+		static bool warned = false;
+		if (warned) {
+			return;
+		}
+		warned = true;
+
+		mwse::lua::logStackTrace("WARNING: The mge HUD functions (mge.loadHUD and the 14 other HUD names) do nothing. MWSE does not call MGE XE's HUD.");
+	}
 }
