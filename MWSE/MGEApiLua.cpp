@@ -1,5 +1,7 @@
 #include "MGEApiLua.h"
 
+#include "MGEIdleApi.h"
+
 #include "TES3Game.h"
 
 #include "NICamera.h"
@@ -19,11 +21,11 @@ namespace mge::lua {
 	//
 
 	bool CoreInterface::enabled() {
-		return api != nullptr;
+		return IdleAPI::isRealAPIInUse();
 	}
 
 	sol::object CoreInterface::getVersion(sol::this_state ts) {
-		if (api == nullptr) {
+		if (!IdleAPI::isRealAPIInUse()) {
 			return sol::nil;
 		}
 

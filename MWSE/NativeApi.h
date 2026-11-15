@@ -166,6 +166,16 @@ namespace mwse::native {
 		MwseNativeStatus requestSunGlare(const char* module, bool enabled);
 	};
 
+	// The request of MGE XE's API (MWSE_NATIVE_REQUEST_MGE_API): MGE XE withdraws the API that
+	// it gave to MGEInterface, and MWSE's idle API takes its place.
+	class MgeApiLink {
+	public:
+		MwseNativeStatus request(const char* module, bool inUse);
+
+	private:
+		bool m_withdrawn = false;
+	};
+
 	class Registry {
 	public:
 		static Registry& get();
@@ -198,6 +208,7 @@ namespace mwse::native {
 		OverrideSlot frameTimer;
 		UIScale uiScale;
 		EngineSettings engineSettings;
+		MgeApiLink mgeApiLink;
 
 	private:
 		Registry();
