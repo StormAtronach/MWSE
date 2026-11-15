@@ -95,7 +95,7 @@ function mge.getZoom() end
 --- Reloads the MGE config file. This is primarily an internal function and shouldn't be called casually.
 function mge.loadConfig() end
 
---- Writes a line to MGE XE's log file, mgeXE.log. The message is written as it is: it takes no format arguments. Without MGE XE, or when MGE XE does not draw the game, the call does nothing.
+--- Writes a line to MGE XE's log file, mgeXE.log. The message is written as it is: it takes no format arguments. Without MGE XE, or when MGE XE does not draw the game, the call does nothing. Each different message stays in memory for the session; do not write a new text in each frame.
 --- @param message string The line to write.
 function mge.log(message) end
 
