@@ -8,21 +8,13 @@
 
 namespace NI {
 
-	Node::Node() : Node(se::memory::builtByGame) {
+	void Node::ctor() {
 #if defined(SE_NI_NODE_FNADDR_CTOR) && SE_NI_NODE_FNADDR_CTOR > 0
 		const auto NI_Node_ctor = reinterpret_cast<void(__thiscall*)(const Node*)>(SE_NI_NODE_FNADDR_CTOR);
 		NI_Node_ctor(this);
 #else
 		throw not_implemented_exception();
 #endif
-	}
-
-	Node::Node(se::memory::BuiltByGame) : children(se::memory::builtByGame) {
-	}
-
-	Node::~Node() {
-		// Call dtor without deletion.
-		vTable.asObject->destructor(this, 0);
 	}
 
 	void Node::attachChild(AVObject* child, bool useFirstAvailable) {
@@ -48,7 +40,7 @@ namespace NI {
 	}
 
 	Pointer<Node> Node::create() {
-		return new Node();
+		return construct<Node>();
 	}
 
 	void Node::detachAllChildren() {

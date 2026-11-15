@@ -9,7 +9,7 @@ namespace NI {
 		static constexpr unsigned short flagCollision = 0x20;
 		static constexpr unsigned short flagPickProxy = 0x400; // Added by MWSE
 
-		CollisionSwitch();
+		void ctor();
 
 		bool getCollisionActive() const;
 		void setCollisionActive(bool active);

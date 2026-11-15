@@ -4,8 +4,9 @@
 #include "ExceptionUtil.h"
 
 namespace NI {
-	BillboardNode::BillboardNode() : Node() {
+	void BillboardNode::ctor() {
 #if defined(SE_NI_BILLBOARDNODE_VTBL) && SE_NI_BILLBOARDNODE_VTBL > 0
+		Node::ctor();
 		vTable.asNode = reinterpret_cast<Node_vTable*>(SE_NI_BILLBOARDNODE_VTBL);
 		savedTime = 0.0f;
 		updateControllers = true;
@@ -16,7 +17,7 @@ namespace NI {
 	}
 
 	Pointer<BillboardNode> BillboardNode::create() {
-		return new BillboardNode();
+		return construct<BillboardNode>();
 	}
 
 #if defined(SE_NI_BILLBOARDNODE_FNADDR_ROTATETOCAMERA) && SE_NI_BILLBOARDNODE_FNADDR_ROTATETOCAMERA > 0

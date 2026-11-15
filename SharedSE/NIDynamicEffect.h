@@ -18,11 +18,9 @@ namespace NI {
 		unsigned int revisionId; // 0x9C
 		NodeLinkedList affectedNodes; // 0xA0
 
-		DynamicEffect();
-		~DynamicEffect();
-
-		// For a subclass whose constructor of the game builds the effect too.
-		explicit DynamicEffect(se::memory::BuiltByGame);
+		DynamicEffect() = delete;
+		DynamicEffect(const DynamicEffect&) = delete;
+		static void operator delete(void*) = delete;
 
 		//
 		// vTable wrappers.

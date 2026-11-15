@@ -3,20 +3,16 @@
 #include "ExceptionUtil.h"
 
 namespace NI {
+	void TextureEffect::ctor() {
 #if defined(SE_NI_TEXTUREEFFECT_FNADDR_CTOR) && SE_NI_TEXTUREEFFECT_FNADDR_CTOR > 0
-	TextureEffect::TextureEffect() : DynamicEffect(se::memory::builtByGame) {
 		reinterpret_cast<void(__thiscall*)(const DynamicEffect*)>(SE_NI_TEXTUREEFFECT_FNADDR_CTOR)(this);
-	}
 #else
-	TextureEffect::TextureEffect() { throw not_implemented_exception(); }
+		throw not_implemented_exception();
 #endif
-
-	TextureEffect::~TextureEffect() {
-		vTable.asObject->destructor(this, 0);
 	}
 
 	Pointer<TextureEffect> TextureEffect::create() {
-		return new TextureEffect();
+		return construct<TextureEffect>();
 	}
 }
 

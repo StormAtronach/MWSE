@@ -5,8 +5,9 @@
 #include "ExceptionUtil.h"
 
 namespace NI {
-	CollisionSwitch::CollisionSwitch() {
+	void CollisionSwitch::ctor() {
 #if defined(SE_NI_COLLISIONSWITCH_VTBL) && SE_NI_COLLISIONSWITCH_VTBL > 0
+		Node::ctor();
 		vTable.asNode = reinterpret_cast<NI::Node_vTable*>(SE_NI_COLLISIONSWITCH_VTBL);
 		BITMASK_SET_ON(flags, flagCollision);
 #else
@@ -70,7 +71,7 @@ namespace NI {
 	}
 
 	Pointer<CollisionSwitch> CollisionSwitch::create() {
-		return new CollisionSwitch();
+		return construct<CollisionSwitch>();
 	}
 }
 

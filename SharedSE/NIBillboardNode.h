@@ -19,7 +19,7 @@ namespace NI {
 		float savedTime;
 		bool updateControllers;
 
-		BillboardNode();
+		void ctor();
 		static Pointer<BillboardNode> create();
 
 		void rotateToCamera(Camera* camera);
