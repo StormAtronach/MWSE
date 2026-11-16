@@ -10,6 +10,7 @@
 #include "NIAccumulator.h"
 
 #include "TES3DataHandler.h"
+#include "TES3Light.h"
 #include "TES3PlayerAnimationController.h"
 #include "TES3WorldController.h"
 
@@ -436,6 +437,44 @@ namespace mwse::native {
 			packet->viewHeight = worldController->viewHeight;
 		}
 		packet->pickRayInViewSize = m_pickRayInViewSize ? 1 : 0;
+	}
+
+	//
+	// LightFacts
+	//
+
+	MwseNativeStatus LightFacts::queryRecords(MwseNativeLightRecordsV1* packet) const {
+		if (packet->recordSize < sizeof(MwseNativeLightRecordV1) || (packet->capacity > 0 && packet->records == nullptr)) {
+			return MWSE_NATIVE_BAD_ARGUMENT;
+		}
+		if (!Registry::get().isMainThread()) {
+			return MWSE_NATIVE_WRONG_THREAD;
+		}
+
+		const auto dataHandler = TES3::DataHandler::get();
+		const auto lights = dataHandler && dataHandler->nonDynamicData ? dataHandler->nonDynamicData->lights : nullptr;
+		packet->count = 0;
+		if (lights == nullptr) {
+			return MWSE_NATIVE_OK;
+		}
+
+		// One walk counts the records and writes those that the buffer has room for.
+		auto destination = reinterpret_cast<unsigned char*>(packet->records);
+		uint32_t count = 0;
+		for (const auto light : *lights) {
+			if (count < packet->capacity) {
+				auto record = reinterpret_cast<MwseNativeLightRecordV1*>(destination + count * packet->recordSize);
+				record->id = light->getObjectID();
+				record->radius = light->radius;
+				for (auto i = 0; i < 4; ++i) {
+					record->color[i] = light->color[i];
+				}
+				record->flags = light->flags;
+			}
+			++count;
+		}
+		packet->count = count;
+		return MWSE_NATIVE_OK;
 	}
 
 	bool UIScale::isRequested() const {
@@ -888,6 +927,14 @@ namespace mwse::native {
 			}
 			registry.uiScale.query(uiScale);
 			return MWSE_NATIVE_OK;
+		}
+		case MWSE_NATIVE_QUERY_LIGHT_RECORDS:
+		{
+			const auto records = static_cast<MwseNativeLightRecordsV1*>(packet);
+			if (records->structSize < sizeof(MwseNativeLightRecordsV1)) {
+				return MWSE_NATIVE_BAD_ARGUMENT;
+			}
+			return registry.lightFacts.queryRecords(records);
 		}
 		}
 
