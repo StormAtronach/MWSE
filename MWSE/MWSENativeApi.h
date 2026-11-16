@@ -356,8 +356,8 @@ typedef struct MwseNativeLightRecordV1 {
 	int32_t radius;
 	// Red, green and blue, then the fourth byte as the record holds it.
 	uint8_t color[4];
-	// The flags of the record: 0x4 negative, 0x8 flicker, 0x10 fire, 0x20 off by default,
-	// 0x40 flicker slow, 0x80 pulse, 0x100 pulse slow.
+	// The flags of the record: 0x1 dynamic, 0x2 can carry, 0x4 negative, 0x8 flicker, 0x10 fire,
+	// 0x20 off by default, 0x40 flicker slow, 0x80 pulse, 0x100 pulse slow.
 	uint32_t flags;
 } MwseNativeLightRecordV1;
 

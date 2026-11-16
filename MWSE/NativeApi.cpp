@@ -453,26 +453,27 @@ namespace mwse::native {
 
 		const auto dataHandler = TES3::DataHandler::get();
 		const auto lights = dataHandler && dataHandler->nonDynamicData ? dataHandler->nonDynamicData->lights : nullptr;
-		packet->count = lights ? static_cast<uint32_t>(lights->size()) : 0;
+		packet->count = 0;
 		if (lights == nullptr) {
 			return MWSE_NATIVE_OK;
 		}
 
+		// One walk counts the records and writes those that the buffer has room for.
 		auto destination = reinterpret_cast<unsigned char*>(packet->records);
-		uint32_t written = 0;
+		uint32_t count = 0;
 		for (const auto light : *lights) {
-			if (written == packet->capacity) {
-				break;
+			if (count < packet->capacity) {
+				auto record = reinterpret_cast<MwseNativeLightRecordV1*>(destination + count * packet->recordSize);
+				record->id = light->getObjectID();
+				record->radius = light->radius;
+				for (auto i = 0; i < 4; ++i) {
+					record->color[i] = light->color[i];
+				}
+				record->flags = light->flags;
 			}
-			auto record = reinterpret_cast<MwseNativeLightRecordV1*>(destination + written * packet->recordSize);
-			record->id = light->getObjectID();
-			record->radius = light->radius;
-			for (auto i = 0; i < 4; ++i) {
-				record->color[i] = light->color[i];
-			}
-			record->flags = light->flags;
-			++written;
+			++count;
 		}
+		packet->count = count;
 		return MWSE_NATIVE_OK;
 	}
 
