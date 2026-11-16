@@ -5013,6 +5013,7 @@ namespace mwse::lua {
 		using se::memory::overrideVirtualTable;
 		using se::memory::genPushEnforced;
 		using se::memory::writeByteUnprotected;
+		using se::memory::writeBytesUnprotected;
 
 		// Open default lua libraries.
 		luaState.open_libraries();
@@ -6484,10 +6485,12 @@ namespace mwse::lua {
 		// mwscript PlaceAtMe and PlaceAtPC: the scene node call of the new reference.
 		{
 			constexpr BYTE sceneNodeCallCode[] = { 0x8B, 0x16, 0x8B, 0xCE, 0xFF, 0x52, 0x2C };
+			constexpr BYTE moveReferenceToThis[] = { 0x8B, 0xCE };
 			auto referenceGetSceneGraphNodeForScriptPlacement = &TES3::Reference::getSceneGraphNodeForScriptPlacement;
 			for (const DWORD address : { 0x509875u, 0x5099DFu }) {
 				if (memcmp(reinterpret_cast<const void*>(address), sceneNodeCallCode, sizeof(sceneNodeCallCode)) == 0) {
-					genCallUnprotected(address, *reinterpret_cast<DWORD*>(&referenceGetSceneGraphNodeForScriptPlacement), sizeof(sceneNodeCallCode));
+					writeBytesUnprotected(address, moveReferenceToThis, sizeof(moveReferenceToThis));
+					genCallUnprotected(address + sizeof(moveReferenceToThis), *reinterpret_cast<DWORD*>(&referenceGetSceneGraphNodeForScriptPlacement), sizeof(sceneNodeCallCode) - sizeof(moveReferenceToThis));
 					log::getLog() << "[MWSE] Leveled creature list placement at 0x" << std::hex << address << std::dec << ": ok" << std::endl;
 				}
 				else {

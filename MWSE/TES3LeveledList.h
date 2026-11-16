@@ -60,7 +60,7 @@ namespace TES3 {
 			SpawnPickSkip();
 			~SpawnPickSkip();
 		};
-		static bool spawnPickSkipped;
+		static thread_local bool spawnPickSkipped;
 		Object * resolveForSpawn();
 
 		bool getLeveledFlag(LeveledCreatureFlags::Flags flag) const;

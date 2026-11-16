@@ -30,7 +30,7 @@ namespace TES3 {
 		return result;
 	}
 
-	bool LeveledCreature::spawnPickSkipped = false;
+	thread_local bool LeveledCreature::spawnPickSkipped = false;
 
 	LeveledCreature::SpawnPickSkip::SpawnPickSkip() {
 		spawnPickSkipped = true;
