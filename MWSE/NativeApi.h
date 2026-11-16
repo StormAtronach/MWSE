@@ -176,6 +176,12 @@ namespace mwse::native {
 		bool m_withdrawn = false;
 	};
 
+	// The facts of the game's lights that a module reads: the light records.
+	class LightFacts {
+	public:
+		MwseNativeStatus queryRecords(MwseNativeLightRecordsV1* packet) const;
+	};
+
 	class Registry {
 	public:
 		static Registry& get();
@@ -209,6 +215,7 @@ namespace mwse::native {
 		UIScale uiScale;
 		EngineSettings engineSettings;
 		MgeApiLink mgeApiLink;
+		LightFacts lightFacts;
 
 	private:
 		Registry();
