@@ -2191,7 +2191,7 @@ namespace mwse::lua {
 	}
 
 	TES3::Object* __fastcall PickLeveledCreatureWithCachedSpawner(TES3::LeveledCreature* leveledList) {
-		auto result = leveledList->resolve();
+		auto result = leveledList->resolveForSpawn();
 
 		// Clear cached spawning reference so it doesn't pollute other calls.
 		event::LeveledCreaturePickedEvent::m_LastLeveledSourceReference = nullptr;
@@ -5013,6 +5013,7 @@ namespace mwse::lua {
 		using se::memory::overrideVirtualTable;
 		using se::memory::genPushEnforced;
 		using se::memory::writeByteUnprotected;
+		using se::memory::writeBytesUnprotected;
 
 		// Open default lua libraries.
 		luaState.open_libraries();
@@ -6480,6 +6481,23 @@ namespace mwse::lua {
 		genCallEnforced(0x4E7DE1, 0x4DC030, *reinterpret_cast<DWORD*>(&Cell_insertReference));
 		genCallEnforced(0x5098DE, 0x4DC030, *reinterpret_cast<DWORD*>(&Cell_insertReference));
 		genCallEnforced(0x509A41, 0x4DC030, *reinterpret_cast<DWORD*>(&Cell_insertReference));
+
+		// mwscript PlaceAtMe and PlaceAtPC: the scene node call of the new reference.
+		{
+			constexpr BYTE sceneNodeCallCode[] = { 0x8B, 0x16, 0x8B, 0xCE, 0xFF, 0x52, 0x2C };
+			constexpr BYTE moveReferenceToThis[] = { 0x8B, 0xCE };
+			auto referenceGetSceneGraphNodeForScriptPlacement = &TES3::Reference::getSceneGraphNodeForScriptPlacement;
+			for (const DWORD address : { 0x509875u, 0x5099DFu }) {
+				if (memcmp(reinterpret_cast<const void*>(address), sceneNodeCallCode, sizeof(sceneNodeCallCode)) == 0) {
+					writeBytesUnprotected(address, moveReferenceToThis, sizeof(moveReferenceToThis));
+					genCallUnprotected(address + sizeof(moveReferenceToThis), *reinterpret_cast<DWORD*>(&referenceGetSceneGraphNodeForScriptPlacement), sizeof(sceneNodeCallCode) - sizeof(moveReferenceToThis));
+					log::getLog() << "[MWSE] Leveled creature list placement at 0x" << std::hex << address << std::dec << ": ok" << std::endl;
+				}
+				else {
+					log::getLog() << "[MWSE] Leveled creature list placement at 0x" << std::hex << address << std::dec << ": skipped: bytes differ" << std::endl;
+				}
+			}
+		}
 		genCallEnforced(0x50A22F, 0x4DC030, *reinterpret_cast<DWORD*>(&Cell_insertReference));
 		genCallEnforced(0x635368, 0x4DC030, *reinterpret_cast<DWORD*>(&Cell_insertReference));
 		auto Reference_setDeleted = &TES3::Reference::setDeleted;

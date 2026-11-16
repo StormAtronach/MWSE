@@ -30,6 +30,25 @@ namespace TES3 {
 		return result;
 	}
 
+	thread_local bool LeveledCreature::spawnPickSkipped = false;
+
+	LeveledCreature::SpawnPickSkip::SpawnPickSkip() {
+		spawnPickSkipped = true;
+	}
+
+	LeveledCreature::SpawnPickSkip::~SpawnPickSkip() {
+		spawnPickSkipped = false;
+	}
+
+	Object * LeveledCreature::resolveForSpawn() {
+		if (spawnPickSkipped) {
+			spawnPickSkipped = false;
+			return nullptr;
+		}
+
+		return resolve();
+	}
+
 	const auto TES3_LeveledCreature_InsertEntry = reinterpret_cast<bool(__thiscall*)(LeveledCreature*, BaseObject*, short)>(0x4CFCC0);
 	bool LeveledCreature::insert(BaseObject* entry, short level) {
 		return TES3_LeveledCreature_InsertEntry(this, entry, level);

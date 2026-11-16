@@ -55,6 +55,14 @@ namespace TES3 {
 		// Custom functions.
 		//
 
+		// While a SpawnPickSkip lives, the next spawn pick returns nothing and fires no event.
+		struct SpawnPickSkip {
+			SpawnPickSkip();
+			~SpawnPickSkip();
+		};
+		static thread_local bool spawnPickSkipped;
+		Object * resolveForSpawn();
+
 		bool getLeveledFlag(LeveledCreatureFlags::Flags flag) const;
 		void setLeveledFlag(LeveledCreatureFlags::Flags flag, bool value);
 		bool getCalculateFromAllLevels() const;

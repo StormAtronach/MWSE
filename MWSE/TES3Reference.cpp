@@ -15,6 +15,7 @@
 #include "LuaReferenceSceneNodeCreatedEvent.h"
 #include "ReferenceTracker.h"
 
+#include "Log.h"
 #include "MemoryUtil.h"
 
 #include "NINode.h"
@@ -31,6 +32,7 @@
 #include "TES3Game.h"
 #include "TES3GameSetting.h"
 #include "TES3ItemData.h"
+#include "TES3LeveledList.h"
 #include "TES3Light.h"
 #include "TES3MagicInstanceController.h"
 #include "TES3Misc.h"
@@ -991,6 +993,25 @@ namespace TES3 {
 		}
 
 		return newNode;
+	}
+
+	NI::Node * Reference::getSceneGraphNodeForScriptPlacement() {
+		if (LeveledCreature::spawnPickSkipped) {
+			mwse::log::getLog() << "[MWSE] Reference::getSceneGraphNodeForScriptPlacement: the spawn pick skip was still set at entry; it is now cleared." << std::endl;
+			LeveledCreature::spawnPickSkipped = false;
+		}
+
+		// A leveled creature list places the creature that it picks, or stays an empty spawn point.
+		if (baseObject && baseObject->objectType == ObjectType::LeveledCreature) {
+			const auto picked = static_cast<LeveledCreature*>(baseObject)->resolve();
+			if (picked == nullptr) {
+				LeveledCreature::SpawnPickSkip skip;
+				return getSceneGraphNode();
+			}
+			baseObject = static_cast<PhysicalObject*>(picked);
+		}
+
+		return getSceneGraphNode();
 	}
 
 #if MWSE_RAISED_FILE_LIMIT
