@@ -732,6 +732,16 @@ namespace TES3 {
 		registry.uiConfigured.fire(&packet);
 	}
 
+	// NiDX8Application::initMainWindow 0x429870 configures the UI at the game's start, before the UI is made, and
+	// again when the renderer restarts. The restart gets the same configuration as the first one.
+	void WorldController::reconfigureUIScaling(int windowWidth) {
+		if (menuController == nullptr) {
+			configureUIScaling(windowWidth);
+			return;
+		}
+		initializeUIScaling(windowWidth);
+	}
+
 	void WorldController::applyUIScale(float scale) {
 		if (renderer == nullptr || mouseController == nullptr || scale <= 0.0f) {
 			return;
