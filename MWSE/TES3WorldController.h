@@ -465,6 +465,7 @@ namespace TES3 {
 		void resolveScriptInternalIDs();
 		void configureUIScaling(int windowWidth);
 		void initializeUIScaling(int windowWidth);
+		void reconfigureUIScaling(int windowWidth);
 		void applyUIScale(float scale);
 
 		float getAIDistance() const;
