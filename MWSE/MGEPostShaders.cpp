@@ -113,6 +113,57 @@ namespace mge {
 				}
 			}
 			break;
+		case 'B': // API v3
+			{
+				// Array of booleans (as integers).
+				int* result = reinterpret_cast<int*>(shaderVariableAPIBuffer);
+				size_t count = sizeof(shaderVariableAPIBuffer) / sizeof(int);
+
+				// Count is set to the actual length, if the call is successful.
+				if (static_cast<mge::MGEAPIv3*>(api)->shaderGetBoolArray(handle, varName, result, &count)) {
+					auto table = state.create_table(count, 0);
+
+					for (auto i = 0u; i < count; ++i) {
+						table[i + 1] = result[i] != 0;
+					}
+					return table;
+				}
+			}
+			break;
+		case 'I': // API v3
+			{
+				// Array of ints.
+				int* result = reinterpret_cast<int*>(shaderVariableAPIBuffer);
+				size_t count = sizeof(shaderVariableAPIBuffer) / sizeof(int);
+
+				// Count is set to the actual length, if the call is successful.
+				if (static_cast<mge::MGEAPIv3*>(api)->shaderGetIntArray(handle, varName, result, &count)) {
+					auto table = state.create_table(count, 0);
+
+					for (auto i = 0u; i < count; ++i) {
+						table[i + 1] = result[i];
+					}
+					return table;
+				}
+			}
+			break;
+		case 'V': // API v3
+			{
+				// Array of vector4s.
+				NI::Point4* result = reinterpret_cast<NI::Point4*>(shaderVariableAPIBuffer);
+				size_t count = sizeof(shaderVariableAPIBuffer) / sizeof(NI::Point4);
+
+				// Count is set to the actual length, if the call is successful.
+				if (static_cast<mge::MGEAPIv3*>(api)->shaderGetVectorArray(handle, varName, &result->x, &count)) {
+					auto table = state.create_table(count, 0);
+
+					for (auto i = 0u; i < count; ++i) {
+						table[i + 1] = result[i];
+					}
+					return table;
+				}
+			}
+			break;
 		case '2':
 			{
 				// Float vectors of length 2.
