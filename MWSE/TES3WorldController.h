@@ -135,6 +135,7 @@ namespace TES3 {
 		~MouseController() = delete;
 
 		void setCursorBounds(int minX, int minY, int maxX, int maxY);
+		void setRestartCursorBounds(int minX, int minY, int maxX, int maxY);
 	};
 	static_assert(sizeof(MouseController) == 0x50, "TES3::MouseController failed size validation");
 
@@ -467,6 +468,7 @@ namespace TES3 {
 		void initializeUIScaling(int windowWidth);
 		void reconfigureUIScaling(int windowWidth);
 		void applyUIScale(float scale);
+		void setViewCursorBounds();
 
 		float getAIDistance() const;
 		void setAIDistance(float value);

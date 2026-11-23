@@ -57,6 +57,7 @@ namespace mwse::native {
 	static const CallSites cameraTransformsSites({ 0x41C029, 0x45CDC3, 0x48F64A, 0x567A17, 0x56871C }, 0x542E60);
 	static const CallSites uiConfigureSites({ 0x40E55E }, 0x40F2A0);
 	static const CallSites uiReconfigureSites({ 0x429B10 }, 0x40F2A0);
+	static const CallSites uiRestartCursorSites({ 0x429B30 }, 0x408740);
 	static const CallSites dynamicLightTestSites({ 0x485B60, 0x4D2C9C, 0x4D2D04, 0x4D2D9F, 0x4D2F10, 0x4D3350 }, 0x4D2F40);
 	static const CallSites cameraRootCullShowSites({ 0x6CC874 }, 0x6EB480);
 	static const CallSites mapTileReadSites({ 0x42E4FD }, 0x42F6F0);
@@ -150,10 +151,15 @@ namespace mwse::native {
 			return MWSE_NATIVE_OK;
 		}
 
-		// Both sites, or none: a renderer restart would otherwise lose the UI scale.
-		const auto changed = uiReconfigureSites.findChangedSite();
+		// All sites, or none: a renderer restart would otherwise lose the UI scale or its cursor bounds.
+		auto changed = uiReconfigureSites.findChangedSite();
 		if (changed) {
 			logChangedSite("the UI configuration after a renderer restart", changed);
+			return MWSE_NATIVE_BYTES_CHANGED;
+		}
+		changed = uiRestartCursorSites.findChangedSite();
+		if (changed) {
+			logChangedSite("the cursor bounds after a renderer restart", changed);
 			return MWSE_NATIVE_BYTES_CHANGED;
 		}
 
@@ -165,6 +171,8 @@ namespace mwse::native {
 
 		auto restart = &TES3::WorldController::reconfigureUIScaling;
 		uiReconfigureSites.redirect(*reinterpret_cast<DWORD*>(&restart));
+		auto cursorBounds = &TES3::MouseController::setRestartCursorBounds;
+		uiRestartCursorSites.redirect(*reinterpret_cast<DWORD*>(&cursorBounds));
 		installed = true;
 		return MWSE_NATIVE_OK;
 	}
