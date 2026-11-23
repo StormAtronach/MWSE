@@ -750,7 +750,10 @@ namespace TES3 {
 		viewWidth = int(renderer->getBackBufferWidth() / scale);
 		viewHeight = int(renderer->getBackBufferHeight() / scale);
 		configureUIScaling(viewWidth);
+		setViewCursorBounds();
+	}
 
+	void WorldController::setViewCursorBounds() {
 		const auto halfWidth = (viewWidth + 1) / 2;
 		const auto halfHeight = (viewHeight + 1) / 2;
 		mouseController->setCursorBounds(-halfWidth, -halfHeight, halfWidth, halfHeight);
@@ -759,6 +762,17 @@ namespace TES3 {
 	const auto TES3_MouseController_setCursorBounds = reinterpret_cast<void(__thiscall*)(MouseController*, int, int, int, int)>(0x408740);
 	void MouseController::setCursorBounds(int minX, int minY, int maxX, int maxY) {
 		TES3_MouseController_setCursorBounds(this, minX, minY, maxX, maxY);
+	}
+
+	// NiDX8Application::initMainWindow 0x429870 sets the cursor bounds of the window after it configures the UI. After
+	// a renderer restart, a UI scale keeps the bounds of its view.
+	void MouseController::setRestartCursorBounds(int minX, int minY, int maxX, int maxY) {
+		const auto worldController = WorldController::get();
+		if (worldController->menuController != nullptr && mwse::native::Registry::get().uiScale.isRequested()) {
+			worldController->setViewCursorBounds();
+			return;
+		}
+		setCursorBounds(minX, minY, maxX, maxY);
 	}
 
 	float WorldController::getAIDistance() const {
