@@ -91,7 +91,6 @@ namespace TES3 {
 	}
 
 	AnimationGroup::LuaEvent::LuaEvent(const std::string_view& _id, const std::string_view& _param) :
-		tag(eventTag),
 		refCount(0),
 		id(_id),
 		param(_param)
@@ -109,18 +108,14 @@ namespace TES3 {
 		return fmt::format("{} {}", id, param);
 	}
 
-	AnimationGroup::LuaEvent* AnimationGroup::LuaEvent::toEvent(Sound* sound) {
-		LuaEvent* e = reinterpret_cast<LuaEvent*>(sound);
-		return (e && e->tag == eventTag) ? e : nullptr;
-	}
-
 	bool AnimationGroup::SoundGenKey::hasLuaEvent() const {
-		return LuaEvent::toEvent(sound) != nullptr;
+		return (reinterpret_cast<uintptr_t>(sound) & luaEventMark) != 0;
 	}
 
 	void AnimationGroup::SoundGenKey::freeLuaEvent() {
-		// The union may hold a regular sound, which must not be released as an event.
-		if (!hasLuaEvent()) {
+		// The word may hold a regular sound, which must not be released as an event.
+		const auto event = getLuaEvent();
+		if (event == nullptr) {
 			return;
 		}
 
@@ -128,7 +123,7 @@ namespace TES3 {
 		if (event->refCount == 0) {
 			delete event;
 		}
-		event = nullptr;
+		sound = nullptr;
 	}
 
 	Sound* AnimationGroup::SoundGenKey::getSound() const {
@@ -139,7 +134,7 @@ namespace TES3 {
 	}
 
 	void AnimationGroup::SoundGenKey::setSound(Sound* sound) {
-		// Release any lua event before overwriting the union.
+		// Release any lua event before overwriting the word.
 		freeLuaEvent();
 		this->sound = sound;
 	}
@@ -148,7 +143,7 @@ namespace TES3 {
 		if (!hasLuaEvent()) {
 			return nullptr;
 		}
-		return event;
+		return reinterpret_cast<LuaEvent*>(reinterpret_cast<uintptr_t>(sound) & ~luaEventMark);
 	}
 
 	void AnimationGroup::SoundGenKey::setLuaEvent(LuaEvent* e) {
@@ -156,12 +151,22 @@ namespace TES3 {
 			return;
 		}
 
-		// Release any lua event before overwriting the union.
+		// Release any lua event before overwriting the word.
 		freeLuaEvent();
-		event = e;
-		if (event) {
-			event->refCount++;
+		if (e) {
+			e->refCount++;
+			sound = reinterpret_cast<Sound*>(reinterpret_cast<uintptr_t>(e) | luaEventMark);
 		}
+	}
+
+	std::string AnimationGroup::SoundGenKey::toString() const {
+		if (const auto event = getLuaEvent()) {
+			return fmt::format("LuaEvent {}", event->toString());
+		}
+		if (const auto soundObject = getSound()) {
+			return soundObject->id;
+		}
+		return "(null)";
 	}
 
 	/// <summary>
@@ -761,8 +766,8 @@ namespace TES3 {
 						|| s1->pitch != s2->pitch
 						|| s1->sound != s2->sound) {
 						mwse::log::getLog() << "[AnimParser] TEST FAIL soundGenKeys" << std::endl;
-						mwse::log::getLog() << "    sound std " << i << ": frame=" << s1->startFrame << ", timing=" << s1->startTime << ", vol=" << int(s1->volume) << ", pitch=" << s1->pitch << ", sound=" << std::hex << (s1->sound ? s1->sound->id : "(null)") << std::dec << std::endl;
-						mwse::log::getLog() << "    sound new " << i << ": frame=" << s2->startFrame << ", timing=" << s2->startTime << ", vol=" << int(s2->volume) << ", pitch=" << s2->pitch << ", sound=" << std::hex << (s2->sound ? s2->sound->id : "(null)") << std::dec << std::endl;
+						mwse::log::getLog() << "    sound std " << i << ": frame=" << s1->startFrame << ", timing=" << s1->startTime << ", vol=" << int(s1->volume) << ", pitch=" << s1->pitch << ", sound=" << s1->toString() << std::endl;
+						mwse::log::getLog() << "    sound new " << i << ": frame=" << s2->startFrame << ", timing=" << s2->startTime << ", vol=" << int(s2->volume) << ", pitch=" << s2->pitch << ", sound=" << s2->toString() << std::endl;
 					}
 				}
 			}
