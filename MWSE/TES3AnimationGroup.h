@@ -176,9 +176,6 @@ namespace TES3 {
 
 	struct AnimationGroup : BaseObject {
 		struct LuaEvent {
-			static constexpr unsigned int eventTag = 0x4541554C; // "LUAE"
-
-			unsigned int tag;
 			int refCount;
 			std::string id;
 			std::string param;
@@ -186,17 +183,19 @@ namespace TES3 {
 			LuaEvent(const std::string_view& _id, const std::string_view& _param);
 			~LuaEvent();
 			std::string toString() const;
-			static LuaEvent* toEvent(Sound* sound);
 		};
 		struct SoundGenKey {
+			// The bit of the sound word that marks a lua event. A Sound and a LuaEvent are aligned, so the bit is
+			// clear in each real address.
+			static constexpr uintptr_t luaEventMark = 1;
+
 			int startFrame; // 0x0
 			float startTime; // 0x4
 			unsigned char volume; // 0x8
 			float pitch; // 0xC
-			union { // 0x10
-				Sound* sound;
-				LuaEvent* event;
-			};
+			// A Sound, or a LuaEvent with luaEventMark set. The mark is in the word, so no test reads through it:
+			// the Sound can be deleted before the key. Use the accessors; the raw word only for a nullptr test.
+			Sound* sound; // 0x10
 
 			SoundGenKey() = delete;
 			~SoundGenKey() = delete;
@@ -208,6 +207,9 @@ namespace TES3 {
 			void setSound(Sound* sound);
 			LuaEvent* getLuaEvent() const;
 			void setLuaEvent(LuaEvent* event);
+
+			// The sound's id, the lua event's text, or "(null)", for the log.
+			std::string toString() const;
 		};
 
 		AnimGroupID groupId; // 0x10
@@ -246,6 +248,7 @@ namespace TES3 {
 	};
 	static_assert(sizeof(AnimationGroup) == 0x2C, "TES3::AnimationGroup failed size validation");
 	static_assert(sizeof(AnimationGroup::SoundGenKey) == 0x14, "TES3::AnimationGroup::SoundGenKey failed size validation");
+	static_assert(alignof(AnimationGroup::LuaEvent) > AnimationGroup::SoundGenKey::luaEventMark, "TES3::AnimationGroup::LuaEvent leaves no free bit for the mark");
 
 	struct KeyframeDefinitionVanilla {
 		const char* filename; // 0x0
