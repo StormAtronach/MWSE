@@ -4,6 +4,7 @@
 
 #include "LuaManager.h"
 
+#include "Log.h"
 #include "WindowsUtil.h"
 
 namespace TES3 {
@@ -15,6 +16,7 @@ namespace TES3 {
 	bool Game::readSettings() {
 		const auto result = TES3_Game_readSettings(this);
 		applyApplicationIniOverrides();
+		mwse::log::getLog() << "Application settings: " << windowWidth << "x" << windowHeight << ", refresh rate " << refreshRate << ", adapter " << adapter << ", fullscreen " << fullscreen << "; Morrowind.ini [Application] overrides " << registryValuesOfIniOverrides.size() << " settings of the registry." << std::endl;
 		return result;
 	}
 
