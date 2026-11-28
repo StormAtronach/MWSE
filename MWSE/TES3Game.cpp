@@ -16,7 +16,16 @@ namespace TES3 {
 	bool Game::readSettings() {
 		const auto result = TES3_Game_readSettings(this);
 		applyApplicationIniOverrides();
+		mwse::log::getLog() << "Application settings: " << windowWidth << "x" << windowHeight << ", refresh rate " << refreshRate << ", adapter " << adapter << ", fullscreen " << fullscreen << "; Morrowind.ini [Application] overrides " << registryValuesOfIniOverrides.size() << " settings of the registry." << std::endl;
 		return result;
+	}
+
+	const auto TES3_Game_writeSettings = reinterpret_cast<void(__thiscall*)(Game*)>(0x4F5840);
+	void Game::writeSettings() {
+		// The registry keeps its own values of the settings that Morrowind.ini overrides.
+		swapRegistryValues();
+		TES3_Game_writeSettings(this);
+		swapRegistryValues();
 	}
 
 	const auto TES3_Game_initialize = reinterpret_cast<bool(__thiscall *)(Game*)>(0x417880);
@@ -52,26 +61,48 @@ namespace TES3 {
 	void Game::applyApplicationIniOverrides() {
 		constexpr auto morrowindIniFile = ".\\Morrowind.ini";
 
-		windowWidth = se::windows::ini::GetInt(morrowindIniFile, "Application", "Screen Width").value_or(windowWidth);
-		windowHeight = se::windows::ini::GetInt(morrowindIniFile, "Application", "Screen Height").value_or(windowHeight);
-		screenDepth = se::windows::ini::GetInt(morrowindIniFile, "Application", "Screen Depth").value_or(screenDepth);
-		backBuffers = se::windows::ini::GetInt(morrowindIniFile, "Application", "Backbuffers").value_or(backBuffers);
-		multiSamples = se::windows::ini::GetInt(morrowindIniFile, "Application", "Multisamples").value_or(multiSamples);
-		mipmapSkipLevel = se::windows::ini::GetInt(morrowindIniFile, "Application", "Mipmap Skip Level").value_or(mipmapSkipLevel);
-		vertexProcessing = se::windows::ini::GetInt(morrowindIniFile, "Application", "Vertex Processing").value_or(vertexProcessing);
-		swapEffect = se::windows::ini::GetInt(morrowindIniFile, "Application", "Swap Effect").value_or(swapEffect);
-		refreshRate = se::windows::ini::GetInt(morrowindIniFile, "Application", "Refresh Rate").value_or(refreshRate);
-		presentationInterval = se::windows::ini::GetInt(morrowindIniFile, "Application", "Presentation Interval").value_or(presentationInterval);
-		adapter = se::windows::ini::GetInt(morrowindIniFile, "Application", "Adapter").value_or(adapter);
-		gamma = se::windows::ini::GetFloat(morrowindIniFile, "Application", "Gamma").value_or(gamma);
-		fullscreen = se::windows::ini::GetBool(morrowindIniFile, "Application", "Fullscreen").value_or(fullscreen);
-		pixelShader = se::windows::ini::GetBool(morrowindIniFile, "Application", "Pixelshader").value_or(pixelShader);
-		stencil = se::windows::ini::GetBool(morrowindIniFile, "Application", "Stencil").value_or(stencil);
-		mipmap = se::windows::ini::GetBool(morrowindIniFile, "Application", "Mipmap").value_or(mipmap);
-		hardware = se::windows::ini::GetBool(morrowindIniFile, "Application", "Hardware").value_or(hardware);
-		multiPass = se::windows::ini::GetBool(morrowindIniFile, "Application", "Multipass").value_or(multiPass);
+		registryValuesOfIniOverrides.clear();
+
+		applyApplicationIniOverride(windowWidth, se::windows::ini::GetInt(morrowindIniFile, "Application", "Screen Width"));
+		applyApplicationIniOverride(windowHeight, se::windows::ini::GetInt(morrowindIniFile, "Application", "Screen Height"));
+		applyApplicationIniOverride(screenDepth, se::windows::ini::GetInt(morrowindIniFile, "Application", "Screen Depth"));
+		applyApplicationIniOverride(backBuffers, se::windows::ini::GetInt(morrowindIniFile, "Application", "Backbuffers"));
+		applyApplicationIniOverride(multiSamples, se::windows::ini::GetInt(morrowindIniFile, "Application", "Multisamples"));
+		applyApplicationIniOverride(mipmapSkipLevel, se::windows::ini::GetInt(morrowindIniFile, "Application", "Mipmap Skip Level"));
+		applyApplicationIniOverride(vertexProcessing, se::windows::ini::GetInt(morrowindIniFile, "Application", "Vertex Processing"));
+		applyApplicationIniOverride(swapEffect, se::windows::ini::GetInt(morrowindIniFile, "Application", "Swap Effect"));
+		applyApplicationIniOverride(refreshRate, se::windows::ini::GetInt(morrowindIniFile, "Application", "Refresh Rate"));
+		applyApplicationIniOverride(presentationInterval, se::windows::ini::GetInt(morrowindIniFile, "Application", "Presentation Interval"));
+		applyApplicationIniOverride(adapter, se::windows::ini::GetInt(morrowindIniFile, "Application", "Adapter"));
+		applyApplicationIniOverride(gamma, se::windows::ini::GetFloat(morrowindIniFile, "Application", "Gamma"));
+		applyApplicationIniOverride(fullscreen, se::windows::ini::GetBool(morrowindIniFile, "Application", "Fullscreen"));
+		applyApplicationIniOverride(pixelShader, se::windows::ini::GetBool(morrowindIniFile, "Application", "Pixelshader"));
+		applyApplicationIniOverride(stencil, se::windows::ini::GetBool(morrowindIniFile, "Application", "Stencil"));
+		applyApplicationIniOverride(mipmap, se::windows::ini::GetBool(morrowindIniFile, "Application", "Mipmap"));
+		applyApplicationIniOverride(hardware, se::windows::ini::GetBool(morrowindIniFile, "Application", "Hardware"));
+		applyApplicationIniOverride(multiPass, se::windows::ini::GetBool(morrowindIniFile, "Application", "Multipass"));
 
 		gamma = std::clamp(gamma, 0.0f, 2.0f);
+	}
+
+	std::vector<Game::RegistryValue> Game::registryValuesOfIniOverrides;
+
+	void Game::keepRegistryValue(void* setting, size_t size) {
+		RegistryValue kept = {};
+		kept.offset = reinterpret_cast<BYTE*>(setting) - reinterpret_cast<BYTE*>(this);
+		kept.size = size;
+		std::memcpy(&kept.value, setting, size);
+		registryValuesOfIniOverrides.push_back(kept);
+	}
+
+	void Game::swapRegistryValues() {
+		for (auto& kept : registryValuesOfIniOverrides) {
+			const auto setting = reinterpret_cast<BYTE*>(this) + kept.offset;
+			DWORD current = 0;
+			std::memcpy(&current, setting, kept.size);
+			std::memcpy(setting, &kept.value, kept.size);
+			kept.value = current;
+		}
 	}
 
 	void Game::setPlayerTarget(Reference* reference) {

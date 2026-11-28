@@ -2472,6 +2472,10 @@ namespace mwse::patch {
 		auto Game_readSettings = &TES3::Game::readSettings;
 		overrideVirtualTableEnforced(0x74665C, offsetof(TES3::Game_vTable, ReadSettings), 0x4F54F0, *reinterpret_cast<DWORD*>(&Game_readSettings));
 
+		// Patch: Keep the Morrowind.ini [Application] values out of the registry when the game writes its settings.
+		auto Game_writeSettings = &TES3::Game::writeSettings;
+		overrideVirtualTableEnforced(0x74665C, offsetof(TES3::Game_vTable, WriteSettings), 0x4F5840, *reinterpret_cast<DWORD*>(&Game_writeSettings));
+
 		// Patch: Add the MP3 decoder DMO to music filter graphs before rendering.
 		{
 			constexpr BYTE expected[] = { 0x52, 0x50, 0xFF, 0x51, 0x34 }; // push edx; push eax; call [ecx+34h]
