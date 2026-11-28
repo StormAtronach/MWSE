@@ -144,6 +144,7 @@ namespace TES3 {
 		// Sets a setting from Morrowind.ini when the ini has it, and keeps the registry's value for writeSettings.
 		template <typename T>
 		void applyApplicationIniOverride(T& setting, const std::optional<T>& value) {
+			static_assert(sizeof(T) <= sizeof(DWORD), "A kept registry value is at most one DWORD.");
 			if (!value) {
 				return;
 			}
