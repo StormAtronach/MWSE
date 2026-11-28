@@ -2366,6 +2366,10 @@ namespace mwse::patch {
 		auto Game_readSettings = &TES3::Game::readSettings;
 		overrideVirtualTableEnforced(0x74665C, offsetof(TES3::Game_vTable, ReadSettings), 0x4F54F0, *reinterpret_cast<DWORD*>(&Game_readSettings));
 
+		// Patch: Keep the Morrowind.ini [Application] values out of the registry when the game writes its settings.
+		auto Game_writeSettings = &TES3::Game::writeSettings;
+		overrideVirtualTableEnforced(0x74665C, offsetof(TES3::Game_vTable, WriteSettings), 0x4F5840, *reinterpret_cast<DWORD*>(&Game_writeSettings));
+
 		// Patch: Enable/Disable.
 		genCallUnprotected(0x508FEB, reinterpret_cast<DWORD>(PatchScriptOpEnable), 0x9);
 		genCallUnprotected(0x5090DB, reinterpret_cast<DWORD>(PatchScriptOpDisable), 0x9);

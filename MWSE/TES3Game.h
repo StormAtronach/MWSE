@@ -121,6 +121,8 @@ namespace TES3 {
 
 		bool readSettings();
 
+		void writeSettings();
+
 		//
 		// Other related this-call functions.
 		//
@@ -139,10 +141,33 @@ namespace TES3 {
 
 		void applyApplicationIniOverrides();
 
+		// Sets a setting from Morrowind.ini when the ini has it, and keeps the registry's value for writeSettings.
+		template <typename T>
+		void applyApplicationIniOverride(T& setting, const std::optional<T>& value) {
+			if (!value) {
+				return;
+			}
+			keepRegistryValue(&setting, sizeof(T));
+			setting = value.value();
+		}
+
+		void keepRegistryValue(void* setting, size_t size);
+
+		// Exchanges the settings that Morrowind.ini overrides with their registry values.
+		void swapRegistryValues();
+
 		void setPlayerTarget(Reference* reference);
 
 		// Get singleton.
 		_declspec (dllexport) static Game* get();
+
+		// A setting that Morrowind.ini overrides: its place in Game and its value from the registry.
+		struct RegistryValue {
+			size_t offset;
+			size_t size;
+			DWORD value;
+		};
+		static std::vector<RegistryValue> registryValuesOfIniOverrides;
 
 	};
 	static_assert(sizeof(Game) == 0x110, "TES3::Game failed size validation");
